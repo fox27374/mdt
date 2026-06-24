@@ -42,7 +42,7 @@ of Podman containers managed with `podman-compose`.
 | File | Purpose |
 |------|---------|
 | [compose.yaml](compose.yaml) | Main Compose stack: Consul, two clustered gnmic collectors, gnmic output, and NATS. |
-| [compose-debug.yaml](compose-debug.yaml) | Same stack with `--debug` logging and a `test.yaml` config — used for troubleshooting. |
+| [compose-debug.yaml](compose-debug.yaml) | Identical stack to `compose.yaml` but with `--debug` added to every gnmic command — used for troubleshooting. |
 | [config/mdt.yaml](config/mdt.yaml) | The core gnmic **collector** config: global auth, clustering, targets, subscriptions, processors, and the NATS output. |
 | [config/output.yaml](config/output.yaml) | The gnmic **output** config: reads from NATS and exposes the Prometheus endpoint. |
 | [config/ca.pem](config/ca.pem) | CA certificate used to verify the NX-OS switch gRPC endpoints. |
