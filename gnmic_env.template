@@ -1,4 +1,5 @@
-SWITCH_USERNAME="admin"
-SWITCH_PASSWORD="letmein"
-FW_USERNAME="admin"
-FW_PASSWORD="letmein"
+# No quotes around values — podman-compose treats them literally.
+SWITCH_USERNAME=admin
+SWITCH_PASSWORD=letmein
+FW_USERNAME=admin
+FW_PASSWORD=letmein
