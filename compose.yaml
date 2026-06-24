@@ -1,0 +1,59 @@
+services:
+  consul:
+    image: hashicorp/consul:2.0
+    container_name: consul
+    networks:
+      - gnmic-net
+    ports:
+      - 8500:8500
+      - 8600:8600/udp
+    command: agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0
+
+  gnmic-1: &gnmic
+    image: ghcr.io/openconfig/gnmic:latest
+    container_name: gnmic-1
+    environment:
+      - GNMIC_INSTANCE_NAME=gnmic-1
+      - GNMIC_CLUSTERING_SERVICE_NAME=gnmic-1
+    env_file: "gnmic_env"
+    volumes:
+      - /opt/gnmic/config:/app/config
+    command: "subscribe --config /app/config/mdt.yaml"
+    networks:
+      - gnmic-net
+    depends_on:
+      - consul
+      - nats
+
+  gnmic-2:
+    <<: *gnmic
+    container_name: gnmic-2
+    environment:
+      - GNMIC_INSTANCE_NAME=gnmic-2
+      - GNMIC_CLUSTERING_SERVICE_NAME=gnmic-2
+
+  gnmic-output:
+    image: ghcr.io/openconfig/gnmic:latest
+    container_name: gnmic-output
+    volumes:
+      - /opt/gnmic/config:/app/config
+    command: "collect --config /app/config/output.yaml"
+    networks:
+      - gnmic-net
+    ports:
+      - 9273:9273
+    depends_on:
+      - consul
+      - nats
+
+  nats:
+    image: nats:alpine3.22
+    container_name: nats
+    networks:
+      - gnmic-net
+    ports:
+      - "4222:4222"
+
+networks:  
+  gnmic-net:
+    driver: bridge

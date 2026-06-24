@@ -1,0 +1,28 @@
+###################################
+# Inputs
+###################################
+
+inputs:
+  gnmi:
+    type: nats
+    name: gnmi-nats
+    address: nats:4222
+    subject: mdt
+    num-workers: 1
+
+
+###################################
+# Outputs
+###################################
+
+outputs:
+  cisco_metrics:
+    type: prometheus
+    listen: :9273
+    path: /metrics
+    expiration: 120s
+    strings-as-labels: true
+    metric-prefix: "mdt"
+    append-subscription-name: true
+
+

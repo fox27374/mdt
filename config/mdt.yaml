@@ -1,0 +1,464 @@
+###################################
+# Global
+###################################
+
+username: "${SWITCH_USERNAME}"
+password: "${SWITCH_PASSWORD}"
+insecure: false
+skip-verify: true
+
+###################################
+# Clustering
+###################################
+
+api: "${GNMIC_CLUSTERING_SERVICE_NAME}:8800"
+clustering:
+  cluster-name: mdt
+  locker:
+    type: consul
+    address: consul:8500
+    tls:
+      skip-verify: true
+
+
+###################################
+# Targets
+###################################
+
+targets:
+  172.24.80.240:57400:
+    name: "ibk-lab-sw98"
+    subscriptions:
+      - xe_if_stats
+      - xe_cpu_stats
+      - xe_mem_stats
+      - xe_poe_stats
+      - xe_if_info
+      - xe_cdp_info
+      - xe_mac_info
+
+  172.24.80.244:57400:
+    name: "ibk-lab-sw99"
+    subscriptions:
+      - xe_if_stats
+      - xe_cpu_stats
+      - xe_mem_stats
+      - xe_poe_stats
+      - xe_if_info
+      - xe_cdp_info
+      - xe_mac_info
+
+  172.24.80.251:57400:
+    name: "ibk-lab-sw03"
+    subscriptions:
+      - xe_if_stats
+      - xe_cpu_stats
+      - xe_mem_stats
+      - xe_poe_stats
+      - xe_if_info
+      - xe_cdp_info
+      - xe_mac_info
+
+  # NX-OS Switches
+  # crypto ca trustpoint NTSRootCA
+  #   enrollment terminal
+  # crypto ca authenticate NTSRootCA
+  # crypto key generate rsa label grpc modulus 2048
+  # crypto ca trustpoint grpc
+  #   rsakeypair grpc
+  #   enrollment terminal
+  # crypto ca authenticate grpc
+  # crypto ca enroll grpc
+  # crypto ca import grpc certificate
+  # feature grpc
+  # grpc port 57400
+  # grpc certificate grpc
+  172.24.80.195:57400:
+    name: "ntsnxsw01"
+    skip-verify: false
+    tls-ca: /app/config/ca.pem
+    subscriptions:
+      - nx_if_stats
+      - nx_cpu_stats
+      - nx_mem_stats
+      - nx_if_info
+      - nx_cdp_info
+      - nx_mac_info
+
+  172.24.80.196:57400:
+    name: "ntsnxsw02"
+    skip-verify: false
+    tls-ca: /app/config/ca.pem
+    subscriptions:
+      - nx_if_stats
+      - nx_cpu_stats
+      - nx_mem_stats
+      - nx_if_info
+      - nx_cdp_info
+      - nx_mac_info
+
+  # Enable SSID Stats: conf t --- ap profile <profile-name> --- bssid-stats
+  # ibk-lab-ewlc01#sh run | sec ap profile ibk-lab
+  172.24.89.147:57400:
+    name: "ibk-lab-ewlc01"
+    subscriptions:
+      - xe_cpu_stats
+      - xe_mem_stats
+      - wl_client_stats
+      - wl_ap_stats
+      - wl_info
+      - wl_client_stats_bulk
+
+  # PaloAlto Firewalls
+  172.24.88.157:9339:
+    name: "Lab-IBK-PA560-2"
+    username: "${FW_USERNAME}"
+    password: "${FW_PASSWORD}"
+    subscriptions:
+      - pan_if_stats
+      - pan_cpu_stats
+      - pan_session_stats
+
+###################################
+# Subscriptions
+###################################
+
+subscriptions:
+  xe_if_stats:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics/in-octets"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics/out-octets"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics/in-errors"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics/out-errors"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/speed"
+    mode: stream
+    encoding: json_ietf
+    stream-mode: sample
+    sample-interval: 30s
+    outputs:
+      - nats
+
+  xe_cpu_stats:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization/one-minute"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 60s
+    outputs:
+      - nats
+
+  xe_mem_stats:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic/total-memory"
+      - "rfc7951:/Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic/used-memory"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
+  xe_poe_stats:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-switch/power-budget"
+      - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-switch/power-allocated"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
+  xe_if_info:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/admin-status"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/oper-status"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/last-change"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
+  xe_cdp_info:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details/cdp-neighbor-detail/device-name"
+      - "rfc7951:/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details/cdp-neighbor-detail/local-intf-name"
+      - "rfc7951:/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details/cdp-neighbor-detail/port-id"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 1h
+    outputs:
+      - nats
+
+  xe_mac_info:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-matm-oper:matm-oper-data/matm-table/matm-mac-entry"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
+  nx_if_stats:
+    paths:
+      - "openconfig:/interfaces/interface/state/counters/in-octets"
+      - "openconfig:/interfaces/interface/state/counters/out-octets"
+      - "openconfig:/interfaces/interface/state/counters/in-errors"
+      - "openconfig:/interfaces/interface/state/counters/out-errors"
+      - "openconfig:/interfaces/interface/ethernet/state"
+    mode: stream
+    encoding: json
+    stream-mode: sample
+    sample-interval: 30s
+    outputs:
+      - nats
+
+  nx_cpu_stats:
+    paths:
+      - "/Cisco-NX-OS-device:System/procsys-items/sysload-items/loadAverage1m"
+    mode: stream
+    encoding: json
+    stream-mode: sample
+    sample-interval: 60s
+    outputs:
+      - nats
+
+  nx_mem_stats:
+    paths:
+      - "/Cisco-NX-OS-device:System/procsys-items/sysmem-items/sysmemusage-items/curr"
+    mode: stream
+    encoding: json
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
+  nx_if_info:
+    paths:
+      - "openconfig:/interfaces/interface/state/admin-status"
+      - "openconfig:/interfaces/interface/state/oper-status"
+      - "openconfig:/interfaces/interface/state/last-change"
+      - "openconfig:/interfaces/interface/oc-eth:ethernet/oc-eth:state/port-speed"
+    mode: stream
+    encoding: json
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
+  nx_cdp_info:
+    paths:
+      - "/System/cdp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/devId"
+    mode: stream
+    encoding: json
+    stream-mode: sample
+    sample-interval: 60s
+    outputs:
+      - nats
+
+  nx_mac_info:
+    paths:
+      - "/System/mac-items/table-items/vlan-items/MacAddressEntry-list"
+    mode: stream
+    encoding: json
+    stream-mode: sample
+    sample-interval: 1h
+    outputs:
+      - nats
+
+  wl_mem_stats:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
+  wl_client_stats:
+    paths:
+      # Client Signal Strength (1.1.1)
+      # Client Noise (1.1.2)
+      # Client SNR (1.1.3)
+      # Client transfer rates (1.2.1)
+      # To compute a loss rate, divide data-retries by pkts-tx (also in traffic-stats). A ratio above ~5-10% is generally considered problematic.
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats/data-retries"
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats/speed"
+      # Rate not always a number: e.g. m7
+      # - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats/current-rate"
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats/most-recent-rssi"
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats/most-recent-snr"
+      # Client count by AP from client view (1.2.2) - no metrics
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/dot11-oper-data/ap-mac-address"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 60s
+    outputs:
+      - nats
+
+  wl_client_stats_bulk:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats[ms-mac-address=08:f9:e0:ea:80:bc]/data-retries"
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats[ms-mac-address=08:f9:e0:ea:80:bc]/most-recent-rssi"
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats[ms-mac-address=28:a0:6b:8e:ff:49]/data-retries"
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats[ms-mac-address=28:a0:6b:8e:ff:49]/most-recent-rssi"
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats[ms-mac-address=40:91:51:52:c6:76]/data-retries"
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/traffic-stats[ms-mac-address=40:91:51:52:c6:76]/most-recent-rssi"
+
+    mode: stream
+    stream-mode: sample
+    sample-interval: 60s
+    outputs:
+      - nats
+
+  wl_ap_stats:
+    paths:
+      # Client count by AP and SSID (1.2.2)
+      - "rfc7951:/Cisco-IOS-XE-wireless-access-point-oper:access-point-oper-data/ssid-counters/num-assoc-clients"
+      # AP channel util, noise (1.1.2)
+      - "rfc7951:/Cisco-IOS-XE-wireless-rrm-oper:rrm-oper-data/rrm-measurement/load/rx-util-percentage"
+      - "rfc7951:/Cisco-IOS-XE-wireless-rrm-oper:rrm-oper-data/rrm-measurement/load/tx-util-percentage"
+      - "rfc7951:/Cisco-IOS-XE-wireless-rrm-oper:rrm-oper-data/rrm-measurement/load/rx-noise-channel-utilization"
+      - "rfc7951:/Cisco-IOS-XE-wireless-rrm-oper:rrm-oper-data/rrm-measurement/load/non-wifi-inter"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 60s
+    outputs:
+      - nats
+
+  wl_info:
+    paths:
+      # AP mac-name mapping
+      - "rfc7951:/Cisco-IOS-XE-wireless-access-point-oper:access-point-oper-data/ap-name-mac-map/eth-mac"
+      # AP mac-ip mapping
+      - "rfc7951:/Cisco-IOS-XE-wireless-access-point-oper:access-point-oper-data/oper-data/ap-ip-data/ap-ip-addr"
+      # AP ethernet mac to radio mac mapping
+      - "rfc7951:/Cisco-IOS-XE-wireless-access-point-oper:access-point-oper-data/ethernet-mac-wtp-mac-map"
+      # Client mac-name mapping
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/client-wsa-info"
+      # Client mac-ip mapping
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/sisf-db-mac/ipv4-binding/ip-key/ip-addr"
+      # Client SSID mapping
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/dot11-oper-data/vap-ssid"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
+  panos_if_stats:
+    paths:
+      - "oc-if:/interfaces/interface/state/counters/in-octets"
+      - "oc-if:/interfaces/interface/state/counters/out-octets"
+      - "oc-if:/interfaces/interface/state/counters/in-errors"
+      - "oc-if:/interfaces/interface/state/counters/out-errors"
+    mode: stream
+    sample-interval: 30s
+    outputs:
+      - nats
+
+  panos_cpu_stats:
+    paths:
+      - "oc-sys:/system/cpus/cpu[index=ALL]"
+    mode: stream
+    sample-interval: 300s
+    outputs:
+      - nats
+  
+  panos_session_stats:
+    paths:
+      - "/pan/session/state"
+    mode: stream
+    sample-interval: 60s
+    outputs:
+      - nats
+
+
+
+
+  #wl_client:
+  #  paths:
+  #    - "rfc7951:/Cisco-IOS-XE-wireless-client-global-oper:client-global-oper-data/client-cnsld-data"
+  #  mode: stream
+  #  stream-mode: sample
+  #  sample-interval: 60s
+
+
+###################################
+# Processors
+###################################
+
+processors:
+  rename-metrics:
+    event-strings:
+      value-names:
+        - ".*"
+      transforms:
+        - path-base:
+            apply-on: "name"
+
+  drop-if-stats-interfaces:
+    event-drop:
+      condition: '.tags.interface_name != null and (.tags.interface_name | test("^(vlan|loopback|tunnel|app|nve|po|bluetooth)"; "i"))'
+
+  delete-nx-cdp-fields:
+    event-delete:
+      value-names:
+        - "^.*adjExpTs$"
+        - "^.*index$"
+        - "^.*intf-items$"
+        - "^.*adjstats-items$"
+        - "^.*cap$"
+        - "^.*duplex$"
+        - "^.*intf-items$"
+        - "^.*localMAC$"
+        - "^.*sysLoc$"
+        - "^.*mgmt-items$"
+        - "^.*mtu$"
+        - "^.*nativeVlan$"
+        - "^.*remoteMAC$"
+        - "^.*sysLoc$"
+        - "^.*ver$"
+
+  nx-normalize-interfaces:
+    event-jq:
+      expression: |
+        .[] |
+        . as $ev |
+        if ($ev.tags["subscription-name"] == "nx_if_stats") then
+          ( $ev.values | to_entries
+            | group_by(.key | capture("interface\\.(?P<idx>[0-9]+)/") | .idx)
+            | map({
+                interface_name: (map(select(.key | test("/name$"))) | first | .value),
+                counters: map(select(.key | test("/name$") | not))
+              })
+            | map(
+                . as $grp |
+                $grp.counters[] |
+                {
+                  name: $ev.name,
+                  timestamp: $ev.timestamp,
+                  tags: ($ev.tags + {interface_name: $grp.interface_name}),
+                  values: {(.key): .value}
+                }
+              )
+            | .[]
+          )
+        else
+          $ev
+        end
+
+
+###################################
+# Outputs
+###################################
+
+outputs:
+  nats:
+    type: nats
+    address: nats:4222
+    subject: mdt
+    event-processors:
+      - nx-normalize-interfaces
+      - drop-if-stats-interfaces
+      - rename-metrics
+
