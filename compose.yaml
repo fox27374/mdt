@@ -19,7 +19,7 @@ services:
       - ./gnmic_env
     volumes:
       - ./config:/app/config:z
-    command: "subscribe --config /app/config/mdt.yaml --debug"
+    command: "subscribe --config /app/config/mdt.yaml"
     networks:
       - gnmic-net
     depends_on:
@@ -38,7 +38,7 @@ services:
     container_name: gnmic-output
     volumes:
       - ./config:/app/config:z
-    command: "collect --config /app/config/output.yaml --debug"
+    command: "collect --config /app/config/output.yaml"
     networks:
       - gnmic-net
     ports:
