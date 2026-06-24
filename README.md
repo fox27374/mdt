@@ -1,36 +1,29 @@
 # mdt — Model-Driven Telemetry Pipeline
 
 Collects streaming telemetry from network switches and firewalls over **gNMI dial-in**,
-ships it through a **NATS** message bus, and re-publishes it as **Prometheus** metrics
-(optionally forwarded on to **Splunk**).
+ships it through a **NATS** message bus, and re-publishes it as **Prometheus** metrics.
 
 The whole stack is built around [gnmic](https://gnmic.openconfig.net/) and runs as a set
-of Docker Compose services.
+of Podman containers managed with `podman-compose`.
 
 ## Architecture
 
 ```
 ┌─────────────────┐   gNMI dial-in    ┌────────────┐
-│  Switches /     │  (subscribe)      │  gnmic-1   │
+│  Switches /     │    (subscribe)    │  gnmic-1   │
 │  Firewalls      │ ────────────────► │  gnmic-2   │  collectors
 │  (XE / NX-OS /  │                   │ (clustered)│
 │   PAN-OS / WLC) │                   └─────┬──────┘
-└─────────────────┘                         │ publish
+└─────────────────┘                         │  publish
                                             ▼  subject: mdt
-                ┌──────────┐          ┌────────────┐
+                ┌──────────┐          ┌─────────────┐
                 │  consul  │◄────────►│    NATS     │  message bus
                 │ (locker/ │ cluster  └─────┬───────┘
                 │  leader) │  coord         │ consume
                 └──────────┘                ▼
                                      ┌──────────────┐
                                      │ gnmic-output │  :9273 /metrics
-                                     │ (Prometheus) │
-                                     └──────┬───────┘
-                                            │ scrape
-                                            ▼
-                                     ┌──────────────┐
-                                     │ OTel Collector│ ─► Splunk HEC
-                                     │ (agent_config)│    (optional)
+                                     │ (Prometheus) │ ─► Prometheus / scraper
                                      └──────────────┘
 ```
 
@@ -41,26 +34,25 @@ of Docker Compose services.
 3. **Processing** — incoming gNMI updates are normalized/filtered/renamed by gnmic
    event processors, then published to the NATS subject `mdt`.
 4. **Output** — `gnmic-output` consumes from NATS and exposes everything as Prometheus
-   metrics on `:9273/metrics`.
-5. **Forwarding (optional)** — a Splunk OpenTelemetry Collector scrapes that endpoint
-   and forwards the metrics to Splunk HEC.
+   metrics on `:9273/metrics`, ready to be scraped by Prometheus (or any compatible
+   scraper / OTel collector).
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| [compose.yaml](compose.yaml) | Main Docker Compose stack: Consul, two clustered gnmic collectors, gnmic output, and NATS. |
+| [compose.yaml](compose.yaml) | Main Compose stack: Consul, two clustered gnmic collectors, gnmic output, and NATS. |
 | [compose-debug.yaml](compose-debug.yaml) | Same stack with `--debug` logging and a `test.yaml` config — used for troubleshooting. |
 | [config/mdt.yaml](config/mdt.yaml) | The core gnmic **collector** config: global auth, clustering, targets, subscriptions, processors, and the NATS output. |
 | [config/output.yaml](config/output.yaml) | The gnmic **output** config: reads from NATS and exposes the Prometheus endpoint. |
 | [config/ca.pem](config/ca.pem) | CA certificate used to verify the NX-OS switch gRPC endpoints. |
-| [agent_config.yaml](agent_config.yaml) | Splunk OpenTelemetry Collector config that scrapes `gnmic-output:9273` and ships metrics to Splunk HEC. |
 | [gnmic_env.template](gnmic_env.template) | Template for device credentials. Copy to `gnmic_env` and fill in. |
 | `gnmic_env` | Actual device credentials (git-ignored). |
 
-> **Note:** The Compose files mount the gnmic configs from `/opt/gnmic/config` on the
-> host (`volumes: /opt/gnmic/config:/app/config`). Place the contents of `config/`
-> there, or adjust the volume mount to point at this repo's `config/` directory.
+> **Note:** The Compose files mount this repo's `config/` directory straight into the
+> containers (`volumes: ./config:/app/config:z`). The `:z` suffix relabels the content
+> for SELinux so the rootless Podman containers can read it — harmless on non-SELinux
+> hosts.
 
 ## Targets & subscriptions
 
@@ -99,33 +91,19 @@ cp gnmic_env.template gnmic_env
 # edit gnmic_env and set SWITCH_USERNAME/PASSWORD and FW_USERNAME/PASSWORD
 ```
 
-### 2. Place the gnmic configs
-
-Copy `config/*` to the host path the Compose files expect:
+### 2. Start the stack
 
 ```bash
-sudo mkdir -p /opt/gnmic/config
-sudo cp config/* /opt/gnmic/config/
-```
-
-### 3. Start the stack
-
-```bash
-docker compose up -d
+podman-compose up -d
 # or, with verbose logging:
-docker compose -f compose-debug.yaml up
+podman-compose -f compose-debug.yaml up
 ```
 
-### 4. Verify
+### 3. Verify
 
 - Prometheus metrics: <http://localhost:9273/metrics>
 - Consul UI (cluster/target ownership): <http://localhost:8500>
 - NATS: `localhost:4222`
-
-### 5. (Optional) Forward to Splunk
-
-Run a Splunk OpenTelemetry Collector with [agent_config.yaml](agent_config.yaml); its
-`metrics/mdt` pipeline scrapes the gnmic Prometheus endpoint and exports to Splunk HEC.
 
 ## Ports
 
