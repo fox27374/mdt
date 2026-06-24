@@ -1,10 +1,6 @@
-networks:  
-  gnmic-net:
-    driver: bridge
-
 services:
   consul:
-    image: hashicorp/consul:2.0
+    image: docker.io/hashicorp/consul:2.0
     container_name: consul
     networks:
       - gnmic-net
@@ -13,15 +9,17 @@ services:
       - 8600:8600/udp
     command: agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0
 
-  gnmic-1:
-    image: ghcr.io/openconfig/gnmic:latest
+  gnmic-1: &gnmic
+    image: ghcr.io/openconfig/gnmic:0.46.0
     container_name: gnmic-1
     environment:
       - GNMIC_INSTANCE_NAME=gnmic-1
       - GNMIC_CLUSTERING_SERVICE_NAME=gnmic-1
+    env_file:
+      - ./gnmic_env
     volumes:
-      - /opt/gnmic/config:/app/config
-    command: "subscribe --config /app/config/test.yaml --debug"
+      - ./config:/app/config:z
+    command: "subscribe --config /app/config/mdt.yaml --debug"
     networks:
       - gnmic-net
     depends_on:
@@ -29,25 +27,17 @@ services:
       - nats
 
   gnmic-2:
-    image: ghcr.io/openconfig/gnmic:latest
+    <<: *gnmic
     container_name: gnmic-2
     environment:
       - GNMIC_INSTANCE_NAME=gnmic-2
       - GNMIC_CLUSTERING_SERVICE_NAME=gnmic-2
-    volumes:
-      - /opt/gnmic/config:/app/config
-    command: "subscribe --config /app/config/test.yaml --debug"
-    networks:
-      - gnmic-net
-    depends_on:
-      - consul
-      - nats
 
   gnmic-output:
     image: ghcr.io/openconfig/gnmic:latest
     container_name: gnmic-output
     volumes:
-      - /opt/gnmic/config:/app/config
+      - ./config:/app/config:z
     command: "collect --config /app/config/output.yaml --debug"
     networks:
       - gnmic-net
@@ -58,10 +48,13 @@ services:
       - nats
 
   nats:
-    image: nats:alpine3.22
+    image: docker.io/nats:alpine3.22
     container_name: nats
     networks:
       - gnmic-net
     ports:
       - "4222:4222"
 
+networks:  
+  gnmic-net:
+    driver: bridge
