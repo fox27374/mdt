@@ -1,0 +1,74 @@
+extensions:
+  health_check:
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  prometheus/gnmic:
+    config:
+      scrape_configs:
+      - job_name: "gnmic"
+        scrape_interval: 60s
+        static_configs:
+        - targets: ["0.0.0.0:9273"]
+
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+      disk:
+      filesystem:
+      load:
+      memory:
+
+processors:
+  batch:
+
+exporters:
+  debug:
+    verbosity: detailed
+
+  splunk_hec/splunkfree:
+    token: "2ea31d5e-8cef-4ec9-9d27-9319237dfa29"
+    endpoint: "https://172.24.89.194:8088/services/collector"
+    tls:
+      insecure_skip_verify: true
+    source: "otel"
+    sourcetype: "otel"
+    index: "cisco_metrics"
+    profiling_data_enabled: false
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - otlp
+        - prometheus/gnmic
+        - hostmetrics
+      processors:
+        - batch
+      exporters:
+        - debug
+        - splunk_hec/splunkfree
+
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters:
+        - debug
+
+  extensions:
+    - health_check
+    - pprof
+    - zpages
