@@ -74,11 +74,11 @@ func main() {
 
 	// Set up HTTP routes
 	mux := http.NewServeMux()
+	mux.Handle("GET /", uiHandler())
 	mux.HandleFunc("GET /api/status", statusHandler(st))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
-	mux.HandleFunc("/", http.NotFound)
 
 	// Start HTTP server
 	server := &http.Server{
