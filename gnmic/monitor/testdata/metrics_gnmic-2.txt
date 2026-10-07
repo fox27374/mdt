@@ -1,0 +1,143 @@
+# HELP gnmic_cluster_is_leader Has value 1 if this gnmic instance is the cluster leader, 0 otherwise
+# TYPE gnmic_cluster_is_leader gauge
+gnmic_cluster_is_leader 1
+# HELP gnmic_cluster_number_of_locked_targets number of locked targets
+# TYPE gnmic_cluster_number_of_locked_targets gauge
+gnmic_cluster_number_of_locked_targets 4
+# HELP gnmic_nats_output_msg_send_duration_ns gnmic nats output send duration in ns
+# TYPE gnmic_nats_output_msg_send_duration_ns gauge
+gnmic_nats_output_msg_send_duration_ns{publisher_id="nats"} 0
+# HELP gnmic_nats_output_number_of_nats_msgs_sent_fail_total Number of failed msgs sent by gnmic nats output
+# TYPE gnmic_nats_output_number_of_nats_msgs_sent_fail_total counter
+gnmic_nats_output_number_of_nats_msgs_sent_fail_total{publisher_id="nats",reason=""} 0
+# HELP gnmic_nats_output_number_of_nats_msgs_sent_success_total Number of msgs successfully sent by gnmic nats output
+# TYPE gnmic_nats_output_number_of_nats_msgs_sent_success_total counter
+gnmic_nats_output_number_of_nats_msgs_sent_success_total{publisher_id="nats",subject=""} 0
+# HELP gnmic_nats_output_number_of_written_nats_bytes_total Number of bytes written by gnmic nats output
+# TYPE gnmic_nats_output_number_of_written_nats_bytes_total counter
+gnmic_nats_output_number_of_written_nats_bytes_total{publisher_id="nats",subject=""} 0
+# HELP gnmic_subscribe_number_of_failed_subscribe_request_messages_total Total number of failed subscribe requests
+# TYPE gnmic_subscribe_number_of_failed_subscribe_request_messages_total counter
+gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="ibk-lab-sw03",subscription="xe_cdp_info"} 29
+gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="ibk-lab-sw03",subscription="xe_cpu_stats"} 29
+gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="ibk-lab-sw03",subscription="xe_if_info"} 29
+gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="ibk-lab-sw03",subscription="xe_if_stats"} 29
+gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="ibk-lab-sw03",subscription="xe_mac_info"} 29
+gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="ibk-lab-sw03",subscription="xe_mem_stats"} 29
+gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="ibk-lab-sw03",subscription="xe_poe_stats"} 29
+# HELP gnmic_subscribe_number_of_received_subscribe_response_messages_total Total number of received subscribe response messages
+# TYPE gnmic_subscribe_number_of_received_subscribe_response_messages_total counter
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ibk-lab-sw98",subscription="xe_cdp_info"} 9
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ibk-lab-sw98",subscription="xe_cpu_stats"} 7
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ibk-lab-sw98",subscription="xe_if_info"} 9
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ibk-lab-sw98",subscription="xe_if_stats"} 52
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ibk-lab-sw98",subscription="xe_mem_stats"} 6
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ibk-lab-sw98",subscription="xe_poe_stats"} 6
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw01",subscription="nx_cdp_info"} 7
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw01",subscription="nx_cpu_stats"} 7
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw01",subscription="nx_if_info"} 6
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw01",subscription="nx_if_stats"} 52
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw01",subscription="nx_mac_info"} 3
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw01",subscription="nx_mem_stats"} 3
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw02",subscription="nx_cdp_info"} 7
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw02",subscription="nx_cpu_stats"} 7
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw02",subscription="nx_if_info"} 6
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw02",subscription="nx_if_stats"} 52
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw02",subscription="nx_mac_info"} 3
+gnmic_subscribe_number_of_received_subscribe_response_messages_total{source="ntsnxsw02",subscription="nx_mem_stats"} 3
+# HELP gnmic_target_connection_state The current gRPC connection state to the target. The value can be one of the following: 0(UNKNOWN), 1 (IDLE), 2 (CONNECTING), 3 (READY), 4 (TRANSIENT_FAILURE), or 5 (SHUTDOWN).
+# TYPE gnmic_target_connection_state gauge
+gnmic_target_connection_state{name="ibk-lab-sw03"} 4
+gnmic_target_connection_state{name="ibk-lab-sw98"} 3
+gnmic_target_connection_state{name="ntsnxsw01"} 3
+gnmic_target_connection_state{name="ntsnxsw02"} 3
+# HELP gnmic_target_up Has value 1 if the gNMI connection to the target is established; otherwise, 0.
+# TYPE gnmic_target_up gauge
+gnmic_target_up{name="ibk-lab-sw03"} 0
+gnmic_target_up{name="ibk-lab-sw98"} 1
+gnmic_target_up{name="ntsnxsw01"} 1
+gnmic_target_up{name="ntsnxsw02"} 1
+# HELP go_gc_duration_seconds A summary of the wall-time pause (stop-the-world) duration in garbage collection cycles.
+# TYPE go_gc_duration_seconds summary
+# HELP go_gc_gogc_percent Heap size target percentage configured by the user, otherwise 100. This value is set by the GOGC environment variable, and the runtime/debug.SetGCPercent function. Sourced from /gc/gogc:percent.
+# TYPE go_gc_gogc_percent gauge
+# HELP go_gc_gomemlimit_bytes Go runtime memory limit configured by the user, otherwise math.MaxInt64. This value is set by the GOMEMLIMIT environment variable, and the runtime/debug.SetMemoryLimit function. Sourced from /gc/gomemlimit:bytes.
+# TYPE go_gc_gomemlimit_bytes gauge
+# HELP go_goroutines Number of goroutines that currently exist.
+# TYPE go_goroutines gauge
+# HELP go_info Information about the Go environment.
+# TYPE go_info gauge
+# HELP go_memstats_alloc_bytes Number of bytes allocated in heap and currently in use. Equals to /memory/classes/heap/objects:bytes.
+# TYPE go_memstats_alloc_bytes gauge
+# HELP go_memstats_alloc_bytes_total Total number of bytes allocated in heap until now, even if released already. Equals to /gc/heap/allocs:bytes.
+# TYPE go_memstats_alloc_bytes_total counter
+# HELP go_memstats_buck_hash_sys_bytes Number of bytes used by the profiling bucket hash table. Equals to /memory/classes/profiling/buckets:bytes.
+# TYPE go_memstats_buck_hash_sys_bytes gauge
+# HELP go_memstats_frees_total Total number of heap objects frees. Equals to /gc/heap/frees:objects + /gc/heap/tiny/allocs:objects.
+# TYPE go_memstats_frees_total counter
+# HELP go_memstats_gc_sys_bytes Number of bytes used for garbage collection system metadata. Equals to /memory/classes/metadata/other:bytes.
+# TYPE go_memstats_gc_sys_bytes gauge
+# HELP go_memstats_heap_alloc_bytes Number of heap bytes allocated and currently in use, same as go_memstats_alloc_bytes. Equals to /memory/classes/heap/objects:bytes.
+# TYPE go_memstats_heap_alloc_bytes gauge
+# HELP go_memstats_heap_idle_bytes Number of heap bytes waiting to be used. Equals to /memory/classes/heap/released:bytes + /memory/classes/heap/free:bytes.
+# TYPE go_memstats_heap_idle_bytes gauge
+# HELP go_memstats_heap_inuse_bytes Number of heap bytes that are in use. Equals to /memory/classes/heap/objects:bytes + /memory/classes/heap/unused:bytes
+# TYPE go_memstats_heap_inuse_bytes gauge
+# HELP go_memstats_heap_objects Number of currently allocated objects. Equals to /gc/heap/objects:objects.
+# TYPE go_memstats_heap_objects gauge
+# HELP go_memstats_heap_released_bytes Number of heap bytes released to OS. Equals to /memory/classes/heap/released:bytes.
+# TYPE go_memstats_heap_released_bytes gauge
+# HELP go_memstats_heap_sys_bytes Number of heap bytes obtained from system. Equals to /memory/classes/heap/objects:bytes + /memory/classes/heap/unused:bytes + /memory/classes/heap/released:bytes + /memory/classes/heap/free:bytes.
+# TYPE go_memstats_heap_sys_bytes gauge
+# HELP go_memstats_last_gc_time_seconds Number of seconds since 1970 of last garbage collection.
+# TYPE go_memstats_last_gc_time_seconds gauge
+# HELP go_memstats_mallocs_total Total number of heap objects allocated, both live and gc-ed. Semantically a counter version for go_memstats_heap_objects gauge. Equals to /gc/heap/allocs:objects + /gc/heap/tiny/allocs:objects.
+# TYPE go_memstats_mallocs_total counter
+# HELP go_memstats_mcache_inuse_bytes Number of bytes in use by mcache structures. Equals to /memory/classes/metadata/mcache/inuse:bytes.
+# TYPE go_memstats_mcache_inuse_bytes gauge
+# HELP go_memstats_mcache_sys_bytes Number of bytes used for mcache structures obtained from system. Equals to /memory/classes/metadata/mcache/inuse:bytes + /memory/classes/metadata/mcache/free:bytes.
+# TYPE go_memstats_mcache_sys_bytes gauge
+# HELP go_memstats_mspan_inuse_bytes Number of bytes in use by mspan structures. Equals to /memory/classes/metadata/mspan/inuse:bytes.
+# TYPE go_memstats_mspan_inuse_bytes gauge
+# HELP go_memstats_mspan_sys_bytes Number of bytes used for mspan structures obtained from system. Equals to /memory/classes/metadata/mspan/inuse:bytes + /memory/classes/metadata/mspan/free:bytes.
+# TYPE go_memstats_mspan_sys_bytes gauge
+# HELP go_memstats_next_gc_bytes Number of heap bytes when next garbage collection will take place. Equals to /gc/heap/goal:bytes.
+# TYPE go_memstats_next_gc_bytes gauge
+# HELP go_memstats_other_sys_bytes Number of bytes used for other system allocations. Equals to /memory/classes/other:bytes.
+# TYPE go_memstats_other_sys_bytes gauge
+# HELP go_memstats_stack_inuse_bytes Number of bytes obtained from system for stack allocator in non-CGO environments. Equals to /memory/classes/heap/stacks:bytes.
+# TYPE go_memstats_stack_inuse_bytes gauge
+# HELP go_memstats_stack_sys_bytes Number of bytes obtained from system for stack allocator. Equals to /memory/classes/heap/stacks:bytes + /memory/classes/os-stacks:bytes.
+# TYPE go_memstats_stack_sys_bytes gauge
+# HELP go_memstats_sys_bytes Number of bytes obtained from system. Equals to /memory/classes/total:byte.
+# TYPE go_memstats_sys_bytes gauge
+# HELP go_sched_gomaxprocs_threads The current runtime.GOMAXPROCS setting, or the number of operating system threads that can execute user-level Go code simultaneously. Sourced from /sched/gomaxprocs:threads.
+# TYPE go_sched_gomaxprocs_threads gauge
+# HELP go_threads Number of OS threads created.
+# TYPE go_threads gauge
+# HELP grpc_client_handled_total Total number of RPCs completed by the client, regardless of success or failure.
+# TYPE grpc_client_handled_total counter
+# HELP grpc_client_msg_received_total Total number of RPC stream messages received by the client.
+# TYPE grpc_client_msg_received_total counter
+# HELP grpc_client_msg_sent_total Total number of gRPC stream messages sent by the client.
+# TYPE grpc_client_msg_sent_total counter
+# HELP grpc_client_started_total Total number of RPCs started on the client.
+# TYPE grpc_client_started_total counter
+# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.
+# TYPE process_cpu_seconds_total counter
+# HELP process_max_fds Maximum number of open file descriptors.
+# TYPE process_max_fds gauge
+# HELP process_network_receive_bytes_total Number of bytes received by the process over the network.
+# TYPE process_network_receive_bytes_total counter
+# HELP process_network_transmit_bytes_total Number of bytes sent by the process over the network.
+# TYPE process_network_transmit_bytes_total counter
+# HELP process_open_fds Number of open file descriptors.
+# TYPE process_open_fds gauge
+# HELP process_resident_memory_bytes Resident memory size in bytes.
+# TYPE process_resident_memory_bytes gauge
+# HELP process_start_time_seconds Start time of the process since unix epoch in seconds.
+# TYPE process_start_time_seconds gauge
+# HELP process_virtual_memory_bytes Virtual memory size in bytes.
+# TYPE process_virtual_memory_bytes gauge
+# HELP process_virtual_memory_max_bytes Maximum amount of virtual memory available in bytes.
+# TYPE process_virtual_memory_max_bytes gauge
