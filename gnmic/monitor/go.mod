@@ -4,12 +4,15 @@ go 1.24.3
 
 require (
 	github.com/nats-io/nats.go v1.29.0
+	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/common v0.25.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/nats-io/nkeys v0.4.5 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
