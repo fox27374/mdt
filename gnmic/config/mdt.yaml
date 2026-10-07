@@ -12,6 +12,8 @@ skip-verify: true
 ###################################
 
 api: "${GNMIC_CLUSTERING_SERVICE_NAME}:8800"
+api-server:
+  enable-metrics: true
 clustering:
   cluster-name: mdt
   locker:

@@ -54,6 +54,7 @@ services:
       - gnmic-net
     ports:
       - "4222:4222"
+    command: -m 8222
 
 networks:  
   gnmic-net:
