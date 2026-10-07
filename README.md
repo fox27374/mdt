@@ -25,6 +25,13 @@ of Podman containers managed with `podman-compose`.
                                      │ gnmic-output │  :9273 /metrics
                                      │ (Prometheus) │ ─► Prometheus / scraper
                                      └──────────────┘
+                                            ▲
+                                            │ query
+                                     ┌──────────────┐
+                                     │   monitor    │  :8080 web UI
+                                     │ (health/     │
+                                     │  status)     │
+                                     └──────────────┘
 ```
 
 1. **Collection** — `gnmic-1` / `gnmic-2` subscribe to each target's gNMI streams
@@ -36,6 +43,9 @@ of Podman containers managed with `podman-compose`.
 4. **Output** — `gnmic-output` consumes from NATS and exposes everything as Prometheus
    metrics on `:9273/metrics`, ready to be scraped by Prometheus (or any compatible
    scraper / OTel collector).
+5. **Monitoring** — the `monitor` service queries the collectors, NATS server, Consul,
+   and the configuration file to assemble a live status view of the entire pipeline,
+   exposed as both a web UI and a JSON API on `:8080`.
 
 ## Files
 
@@ -48,6 +58,7 @@ of Podman containers managed with `podman-compose`.
 | [config/ca.pem](config/ca.pem) | CA certificate used to verify the NX-OS switch gRPC endpoints. |
 | [gnmic_env.template](gnmic_env.template) | Template for device credentials. Copy to `gnmic_env` and fill in. |
 | `gnmic_env` | Actual device credentials (git-ignored). |
+| [monitor/](monitor/) | The gnmic-monitor web service: health status and health API for the entire stack. |
 
 > **Note:** The Compose files mount this repo's `config/` directory straight into the
 > containers (`volumes: ./config:/app/config:z`). The `:z` suffix relabels the content
@@ -105,6 +116,40 @@ podman-compose -f compose-debug.yaml up
 - Consul UI (cluster/target ownership): <http://localhost:8500>
 - NATS: `localhost:4222`
 
+## Monitoring
+
+The `monitor` service provides a web UI and JSON API for inspecting the health and status of the entire MDT pipeline. Access it at <http://localhost:8080> or query the JSON API at `/api/status`.
+
+The UI and API display:
+
+- **Component health** — live status of Consul, NATS server, NATS consumer, gnmic-output collectors, and each gnmic collector (gnmic-1, gnmic-2).
+- **Target list** — all targets from the configuration with their owner collector and current status.
+- **Subscription status** — each target's subscriptions with their last-seen timestamp and data-point count.
+
+Status values are:
+
+- **OK** — healthy, receiving data at the expected rate.
+- **WAITING** — component or subscription starting up.
+- **STALE** — no new data received for 3 × the subscription's sample interval (minimum 2 minutes).
+- **NO_DATA** — subscription configured but never received a data point.
+- **ERROR** — configuration error or communication failure.
+
+### Environment variables
+
+The monitor reads these environment variables; defaults shown are used if unset:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `LISTEN` | `:8080` | HTTP listen address |
+| `COLLECTORS` | `gnmic-1=http://gnmic-1:8800,gnmic-2=http://gnmic-2:8800` | Comma-separated list of collectors and their APIs |
+| `NATS_URL` | `nats://nats:4222` | NATS server URL |
+| `NATS_SUBJECT` | `mdt` | NATS subject being consumed |
+| `NATS_MON_URL` | `http://nats:8222` | NATS monitoring API URL |
+| `CONSUL_URL` | `http://consul:8500` | Consul HTTP API URL |
+| `OUTPUT_URL` | `http://gnmic-output:9273/metrics` | gnmic-output metrics endpoint |
+| `MDT_CONFIG` | `/app/config/mdt.yaml` | Path to gnmic collector configuration |
+| `POLL_INTERVAL` | `15s` | How often to query components for status updates |
+
 ## Ports
 
 | Port | Service | Purpose |
@@ -114,5 +159,6 @@ podman-compose -f compose-debug.yaml up
 | 8500 | Consul | HTTP API / UI |
 | 8600/udp | Consul | DNS |
 | 8800 | gnmic | Clustering API (internal) |
+| 8080 | monitor | Monitor web UI and `/api/status` |
 | 57400 | targets | gNMI dial-in port on switches |
 | 9339 | targets | gNMI dial-in port on Palo Alto firewalls |
