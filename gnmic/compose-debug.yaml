@@ -47,6 +47,19 @@ services:
       - consul
       - nats
 
+  monitor:
+    build: ./monitor
+    container_name: gnmic-monitor
+    volumes:
+      - ./config/mdt.yaml:/app/config/mdt.yaml:ro,z
+    networks:
+      - gnmic-net
+    ports:
+      - 8080:8080
+    depends_on:
+      - consul
+      - nats
+
   nats:
     image: docker.io/nats:alpine3.22
     container_name: nats
