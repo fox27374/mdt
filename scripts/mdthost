@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Run a command on the container test host (kof-ibk-debian4) inside a fresh copy of this repo.
+# The test environment is only reachable from that host, so containers for this repo run there.
+#
+#   scripts/mdthost '<command>'     e.g. scripts/mdthost 'cd gnmic && podman-compose up -d'
+#
+# The command runs in the repo root of the copy (/tmp/claude-work/mdt) with HOME=/tmp/claude-home
+# (the account has no home directory). gnmic/gnmic_env is copied host-side from /opt/gnmic/gnmic_env.
+# Env: MDTHOST (default claude@172.24.89.69), MDTHOST_PASS (optional, else ssh keys are used).
+set -euo pipefail
+host=${MDTHOST:-claude@172.24.89.69}
+dir=/tmp/claude-work/mdt
+ssh_cmd=(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "$host")
+if [ -n "${MDTHOST_PASS:-}" ]; then
+  export SSHPASS=$MDTHOST_PASS
+  ssh_cmd=(sshpass -e "${ssh_cmd[@]}")
+fi
+root=$(git rev-parse --show-toplevel)
+COPYFILE_DISABLE=1 tar -C "$root" --exclude=.git --exclude=.DS_Store -czf - . |
+  "${ssh_cmd[@]}" "set -e; export HOME=/tmp/claude-home LC_ALL=C; mkdir -p \$HOME; rm -rf $dir; mkdir -p $dir; tar -xzf - -C $dir; cp /opt/gnmic/gnmic_env $dir/gnmic/gnmic_env; cd $dir; $1" 2> >(grep -v -E 'setlocale|chdir|Warning: Permanently|extended header' >&2)
