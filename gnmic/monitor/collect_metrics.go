@@ -9,7 +9,6 @@ import (
 
 	"github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
-	"github.com/prometheus/common/model"
 )
 
 // failTracker remembers, per (source, subscription), the last counter value and the time
@@ -42,7 +41,7 @@ func newFailTracker() *failTracker {
 //     Sub: <subscription label>, Reason: "subscribe request failed (<value> total)"} (value as an integer).
 // A body that cannot be parsed returns an error.
 func parseMetrics(collector string, body io.Reader, now time.Time, tr *failTracker) ([]Issue, error) {
-	parser := expfmt.NewTextParser(model.UTF8Validation)
+	parser := &expfmt.TextParser{}
 	families, err := parser.TextToMetricFamilies(body)
 	if err != nil {
 		return nil, fmt.Errorf("parse metrics: %w", err)
