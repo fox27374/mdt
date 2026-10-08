@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 	"time"
 )
@@ -40,6 +41,8 @@ func main() {
 	outputURL := env("OUTPUT_URL", "http://gnmic-output:9273/metrics")
 	mdtConfig := env("MDT_CONFIG", "/app/config/mdt.yaml")
 	pollIntervalStr := env("POLL_INTERVAL", "15s")
+	hostsStr := env("HOSTS", "")
+	hostNICIncludeStr := env("HOST_NIC_INCLUDE", "^(en|eth|em|bond|ib)[a-z0-9]*$")
 
 	// Parse collectors
 	cols, err := ParseCollectors(collectorsStr)
@@ -51,6 +54,24 @@ func main() {
 	poll, err := time.ParseDuration(pollIntervalStr)
 	if err != nil {
 		log.Fatalf("parse poll interval: %v", err)
+	}
+
+	// Parse hosts
+	hosts, err := ParseHosts(hostsStr)
+	if err != nil {
+		log.Fatalf("parse hosts: %v", err)
+	}
+
+	// Parse thresholds
+	th, err := ParseThresholds(os.Getenv)
+	if err != nil {
+		log.Fatalf("parse thresholds: %v", err)
+	}
+
+	// Compile NIC include pattern
+	hostNICInclude, err := regexp.Compile(hostNICIncludeStr)
+	if err != nil {
+		log.Fatalf("compile HOST_NIC_INCLUDE pattern: %v", err)
 	}
 
 	// Create store
@@ -71,6 +92,9 @@ func main() {
 		OutputURL:  outputURL,
 		Collectors: cols,
 	}, poll)
+	if len(hosts) > 0 {
+		go RunHosts(ctx, st, hosts, th, hostNICInclude, poll)
+	}
 
 	// Set up HTTP routes
 	mux := http.NewServeMux()
