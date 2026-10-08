@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -66,20 +67,38 @@ func parseTargets(body []byte, owner string) ([]TargetConfig, error) {
 
 		// Build SubConfig for each configured subscription
 		var subs []SubConfig
-		for _, subName := range configuredSubs {
-			if subDetail, ok := subscriptionsDetail[subName].(map[string]interface{}); ok {
-				interval := parseInterval(subDetail["sample-interval"])
-				subs = append(subs, SubConfig{
-					Name:     subName,
-					Interval: interval,
-				})
-			} else {
-				// Subscription is configured but not in the detail map, set to default 10s
-				subs = append(subs, SubConfig{
-					Name:     subName,
-					Interval: 10 * time.Second,
-				})
+		if len(configuredSubs) > 0 {
+			// Target has explicit subscriptions list
+			for _, subName := range configuredSubs {
+				if subDetail, ok := subscriptionsDetail[subName].(map[string]interface{}); ok {
+					interval := parseInterval(subDetail["sample-interval"])
+					subs = append(subs, SubConfig{
+						Name:     subName,
+						Interval: interval,
+					})
+				} else {
+					// Subscription is configured but not in the detail map, set to default 10s
+					subs = append(subs, SubConfig{
+						Name:     subName,
+						Interval: 10 * time.Second,
+					})
+				}
 			}
+		} else {
+			// No explicit subscriptions list: use ALL subscriptions from detail (gnmic's rule)
+			for subName, subDetail := range subscriptionsDetail {
+				if subDetailMap, ok := subDetail.(map[string]interface{}); ok {
+					interval := parseInterval(subDetailMap["sample-interval"])
+					subs = append(subs, SubConfig{
+						Name:     subName,
+						Interval: interval,
+					})
+				}
+			}
+			// Sort by name for consistent ordering
+			sort.Slice(subs, func(i, j int) bool {
+				return subs[i].Name < subs[j].Name
+			})
 		}
 
 		targets = append(targets, TargetConfig{

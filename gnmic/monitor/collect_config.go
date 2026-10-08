@@ -89,6 +89,18 @@ func ParseConfig(data []byte) ([]TargetConfig, error) {
 							}
 						}
 					}
+				} else {
+					// No explicit subscriptions list: use ALL defined subscriptions (gnmic's rule)
+					for subName, interval := range subsMap {
+						subs = append(subs, SubConfig{
+							Name:     subName,
+							Interval: interval,
+						})
+					}
+					// Sort by name for consistent ordering
+					sort.Slice(subs, func(i, j int) bool {
+						return subs[i].Name < subs[j].Name
+					})
 				}
 
 				targets = append(targets, TargetConfig{

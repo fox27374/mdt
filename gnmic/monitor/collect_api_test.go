@@ -382,6 +382,50 @@ func TestParseTargetsWithMultipleSubs(t *testing.T) {
 	}
 }
 
+// TestParseTargetsNoSubscriptionsListUsesAll tests that targets without explicit subscriptions
+// use all available subscriptions (gnmic's rule)
+func TestParseTargetsNoSubscriptionsListUsesAll(t *testing.T) {
+	jsonBody := []byte(`{
+		"multi-sub-target": {
+			"config": {
+				"name": "multi-sub-target",
+				"address": "10.0.0.1:9339",
+				"subscriptions": []
+			},
+			"subscriptions": {
+				"sub1": {"name": "sub1", "sample-interval": 10000000000},
+				"sub2": {"name": "sub2", "sample-interval": "20s"},
+				"sub3": {"name": "sub3"}
+			}
+		}
+	}`)
+
+	targets, err := parseTargets(jsonBody, "test-owner")
+	if err != nil {
+		t.Fatalf("parseTargets failed: %v", err)
+	}
+
+	if len(targets) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(targets))
+	}
+
+	target := targets[0]
+	if len(target.Subs) != 3 {
+		t.Fatalf("expected 3 subscriptions, got %d", len(target.Subs))
+	}
+
+	// Check that all subscriptions are present
+	subNames := make(map[string]bool)
+	for _, sub := range target.Subs {
+		subNames[sub.Name] = true
+	}
+	for _, name := range []string{"sub1", "sub2", "sub3"} {
+		if !subNames[name] {
+			t.Errorf("missing subscription %s", name)
+		}
+	}
+}
+
 // BenchmarkParseTargets benchmarks the parseTargets function with a fixture
 func BenchmarkParseTargets(b *testing.B) {
 	body, err := os.ReadFile("testdata/api_targets_gnmic-1.json")
