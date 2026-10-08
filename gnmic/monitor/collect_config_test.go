@@ -187,6 +187,46 @@ func TestParseConfigRealFile(t *testing.T) {
 	}
 }
 
+func TestParseConfigNoSubscriptionsListUsesAll(t *testing.T) {
+	// Target without explicit subscriptions list should use ALL defined subscriptions
+	yaml := `
+targets:
+  10.0.0.1:57400:
+    name: target-1
+subscriptions:
+  sub1:
+    sample-interval: 10s
+  sub2:
+    sample-interval: 20s
+  sub3:
+    sample-interval: 30s
+`
+	targets, err := ParseConfig([]byte(yaml))
+	if err != nil {
+		t.Fatalf("ParseConfig failed: %v", err)
+	}
+	if len(targets) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(targets))
+	}
+
+	// Should have all 3 subscriptions
+	if len(targets[0].Subs) != 3 {
+		t.Errorf("subscriptions count = %d, want 3", len(targets[0].Subs))
+	}
+
+	// Verify names
+	subNames := make(map[string]bool)
+	for _, sub := range targets[0].Subs {
+		subNames[sub.Name] = true
+	}
+	for i := 1; i <= 3; i++ {
+		subName := "sub" + string('0'+byte(i))
+		if !subNames[subName] {
+			t.Errorf("missing subscription %s", subName)
+		}
+	}
+}
+
 func TestRunConfig(t *testing.T) {
 	// Create a temporary file
 	yaml := `

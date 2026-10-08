@@ -47,6 +47,144 @@ func TestStoreCollectorTargetWithFreshSeen(t *testing.T) {
 	}
 }
 
+func TestMultipleSubscriptionsInSnapshot(t *testing.T) {
+	// Test that a target with multiple subscriptions shows all of them in the snapshot
+	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	started := time.Date(2024, 1, 1, 11, 0, 0, 0, time.UTC)
+	st := NewStore(started)
+
+	// Set a target with 3 subscriptions from both config and collector
+	st.SetConfig("config", []TargetConfig{
+		{
+			Name:    "multi-target",
+			Address: "10.0.0.1:57400",
+			Owner:   "",
+			Subs: []SubConfig{
+				{Name: "sub1", Interval: 30 * time.Second},
+				{Name: "sub2", Interval: 60 * time.Second},
+				{Name: "sub3", Interval: 120 * time.Second},
+			},
+		},
+	})
+
+	st.SetConfig("gnmic-1", []TargetConfig{
+		{
+			Name:    "multi-target",
+			Address: "10.0.0.1:57400",
+			Owner:   "gnmic-1",
+			Subs: []SubConfig{
+				{Name: "sub1", Interval: 30 * time.Second},
+				{Name: "sub2", Interval: 60 * time.Second},
+				{Name: "sub3", Interval: 120 * time.Second},
+			},
+		},
+	})
+
+	snap := st.Snapshot(now)
+
+	if len(snap.Targets) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(snap.Targets))
+	}
+
+	tgt := snap.Targets[0]
+	if len(tgt.Subs) != 3 {
+		t.Fatalf("expected 3 subscriptions, got %d", len(tgt.Subs))
+	}
+
+	// Verify all subscription names are present
+	subNames := make(map[string]bool)
+	for _, sub := range tgt.Subs {
+		subNames[sub.Name] = true
+	}
+	for i := 1; i <= 3; i++ {
+		subName := "sub" + string('0'+byte(i))
+		if !subNames[subName] {
+			t.Errorf("missing subscription %s", subName)
+		}
+	}
+}
+
+func TestTargetWithExplicitListAndTargetWithAllSubs(t *testing.T) {
+	// Regression test for issue #50: A target with explicit subscription list and another
+	// with no explicit list (using all) should both show all their subscriptions
+	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	started := time.Date(2024, 1, 1, 11, 0, 0, 0, time.UTC)
+	st := NewStore(started)
+
+	// Target 1: explicit list with 2 subscriptions
+	st.SetConfig("config", []TargetConfig{
+		{
+			Name:    "explicit-list-target",
+			Address: "10.0.0.1:57400",
+			Subs: []SubConfig{
+				{Name: "sub1", Interval: 30 * time.Second},
+				{Name: "sub2", Interval: 60 * time.Second},
+			},
+		},
+		{
+			Name:    "all-subs-target",
+			Address: "10.0.0.2:57400",
+			Subs: []SubConfig{
+				// No explicit list - should have all 3 subscriptions after config parsing
+				{Name: "sub1", Interval: 30 * time.Second},
+				{Name: "sub2", Interval: 60 * time.Second},
+				{Name: "sub3", Interval: 120 * time.Second},
+			},
+		},
+	})
+
+	st.SetConfig("gnmic-1", []TargetConfig{
+		{
+			Name:    "explicit-list-target",
+			Address: "10.0.0.1:57400",
+			Owner:   "gnmic-1",
+			Subs: []SubConfig{
+				{Name: "sub1", Interval: 30 * time.Second},
+				{Name: "sub2", Interval: 60 * time.Second},
+			},
+		},
+		{
+			Name:    "all-subs-target",
+			Address: "10.0.0.2:57400",
+			Owner:   "gnmic-1",
+			Subs: []SubConfig{
+				{Name: "sub1", Interval: 30 * time.Second},
+				{Name: "sub2", Interval: 60 * time.Second},
+				{Name: "sub3", Interval: 120 * time.Second},
+			},
+		},
+	})
+
+	snap := st.Snapshot(now)
+
+	if len(snap.Targets) != 2 {
+		t.Fatalf("expected 2 targets, got %d", len(snap.Targets))
+	}
+
+	// Check explicit list target has 2 subscriptions
+	var explicitTarget *TargetState
+	var allSubsTarget *TargetState
+	for i := range snap.Targets {
+		if snap.Targets[i].Name == "explicit-list-target" {
+			explicitTarget = &snap.Targets[i]
+		} else if snap.Targets[i].Name == "all-subs-target" {
+			allSubsTarget = &snap.Targets[i]
+		}
+	}
+
+	if explicitTarget == nil || allSubsTarget == nil {
+		t.Fatalf("targets not found in snapshot")
+	}
+
+	if len(explicitTarget.Subs) != 2 {
+		t.Errorf("explicit-list-target: expected 2 subs, got %d", len(explicitTarget.Subs))
+	}
+
+	if len(allSubsTarget.Subs) != 3 {
+		t.Errorf("all-subs-target: expected 3 subs, got %d", len(allSubsTarget.Subs))
+	}
+}
+
 func TestStoreNeverSeenWindow(t *testing.T) {
 	// Never seen, within window gives WAITING; past window gives NO_DATA
 	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
