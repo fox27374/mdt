@@ -964,47 +964,51 @@
 
 			// Draw nodes
 			for (const node of model.nodes) {
-				const statusClass = statusClass(node.status);
-				const g = document.createElementNS(SVG_NS, "g");
-				g.setAttribute("class", "node node-" + node.kind + " st-" + statusClass);
-				g.setAttribute("data-id", node.id);
-				g.setAttribute("transform", "translate(" + node.x + "," + node.y + ")");
+				try {
+					const nodeStatusClass = statusClass(node.status);
+					const g = document.createElementNS(SVG_NS, "g");
+					g.setAttribute("class", "node node-" + node.kind + " st-" + nodeStatusClass);
+					g.setAttribute("data-id", node.id);
+					g.setAttribute("transform", "translate(" + node.x + "," + node.y + ")");
 
-				// Circle
-				const circle = document.createElementNS(SVG_NS, "circle");
-				circle.setAttribute("cx", "0");
-				circle.setAttribute("cy", "0");
-				circle.setAttribute("r", "26");
-				g.appendChild(circle);
+					// Circle
+					const circle = document.createElementNS(SVG_NS, "circle");
+					circle.setAttribute("cx", "0");
+					circle.setAttribute("cy", "0");
+					circle.setAttribute("r", "26");
+					g.appendChild(circle);
 
-				// Icon
-				const icon = iconFor(node.kind);
-				g.appendChild(icon);
+					// Icon
+					const icon = iconFor(node.kind);
+					g.appendChild(icon);
 
-				// Label text
-				let label = node.label;
-				if (node.kind === "target" && label.length > 18) {
-					label = label.substring(0, 17) + "…";
+					// Label text
+					let label = node.label || "";
+					if (node.kind === "target" && label.length > 18) {
+						label = label.substring(0, 17) + "…";
+					}
+
+					const text = document.createElementNS(SVG_NS, "text");
+					text.setAttribute("x", "0");
+					text.setAttribute("y", "38");
+					text.setAttribute("class", "label");
+					text.textContent = label;
+					g.appendChild(text);
+
+					// "not monitored" text if needed
+					if (node.notMonitored) {
+						const subtext = document.createElementNS(SVG_NS, "text");
+						subtext.setAttribute("x", "0");
+						subtext.setAttribute("y", "52");
+						subtext.setAttribute("class", "sublabel");
+						subtext.textContent = "not monitored";
+						g.appendChild(subtext);
+					}
+
+					svg.appendChild(g);
+				} catch (e) {
+					console.error("Failed to render node " + (node.id || "unknown") + ":", e);
 				}
-
-				const text = document.createElementNS(SVG_NS, "text");
-				text.setAttribute("x", "0");
-				text.setAttribute("y", "38");
-				text.setAttribute("class", "label");
-				text.textContent = label;
-				g.appendChild(text);
-
-				// "not monitored" text if needed
-				if (node.notMonitored) {
-					const subtext = document.createElementNS(SVG_NS, "text");
-					subtext.setAttribute("x", "0");
-					subtext.setAttribute("y", "52");
-					subtext.setAttribute("class", "sublabel");
-					subtext.textContent = "not monitored";
-					g.appendChild(subtext);
-				}
-
-				svg.appendChild(g);
 			}
 
 			// Build legend
@@ -1359,6 +1363,7 @@
 		}
 
 		async function fetchStatus() {
+			const errorBanner = document.getElementById("errorBanner");
 			try {
 				const response = await fetch("/api/status");
 				if (!response.ok) {
@@ -1367,21 +1372,64 @@
 				const data = await response.json();
 				state.lastData = data;
 				state.lastSuccessTime = new Date();
-				document.getElementById("errorBanner").classList.remove("show");
+				errorBanner.classList.remove("show");
+				errorBanner.textContent = "Cannot reach monitor API";
 
-				renderComponents(data.components);
-				renderUpdatedTime();
-				renderSummary(data.targets);
-				renderTargets(data.targets);
-				renderHosts(data.hosts);
-				if (typeof buildTopology === "function") {
-					renderTopology(buildTopology(data));
+				// Render each section with its own error handling
+				try {
+					renderComponents(data.components);
+				} catch (e) {
+					console.error("Components failed to render:", e);
+				}
+
+				try {
+					renderUpdatedTime();
+				} catch (e) {
+					console.error("Updated time failed to render:", e);
+				}
+
+				try {
+					renderSummary(data.targets);
+				} catch (e) {
+					console.error("Summary failed to render:", e);
+				}
+
+				try {
+					renderTargets(data.targets);
+				} catch (e) {
+					console.error("Targets failed to render:", e);
+				}
+
+				try {
+					renderHosts(data.hosts);
+				} catch (e) {
+					console.error("Hosts failed to render:", e);
+				}
+
+				try {
+					if (typeof buildTopology === "function") {
+						renderTopology(buildTopology(data));
+					}
+				} catch (e) {
+					console.error("Topology failed to render:", e);
+					const topologyView = document.getElementById("topologyView");
+					if (topologyView) {
+						topologyView.innerHTML = '<div style="color: var(--error); padding: 16px;">Topology failed to render: ' +
+							e.message + '</div>';
+					}
 				}
 			} catch (error) {
-				document.getElementById("errorBanner").classList.add("show");
+				// Only show API banner for fetch/JSON errors
+				errorBanner.classList.add("show");
+				errorBanner.textContent = "Cannot reach monitor API";
+				console.error("API fetch failed:", error);
 				if (state.lastData) {
 					// Keep showing old data but with error banner
-					renderUpdatedTime();
+					try {
+						renderUpdatedTime();
+					} catch (e) {
+						console.error("Updated time failed to render:", e);
+					}
 				}
 			}
 		}

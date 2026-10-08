@@ -311,6 +311,50 @@ test("8. All x and y are finite, no two nodes share same (x, y)", () => {
   }
 });
 
+test("8b. All node labels are non-null strings", () => {
+  const data = {
+    components: [
+      { name: "collector gnmic-1", ok: true, detail: "healthy" },
+      { name: "nats", ok: true, detail: "ok" },
+      { name: "gnmic-output", ok: true, detail: "ok" },
+      { name: "consul", ok: true, detail: "ok" }
+    ],
+    targets: [
+      { name: "target-a", address: "10.0.0.1:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] },
+      { name: "", address: "10.0.0.2:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] }
+    ]
+  };
+
+  const topo = buildTopology(data);
+
+  for (const node of topo.nodes) {
+    assert(node.label !== null && node.label !== undefined, `node ${node.id} has null/undefined label`);
+    assert(typeof node.label === "string", `node ${node.id} label is not a string: ${typeof node.label}`);
+  }
+});
+
+test("8c. All node statuses are valid status values", () => {
+  const validStatuses = ["OK", "WAITING", "STALE", "NO_DATA", "ERROR", "UNKNOWN"];
+
+  const data = {
+    components: [
+      { name: "collector gnmic-1", ok: true, detail: "healthy" },
+      { name: "nats", ok: true, detail: "ok" },
+      { name: "gnmic-output", ok: true, detail: "ok" },
+      { name: "consul", ok: true, detail: "ok" }
+    ],
+    targets: [
+      { name: "target-a", address: "10.0.0.1:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] }
+    ]
+  };
+
+  const topo = buildTopology(data);
+
+  for (const node of topo.nodes) {
+    assert(validStatuses.includes(node.status), `node ${node.id} has invalid status: ${node.status}`);
+  }
+});
+
 test("9. Infrastructure nodes (nats, output, prometheus) y is average of first/last collector y", () => {
   // Test case 1: Two collectors - infraY should be average of their y values
   let data = {
