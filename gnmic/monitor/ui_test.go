@@ -104,6 +104,34 @@ func TestUIHandler(t *testing.T) {
 		if !strings.Contains(body, "class=\"tooltip\"") {
 			t.Error("expected body to contain 'class=\"tooltip\"'")
 		}
+
+		if !strings.Contains(body, "id=\"hostsPanel\"") {
+			t.Error("expected body to contain 'id=\"hostsPanel\"'")
+		}
+
+		if !strings.Contains(body, "id=\"hostsTable\"") {
+			t.Error("expected body to contain 'id=\"hostsTable\"'")
+		}
+
+		if !strings.Contains(body, "id=\"hostsSummary\"") {
+			t.Error("expected body to contain 'id=\"hostsSummary\"'")
+		}
+
+		if !strings.Contains(body, "function renderHosts") {
+			t.Error("expected body to contain 'function renderHosts'")
+		}
+
+		if !strings.Contains(body, "expandedHosts") {
+			t.Error("expected body to contain 'expandedHosts'")
+		}
+
+		if !strings.Contains(body, "level-crit") {
+			t.Error("expected body to contain 'level-crit'")
+		}
+
+		if !strings.Contains(body, "level-warn") {
+			t.Error("expected body to contain 'level-warn'")
+		}
 	})
 
 	t.Run("GET /topology.js returns 200 with JavaScript", func(t *testing.T) {
