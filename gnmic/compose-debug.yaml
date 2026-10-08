@@ -56,9 +56,23 @@ services:
       - gnmic-net
     ports:
       - 8080:8080
+    environment:
+      - HOSTS=${MONITOR_HOSTS:-docker-host=http://host.containers.internal:9100}
     depends_on:
       - consul
       - nats
+      - node-exporter
+
+  node-exporter:
+    image: docker.io/prom/node-exporter:v1.12.1
+    container_name: node-exporter
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    command:
+      - --path.rootfs=/host
+      - --web.listen-address=:9100
 
   nats:
     image: docker.io/nats:alpine3.22
@@ -69,6 +83,6 @@ services:
       - "4222:4222"
     command: -m 8222
 
-networks:  
+networks:
   gnmic-net:
     driver: bridge
