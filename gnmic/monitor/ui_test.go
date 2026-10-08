@@ -132,6 +132,68 @@ func TestUIHandler(t *testing.T) {
 		if !strings.Contains(body, "level-warn") {
 			t.Error("expected body to contain 'level-warn'")
 		}
+
+		// Test that legend includes all required status classes
+		if !strings.Contains(body, "st-waiting") {
+			t.Error("expected body to contain 'st-waiting' for legend")
+		}
+
+		if !strings.Contains(body, "st-stale") {
+			t.Error("expected body to contain 'st-stale' for legend")
+		}
+
+		if !strings.Contains(body, "st-no-data") {
+			t.Error("expected body to contain 'st-no-data' for legend")
+		}
+
+		// Test that legend dot CSS rules are defined for all statuses
+		if !strings.Contains(body, ".legend-dot.ok") {
+			t.Error("expected body to contain '.legend-dot.ok' CSS rule")
+		}
+
+		if !strings.Contains(body, ".legend-dot.waiting") {
+			t.Error("expected body to contain '.legend-dot.waiting' CSS rule")
+		}
+
+		if !strings.Contains(body, ".legend-dot.stale") {
+			t.Error("expected body to contain '.legend-dot.stale' CSS rule")
+		}
+
+		if !strings.Contains(body, ".legend-dot.no-data") {
+			t.Error("expected body to contain '.legend-dot.no-data' CSS rule")
+		}
+
+		if !strings.Contains(body, ".legend-dot.error") {
+			t.Error("expected body to contain '.legend-dot.error' CSS rule")
+		}
+
+		// Test that SVG text elements have fill rules in CSS
+		if !strings.Contains(body, ".node text {") {
+			t.Error("expected body to contain '.node text {' CSS rule")
+		}
+
+		// Check for fill in node text rule
+		if !strings.Contains(body, "fill: var(--text)") {
+			t.Error("expected body to contain 'fill: var(--text)' in node text rule")
+		}
+
+		// Test that SVG heading text has explicit fill color set
+		if !strings.Contains(body, "text.setAttribute(\"fill\"") {
+			t.Error("expected body to contain setAttribute for SVG text fill")
+		}
+
+		// Test that arrowhead markers are defined with proper colors
+		if !strings.Contains(body, "arrowhead-normal") {
+			t.Error("expected body to contain 'arrowhead-normal' marker")
+		}
+
+		if !strings.Contains(body, "arrowhead-error") {
+			t.Error("expected body to contain 'arrowhead-error' marker")
+		}
+
+		if !strings.Contains(body, "arrowhead-stale") {
+			t.Error("expected body to contain 'arrowhead-stale' marker")
+		}
 	})
 
 	t.Run("GET /topology.js returns 200 with JavaScript", func(t *testing.T) {
