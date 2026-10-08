@@ -17,6 +17,7 @@
 			--chip-bg: #f5f5f5;
 			--banner-bg: #ffebee;
 			--banner-fg: #c62828;
+			--edge: #708090;
 		}
 
 		@media (prefers-color-scheme: dark) {
@@ -32,6 +33,7 @@
 				--chip-bg: #2a2a2a;
 				--banner-bg: #5f2c2c;
 				--banner-fg: #ffcdd2;
+				--edge: #90a4ae;
 			}
 		}
 
@@ -47,6 +49,7 @@
 			--chip-bg: #2a2a2a;
 			--banner-bg: #5f2c2c;
 			--banner-fg: #ffcdd2;
+			--edge: #90a4ae;
 		}
 
 		* {
@@ -291,6 +294,132 @@
 			background-color: var(--bg);
 		}
 
+		#topologySvg {
+			display: block;
+			margin-bottom: 16px;
+		}
+
+		.legend {
+			display: flex;
+			gap: 16px;
+			flex-wrap: wrap;
+			margin-top: 12px;
+			font-size: 12px;
+		}
+
+		.legend-item {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+		}
+
+		.legend-dot {
+			width: 12px;
+			height: 12px;
+			border-radius: 50%;
+			flex-shrink: 0;
+		}
+
+		.legend-dot.dashed {
+			border: 2px dashed var(--waiting);
+			background: transparent;
+		}
+
+		.edge {
+			fill: none;
+			vector-effect: non-scaling-stroke;
+		}
+
+		.edge-normal {
+			stroke: var(--edge);
+			stroke-width: 2;
+		}
+
+		.edge-error {
+			stroke: var(--error);
+			stroke-width: 3;
+		}
+
+		.edge-stale {
+			stroke: var(--stale);
+			stroke-width: 2;
+			stroke-dasharray: 4,4;
+		}
+
+		.edge-locker {
+			stroke: var(--edge);
+			stroke-width: 2;
+			stroke-dasharray: 2,2;
+		}
+
+		.node {
+			cursor: pointer;
+		}
+
+		.node circle {
+			fill: var(--chip-bg);
+			stroke-width: 4;
+		}
+
+		.node-target.st-ok circle { stroke: var(--ok); }
+		.node-target.st-waiting circle { stroke: var(--waiting); }
+		.node-target.st-stale circle { stroke: var(--stale); }
+		.node-target.st-no-data circle { stroke: var(--no-data); }
+		.node-target.st-error circle { stroke: var(--error); }
+		.node-target.st-unknown circle { stroke: var(--waiting); stroke-dasharray: 2,2; }
+
+		.node-collector.st-ok circle { stroke: var(--ok); }
+		.node-collector.st-waiting circle { stroke: var(--waiting); }
+		.node-collector.st-stale circle { stroke: var(--stale); }
+		.node-collector.st-no-data circle { stroke: var(--no-data); }
+		.node-collector.st-error circle { stroke: var(--error); }
+		.node-collector.st-unknown circle { stroke: var(--waiting); stroke-dasharray: 2,2; }
+
+		.node-nats.st-ok circle { stroke: var(--ok); }
+		.node-nats.st-waiting circle { stroke: var(--waiting); }
+		.node-nats.st-stale circle { stroke: var(--stale); }
+		.node-nats.st-no-data circle { stroke: var(--no-data); }
+		.node-nats.st-error circle { stroke: var(--error); }
+		.node-nats.st-unknown circle { stroke: var(--waiting); stroke-dasharray: 2,2; }
+
+		.node-output.st-ok circle { stroke: var(--ok); }
+		.node-output.st-waiting circle { stroke: var(--waiting); }
+		.node-output.st-stale circle { stroke: var(--stale); }
+		.node-output.st-no-data circle { stroke: var(--no-data); }
+		.node-output.st-error circle { stroke: var(--error); }
+		.node-output.st-unknown circle { stroke: var(--waiting); stroke-dasharray: 2,2; }
+
+		.node-consul.st-ok circle { stroke: var(--ok); }
+		.node-consul.st-waiting circle { stroke: var(--waiting); }
+		.node-consul.st-stale circle { stroke: var(--stale); }
+		.node-consul.st-no-data circle { stroke: var(--no-data); }
+		.node-consul.st-error circle { stroke: var(--error); }
+		.node-consul.st-unknown circle { stroke: var(--waiting); stroke-dasharray: 2,2; }
+
+		.node-prometheus.st-ok circle { stroke: var(--ok); }
+		.node-prometheus.st-waiting circle { stroke: var(--waiting); }
+		.node-prometheus.st-stale circle { stroke: var(--stale); }
+		.node-prometheus.st-no-data circle { stroke: var(--no-data); }
+		.node-prometheus.st-error circle { stroke: var(--error); }
+		.node-prometheus.st-unknown circle { stroke: var(--waiting); stroke-dasharray: 2,2; }
+
+		.node-icon {
+			stroke: var(--fg);
+			fill: none;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.node text {
+			font-size: 12px;
+			text-anchor: middle;
+			fill: var(--fg);
+			font-weight: 500;
+		}
+
+		.node .label { dominant-baseline: hanging; }
+		.node .sublabel { dominant-baseline: hanging; font-weight: 400; }
+
 		[hidden] {
 			display: none !important;
 		}
@@ -343,6 +472,7 @@
 
 		<div id="topologyView">
 			<svg id="topologySvg" role="img" aria-label="Pipeline topology" width="100%"></svg>
+			<div id="topologyLegend" class="legend"></div>
 		</div>
 
 		<div id="tableView" hidden>
@@ -502,6 +632,298 @@
 			});
 		}
 
+		const SVG_NS = "http://www.w3.org/2000/svg";
+
+		function iconFor(kind) {
+			const g = document.createElementNS(SVG_NS, "g");
+			const R = 26;
+			const iconSize = 16;
+			const iconX = -iconSize / 2;
+			const iconY = -iconSize / 2;
+
+			if (kind === "target") {
+				// Router: circle with arrows
+				const circle = document.createElementNS(SVG_NS, "circle");
+				circle.setAttribute("cx", "0");
+				circle.setAttribute("cy", "0");
+				circle.setAttribute("r", "5");
+				circle.setAttribute("class", "node-icon");
+				g.appendChild(circle);
+
+				// Four arrows
+				const arrows = [
+					{ x1: 0, y1: -10, x2: 0, y2: -6 }, // top
+					{ x1: 0, y1: 10, x2: 0, y2: 6 },   // bottom
+					{ x1: -10, y1: 0, x2: -6, y2: 0 }, // left
+					{ x1: 10, y1: 0, x2: 6, y2: 0 }    // right
+				];
+				for (const arr of arrows) {
+					const line = document.createElementNS(SVG_NS, "line");
+					line.setAttribute("x1", arr.x1);
+					line.setAttribute("y1", arr.y1);
+					line.setAttribute("x2", arr.x2);
+					line.setAttribute("y2", arr.y2);
+					line.setAttribute("class", "node-icon");
+					g.appendChild(line);
+				}
+			} else if (kind === "collector") {
+				// Server: rounded rectangle with lines
+				const rect = document.createElementNS(SVG_NS, "rect");
+				rect.setAttribute("x", "-10");
+				rect.setAttribute("y", "-8");
+				rect.setAttribute("width", "20");
+				rect.setAttribute("height", "16");
+				rect.setAttribute("rx", "2");
+				rect.setAttribute("class", "node-icon");
+				g.appendChild(rect);
+
+				// Two horizontal lines
+				for (let y = -4; y <= 4; y += 8) {
+					const line = document.createElementNS(SVG_NS, "line");
+					line.setAttribute("x1", "-8");
+					line.setAttribute("y1", y);
+					line.setAttribute("x2", "8");
+					line.setAttribute("y2", y);
+					line.setAttribute("class", "node-icon");
+					g.appendChild(line);
+				}
+			} else if (kind === "nats") {
+				// Message bus: three horizontal bars
+				for (let i = 0; i < 3; i++) {
+					const y = (i - 1) * 6;
+					const line = document.createElementNS(SVG_NS, "line");
+					line.setAttribute("x1", "-10");
+					line.setAttribute("y1", y);
+					line.setAttribute("x2", "10");
+					line.setAttribute("y2", y);
+					line.setAttribute("stroke-width", 2 - i * 0.5);
+					line.setAttribute("class", "node-icon");
+					g.appendChild(line);
+				}
+			} else if (kind === "output") {
+				// Database: cylinder
+				const top = document.createElementNS(SVG_NS, "ellipse");
+				top.setAttribute("cx", "0");
+				top.setAttribute("cy", "-6");
+				top.setAttribute("rx", "8");
+				top.setAttribute("ry", "4");
+				top.setAttribute("class", "node-icon");
+				g.appendChild(top);
+
+				const left = document.createElementNS(SVG_NS, "line");
+				left.setAttribute("x1", "-8");
+				left.setAttribute("y1", "-6");
+				left.setAttribute("x2", "-8");
+				left.setAttribute("y2", "6");
+				left.setAttribute("class", "node-icon");
+				g.appendChild(left);
+
+				const right = document.createElementNS(SVG_NS, "line");
+				right.setAttribute("x1", "8");
+				right.setAttribute("y1", "-6");
+				right.setAttribute("x2", "8");
+				right.setAttribute("y2", "6");
+				right.setAttribute("class", "node-icon");
+				g.appendChild(right);
+
+				const bottom = document.createElementNS(SVG_NS, "ellipse");
+				bottom.setAttribute("cx", "0");
+				bottom.setAttribute("cy", "6");
+				bottom.setAttribute("rx", "8");
+				bottom.setAttribute("ry", "4");
+				bottom.setAttribute("class", "node-icon");
+				g.appendChild(bottom);
+			} else if (kind === "consul") {
+				// Hexagon
+				const hexPoints = [
+					{ x: -8, y: 0 },
+					{ x: -4, y: -7 },
+					{ x: 4, y: -7 },
+					{ x: 8, y: 0 },
+					{ x: 4, y: 7 },
+					{ x: -4, y: 7 }
+				];
+				const path = document.createElementNS(SVG_NS, "path");
+				const pathStr = hexPoints.map((p, i) => (i === 0 ? "M" : "L") + p.x + "," + p.y).join(" ") + " Z";
+				path.setAttribute("d", pathStr);
+				path.setAttribute("class", "node-icon");
+				g.appendChild(path);
+			} else if (kind === "prometheus") {
+				// Circle with triangle/flame on top
+				const circle = document.createElementNS(SVG_NS, "circle");
+				circle.setAttribute("cx", "0");
+				circle.setAttribute("cy", "0");
+				circle.setAttribute("r", "7");
+				circle.setAttribute("class", "node-icon");
+				g.appendChild(circle);
+
+				const triangle = document.createElementNS(SVG_NS, "path");
+				triangle.setAttribute("d", "M 0,-10 L -3,-5 L 3,-5 Z");
+				triangle.setAttribute("class", "node-icon");
+				g.appendChild(triangle);
+			}
+
+			return g;
+		}
+
+		function renderTopology(model) {
+			const svg = document.getElementById("topologySvg");
+			const legend = document.getElementById("topologyLegend");
+
+			if (!svg || !model || !model.nodes || !model.edges) {
+				return;
+			}
+
+			// Clear SVG
+			while (svg.firstChild) {
+				svg.removeChild(svg.firstChild);
+			}
+
+			// Clear legend
+			legend.innerHTML = "";
+
+			// Set viewBox
+			svg.setAttribute("viewBox", "0 0 " + model.width + " " + model.height);
+
+			// Create defs for markers
+			const defs = document.createElementNS(SVG_NS, "defs");
+			const marker = document.createElementNS(SVG_NS, "marker");
+			marker.setAttribute("id", "arrowhead");
+			marker.setAttribute("markerWidth", "10");
+			marker.setAttribute("markerHeight", "10");
+			marker.setAttribute("refX", "9");
+			marker.setAttribute("refY", "3");
+			marker.setAttribute("orient", "auto");
+			const poly = document.createElementNS(SVG_NS, "polygon");
+			poly.setAttribute("points", "0 0, 10 3, 0 6");
+			poly.setAttribute("fill", "var(--edge)");
+			marker.appendChild(poly);
+			defs.appendChild(marker);
+			svg.appendChild(defs);
+
+			// Draw column headings
+			const headings = [
+				{ x: 80, text: "Targets" },
+				{ x: 320, text: "Collectors" },
+				{ x: 540, text: "NATS" },
+				{ x: 720, text: "Output" },
+				{ x: 900, text: "Prometheus" }
+			];
+			for (const h of headings) {
+				const text = document.createElementNS(SVG_NS, "text");
+				text.setAttribute("x", h.x);
+				text.setAttribute("y", "20");
+				text.setAttribute("text-anchor", "middle");
+				text.setAttribute("font-size", "11");
+				text.setAttribute("fill", "var(--fg)");
+				text.setAttribute("opacity", "0.6");
+				text.textContent = h.text;
+				svg.appendChild(text);
+			}
+
+			// Draw edges first
+			for (const edge of model.edges) {
+				const fromNode = model.nodes.find(n => n.id === edge.from);
+				const toNode = model.nodes.find(n => n.id === edge.to);
+
+				if (!fromNode || !toNode) continue;
+
+				const R = 26;
+				const x1 = fromNode.x + R;
+				const x2 = toNode.x - R;
+				const y1 = fromNode.y;
+				const y2 = toNode.y;
+				const midX = (x1 + x2) / 2;
+
+				const path = document.createElementNS(SVG_NS, "path");
+				const pathStr = "M " + x1 + "," + y1 + " H " + midX + " V " + y2 + " H " + x2;
+				path.setAttribute("d", pathStr);
+				path.setAttribute("class", "edge edge-" + edge.style);
+
+				// Add arrowhead for non-locker edges
+				if (edge.style !== "locker") {
+					path.setAttribute("marker-end", "url(#arrowhead)");
+				}
+
+				svg.appendChild(path);
+			}
+
+			// Draw nodes
+			for (const node of model.nodes) {
+				const statusClass = statusClass(node.status);
+				const g = document.createElementNS(SVG_NS, "g");
+				g.setAttribute("class", "node node-" + node.kind + " st-" + statusClass);
+				g.setAttribute("data-id", node.id);
+				g.setAttribute("transform", "translate(" + node.x + "," + node.y + ")");
+
+				// Circle
+				const circle = document.createElementNS(SVG_NS, "circle");
+				circle.setAttribute("cx", "0");
+				circle.setAttribute("cy", "0");
+				circle.setAttribute("r", "26");
+				g.appendChild(circle);
+
+				// Icon
+				const icon = iconFor(node.kind);
+				g.appendChild(icon);
+
+				// Label text
+				let label = node.label;
+				if (node.kind === "target" && label.length > 18) {
+					label = label.substring(0, 17) + "…";
+				}
+
+				const text = document.createElementNS(SVG_NS, "text");
+				text.setAttribute("x", "0");
+				text.setAttribute("y", "38");
+				text.setAttribute("class", "label");
+				text.textContent = label;
+				g.appendChild(text);
+
+				// "not monitored" text if needed
+				if (node.notMonitored) {
+					const subtext = document.createElementNS(SVG_NS, "text");
+					subtext.setAttribute("x", "0");
+					subtext.setAttribute("y", "52");
+					subtext.setAttribute("class", "sublabel");
+					subtext.textContent = "not monitored";
+					g.appendChild(subtext);
+				}
+
+				svg.appendChild(g);
+			}
+
+			// Build legend
+			const statuses = ["OK", "WAITING", "STALE", "NO_DATA", "ERROR"];
+			for (const status of statuses) {
+				const item = document.createElement("div");
+				item.className = "legend-item";
+
+				const dot = document.createElement("div");
+				dot.className = "legend-dot " + statusClass(status);
+				const colorVar = status === "NO_DATA" ? "--no-data" : "--" + status.toLowerCase();
+				dot.style.backgroundColor = "var(" + colorVar + ")";
+				item.appendChild(dot);
+
+				const label = document.createElement("span");
+				label.textContent = status.replace(/_/g, " ");
+				item.appendChild(label);
+
+				legend.appendChild(item);
+			}
+
+			// Add "Unknown / Not Monitored" to legend
+			const unknownItem = document.createElement("div");
+			unknownItem.className = "legend-item";
+			const unknownDot = document.createElement("div");
+			unknownDot.className = "legend-dot dashed";
+			unknownItem.appendChild(unknownDot);
+			const unknownLabel = document.createElement("span");
+			unknownLabel.textContent = "Unknown / Not Monitored";
+			unknownItem.appendChild(unknownLabel);
+			legend.appendChild(unknownItem);
+		}
+
 		function renderTargets(targets) {
 			const tbody = document.getElementById("targets");
 			tbody.innerHTML = "";
@@ -625,6 +1047,9 @@
 				renderUpdatedTime();
 				renderSummary(data.targets);
 				renderTargets(data.targets);
+				if (typeof buildTopology === "function") {
+					renderTopology(buildTopology(data));
+				}
 			} catch (error) {
 				document.getElementById("errorBanner").classList.add("show");
 				if (state.lastData) {
