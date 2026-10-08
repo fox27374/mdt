@@ -68,6 +68,7 @@ services:
     container_name: node-exporter
     network_mode: host
     pid: host
+    networks: {}
     volumes:
       - /:/host:ro
     command:
