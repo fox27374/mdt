@@ -149,7 +149,7 @@ The monitor reads these environment variables; defaults shown are used if unset:
 | `OUTPUT_URL` | `http://gnmic-output:9273/metrics` | gnmic-output metrics endpoint |
 | `MDT_CONFIG` | `/app/config/mdt.yaml` | Path to gnmic collector configuration |
 | `POLL_INTERVAL` | `15s` | How often to query components for status updates |
-| `HOSTS` | `docker-host=http://node-exporter:9100` | Comma-separated list of hosts to monitor; format: `name=http://host:9100,...` |
+| `HOSTS` | `docker-host=http://host.containers.internal:9100` | Comma-separated list of hosts to monitor; format: `name=http://host:9100,...` |
 | `HOST_NIC_INCLUDE` | `^(en\|eth\|em\|bond\|ib)[a-z0-9]*$` | Regex pattern for network interfaces to include |
 | `HOST_CPU_WARN` / `HOST_CPU_CRIT` | `80` / `95` | CPU usage thresholds (%) |
 | `HOST_MEM_WARN` / `HOST_MEM_CRIT` | `85` / `95` | Memory usage thresholds (%) |

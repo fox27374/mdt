@@ -57,7 +57,7 @@ services:
     ports:
       - 8080:8080
     environment:
-      - HOSTS=${MONITOR_HOSTS:-docker-host=http://node-exporter:9100}
+      - HOSTS=${MONITOR_HOSTS:-docker-host=http://host.containers.internal:9100}
     depends_on:
       - consul
       - nats
@@ -66,12 +66,10 @@ services:
   node-exporter:
     image: docker.io/prom/node-exporter:v1.12.1
     container_name: node-exporter
+    network_mode: host
+    pid: host
     volumes:
       - /:/host:ro
-    networks:
-      - gnmic-net
-    ports:
-      - 9100:9100
     command:
       - --path.rootfs=/host
       - --web.listen-address=:9100
