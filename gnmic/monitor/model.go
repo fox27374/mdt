@@ -170,6 +170,7 @@ type Snapshot struct {
 	Time       time.Time     `json:"time"`
 	Components []Component   `json:"components"`
 	Targets    []TargetState `json:"targets"`
+	Hosts      []HostState   `json:"hosts"`
 }
 
 // Helper functions for string parsing

@@ -18,6 +18,7 @@ type Store struct {
 	issues          map[string][]Issue                  // source -> issues
 	components      map[string]Component                // name -> component
 	seen            map[string]map[string]SeenRecord    // targetKey -> (sub -> record)
+	hosts           map[string]HostState                // name -> host state
 	setConfigCount  map[string]int64                    // source -> counter (for determining latest owner)
 	maxSetConfigID  int64                               // monotonically increasing counter
 	hasCollectorSet bool                                // true if any non-"config" source called SetConfig
@@ -30,6 +31,7 @@ func NewStore(started time.Time) *Store {
 		issues:         make(map[string][]Issue),
 		components:     make(map[string]Component),
 		seen:           make(map[string]map[string]SeenRecord),
+		hosts:          make(map[string]HostState),
 		setConfigCount: make(map[string]int64),
 	}
 }
@@ -71,6 +73,14 @@ func (s *Store) SetComponent(c Component) {
 	defer s.mu.Unlock()
 
 	s.components[c.Name] = c
+}
+
+// SetHost inserts or replaces the host state with the same Name.
+func (s *Store) SetHost(h HostState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.hosts[h.Name] = h
 }
 
 // Seen records one received event for (target, sub).
@@ -343,6 +353,32 @@ func (s *Store) Snapshot(now time.Time) Snapshot {
 	// Sort components by name (rule 9)
 	sort.Slice(snap.Components, func(i, j int) bool {
 		return snap.Components[i].Name < snap.Components[j].Name
+	})
+
+	// Build hosts
+	snap.Hosts = make([]HostState, 0)
+	for _, host := range s.hosts {
+		// Make a deep copy of the host state
+		hostCopy := host
+		// Copy the slices to prevent caller from modifying store data
+		hostCopy.Disks = make([]MetricState, len(host.Disks))
+		copy(hostCopy.Disks, host.Disks)
+		hostCopy.NICs = make([]MetricState, len(host.NICs))
+		copy(hostCopy.NICs, host.NICs)
+		snap.Hosts = append(snap.Hosts, hostCopy)
+	}
+
+	// Sort hosts by level severity descending, then by name ascending
+	sort.Slice(snap.Hosts, func(i, j int) bool {
+		levelCmp := WorseLevel(snap.Hosts[i].Level, snap.Hosts[j].Level)
+		if snap.Hosts[i].Level == snap.Hosts[j].Level {
+			// Same level, sort by name ascending
+			return snap.Hosts[i].Name < snap.Hosts[j].Name
+		}
+		// Different levels: return true if snap.Hosts[i] is worse (more severe)
+		// WorseLevel returns the more severe level, so if it returns snap.Hosts[i].Level,
+		// then snap.Hosts[i] is worse than snap.Hosts[j]
+		return levelCmp == snap.Hosts[i].Level
 	})
 
 	return snap
