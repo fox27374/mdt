@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -791,5 +792,178 @@ func TestStoreWorseStatus(t *testing.T) {
 	// Target status should be STALE (Worse of OK, STALE, WAITING)
 	if tgt.Status != StatusStale {
 		t.Errorf("target status = %v, want %v", tgt.Status, StatusStale)
+	}
+}
+
+func TestSetHostUpsert(t *testing.T) {
+	// SetHost upserts by name; the snapshot contains the host
+	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	store := NewStore(now)
+
+	// Set a host
+	host1 := HostState{
+		Name:  "host-1",
+		Level: LevelOK,
+		CPU:   MetricState{Name: "cpu", Level: LevelOK, Value: 50},
+	}
+	store.SetHost(host1)
+
+	snap := store.Snapshot(now)
+	if len(snap.Hosts) != 1 {
+		t.Fatalf("expected 1 host, got %d", len(snap.Hosts))
+	}
+
+	if snap.Hosts[0].Name != "host-1" || snap.Hosts[0].Level != LevelOK {
+		t.Errorf("host = %+v, want {Name:host-1, Level:OK}", snap.Hosts[0])
+	}
+
+	// Update the same host
+	host1Updated := HostState{
+		Name:  "host-1",
+		Level: LevelWarn,
+		CPU:   MetricState{Name: "cpu", Level: LevelWarn, Value: 80},
+	}
+	store.SetHost(host1Updated)
+
+	snap = store.Snapshot(now)
+	if len(snap.Hosts) != 1 {
+		t.Fatalf("expected 1 host after update, got %d", len(snap.Hosts))
+	}
+
+	if snap.Hosts[0].Level != LevelWarn {
+		t.Errorf("host level after update = %v, want %v", snap.Hosts[0].Level, LevelWarn)
+	}
+}
+
+func TestHostsOrdering(t *testing.T) {
+	// Hosts are ordered CRIT before WARN before UNKNOWN before OK, then by name within a level
+	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	store := NewStore(now)
+
+	// Add hosts in random order
+	store.SetHost(HostState{Name: "ok-zebra", Level: LevelOK})
+	store.SetHost(HostState{Name: "crit-alpha", Level: LevelCrit})
+	store.SetHost(HostState{Name: "warn-bravo", Level: LevelWarn})
+	store.SetHost(HostState{Name: "ok-alpha", Level: LevelOK})
+	store.SetHost(HostState{Name: "unknown-charlie", Level: LevelUnknown})
+	store.SetHost(HostState{Name: "warn-alpha", Level: LevelWarn})
+	store.SetHost(HostState{Name: "crit-bravo", Level: LevelCrit})
+
+	snap := store.Snapshot(now)
+
+	if len(snap.Hosts) != 7 {
+		t.Fatalf("expected 7 hosts, got %d", len(snap.Hosts))
+	}
+
+	expectedOrder := []string{
+		"crit-alpha",
+		"crit-bravo",
+		"warn-alpha",
+		"warn-bravo",
+		"unknown-charlie",
+		"ok-alpha",
+		"ok-zebra",
+	}
+
+	for i, expected := range expectedOrder {
+		if snap.Hosts[i].Name != expected {
+			t.Errorf("host[%d] = %q, want %q", i, snap.Hosts[i].Name, expected)
+		}
+	}
+}
+
+func TestHostsEmptySlice(t *testing.T) {
+	// Empty store has Hosts of length 0 and not nil
+	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	store := NewStore(now)
+
+	snap := store.Snapshot(now)
+
+	if snap.Hosts == nil {
+		t.Errorf("hosts is nil, want empty slice")
+	}
+	if len(snap.Hosts) != 0 {
+		t.Errorf("hosts length = %d, want 0", len(snap.Hosts))
+	}
+}
+
+func TestHostsCopyPreventsModification(t *testing.T) {
+	// Modifying a returned HostState's Disks slice does not change the store
+	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	store := NewStore(now)
+
+	originalDisks := []MetricState{
+		{Name: "disk1", Level: LevelOK, Value: 50},
+		{Name: "disk2", Level: LevelWarn, Value: 80},
+	}
+
+	originalNICs := []MetricState{
+		{Name: "eth0", Level: LevelOK, Value: 30},
+	}
+
+	host := HostState{
+		Name:  "host-1",
+		Level: LevelWarn,
+		Disks: originalDisks,
+		NICs:  originalNICs,
+	}
+
+	store.SetHost(host)
+
+	// Get the snapshot
+	snap := store.Snapshot(now)
+	if len(snap.Hosts) != 1 {
+		t.Fatalf("expected 1 host, got %d", len(snap.Hosts))
+	}
+
+	// Modify the returned host's slices
+	snap.Hosts[0].Disks[0].Name = "modified-disk"
+	snap.Hosts[0].NICs[0].Value = 999
+
+	// Get another snapshot and verify the store's data is unchanged
+	snap2 := store.Snapshot(now)
+	if snap2.Hosts[0].Disks[0].Name != "disk1" {
+		t.Errorf("disk name in store was modified, got %q, want disk1", snap2.Hosts[0].Disks[0].Name)
+	}
+	if snap2.Hosts[0].NICs[0].Value != 30 {
+		t.Errorf("NIC value in store was modified, got %v, want 30", snap2.Hosts[0].NICs[0].Value)
+	}
+}
+
+func TestHostsConcurrentSetHostSnapshot(t *testing.T) {
+	// Concurrent SetHost and Snapshot calls pass go test -race
+	store := NewStore(time.Now())
+	now := time.Now()
+
+	// Launch many goroutines calling SetHost concurrently
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			host := HostState{
+				Name:  fmt.Sprintf("host-%d", n%5), // Only 5 unique hosts
+				Level: []HostLevel{LevelOK, LevelWarn, LevelCrit, LevelUnknown}[n%4],
+				CPU:   MetricState{Name: "cpu", Level: LevelOK, Value: float64(n)},
+			}
+			store.SetHost(host)
+		}(i)
+	}
+
+	// Also call Snapshot concurrently
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = store.Snapshot(now)
+		}()
+	}
+
+	wg.Wait()
+
+	// Verify we have at most 5 hosts (the unique ones)
+	snap := store.Snapshot(now)
+	if len(snap.Hosts) > 5 {
+		t.Errorf("hosts count = %d, want <= 5", len(snap.Hosts))
 	}
 }
