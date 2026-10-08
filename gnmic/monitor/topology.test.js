@@ -310,3 +310,97 @@ test("8. All x and y are finite, no two nodes share same (x, y)", () => {
     positions.add(key);
   }
 });
+
+test("9. Infrastructure nodes (nats, output, prometheus) y is average of first/last collector y", () => {
+  // Test case 1: Two collectors - infraY should be average of their y values
+  let data = {
+    components: [
+      { name: "collector gnmic-1", ok: true, detail: "healthy" },
+      { name: "collector gnmic-2", ok: true, detail: "healthy" },
+      { name: "nats", ok: true, detail: "ok" },
+      { name: "gnmic-output", ok: true, detail: "ok" },
+      { name: "consul", ok: true, detail: "ok" }
+    ],
+    targets: [
+      { name: "target-a", address: "10.0.0.1:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] },
+      { name: "target-b", address: "10.0.0.2:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] },
+      { name: "target-c", address: "10.0.0.3:57400", owner: "gnmic-2", status: "OK", reason: "", subs: [] }
+    ]
+  };
+
+  let topo = buildTopology(data);
+  let gnmic1 = topo.nodes.find(n => n.id === "collector:gnmic-1");
+  let gnmic2 = topo.nodes.find(n => n.id === "collector:gnmic-2");
+  let nats = topo.nodes.find(n => n.id === "nats");
+  let output = topo.nodes.find(n => n.id === "output");
+  let prometheus = topo.nodes.find(n => n.id === "prometheus");
+
+  const expectedInfraY = (gnmic1.y + gnmic2.y) / 2;
+  assert.equal(nats.y, expectedInfraY, "nats y should be average of first and last collector y");
+  assert.equal(output.y, expectedInfraY, "output y should be average of first and last collector y");
+  assert.equal(prometheus.y, expectedInfraY, "prometheus y should be average of first and last collector y");
+
+  // Test case 2: Single collector - infraY should equal that collector's y
+  data = {
+    components: [
+      { name: "collector gnmic-1", ok: true, detail: "healthy" },
+      { name: "nats", ok: true, detail: "ok" },
+      { name: "gnmic-output", ok: true, detail: "ok" },
+      { name: "consul", ok: true, detail: "ok" }
+    ],
+    targets: [
+      { name: "target-a", address: "10.0.0.1:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] },
+      { name: "target-b", address: "10.0.0.2:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] }
+    ]
+  };
+
+  topo = buildTopology(data);
+  const collector = topo.nodes.find(n => n.id === "collector:gnmic-1");
+  nats = topo.nodes.find(n => n.id === "nats");
+  output = topo.nodes.find(n => n.id === "output");
+  prometheus = topo.nodes.find(n => n.id === "prometheus");
+
+  assert.equal(nats.y, collector.y, "with one collector, nats y should equal that collector's y");
+  assert.equal(output.y, collector.y, "with one collector, output y should equal that collector's y");
+  assert.equal(prometheus.y, collector.y, "with one collector, prometheus y should equal that collector's y");
+
+  // Test case 3: No collectors - infraY should be TOP (48)
+  data = {
+    components: [
+      { name: "nats", ok: true, detail: "ok" },
+      { name: "gnmic-output", ok: true, detail: "ok" },
+      { name: "consul", ok: true, detail: "ok" }
+    ],
+    targets: [
+      { name: "target-orphan", address: "10.0.0.1:57400", owner: "", status: "OK", reason: "", subs: [] }
+    ]
+  };
+
+  topo = buildTopology(data);
+  nats = topo.nodes.find(n => n.id === "nats");
+  output = topo.nodes.find(n => n.id === "output");
+  prometheus = topo.nodes.find(n => n.id === "prometheus");
+
+  assert.equal(nats.y, 48, "with no collectors, nats y should be TOP=48");
+  assert.equal(output.y, 48, "with no collectors, output y should be TOP=48");
+  assert.equal(prometheus.y, 48, "with no collectors, prometheus y should be TOP=48");
+
+  // Verify consul y is still (largest y of any other node) + ROW
+  const consul = topo.nodes.find(n => n.id === "consul");
+  let maxOtherY = 0;
+  for (const node of topo.nodes) {
+    if (node.kind !== "consul" && node.y > maxOtherY) {
+      maxOtherY = node.y;
+    }
+  }
+  assert.equal(consul.y, maxOtherY + 64, "consul y should be (largest y of any other node) + ROW");
+
+  // Verify height still follows spec: height = (largest y of any node) + TOP
+  let maxY = 0;
+  for (const node of topo.nodes) {
+    if (node.y > maxY) {
+      maxY = node.y;
+    }
+  }
+  assert.equal(topo.height, maxY + 48, "height should be (largest y of any node) + TOP");
+});

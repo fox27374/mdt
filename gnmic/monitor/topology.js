@@ -306,28 +306,25 @@ function buildTopology(data) {
   nodeMap["prometheus"] = prometheusNode;
 
   // 5. Calculate y positions for infrastructure nodes
-  // Get all y values excluding infrastructure nodes
-  const infrastructureYs = [TOP];
-  for (const node of nodes) {
-    if (["target", "collector"].includes(node.kind)) {
-      infrastructureYs.push(node.y);
-    }
-  }
-
+  // nats, output, prometheus get y = average of first and last collector y (or TOP if no collectors)
   let infraY = TOP;
-  if (infrastructureYs.length > 1) {
-    infraY = (Math.min(...infrastructureYs) + Math.max(...infrastructureYs)) / 2;
+  if (collectorNames.length > 0) {
+    const firstCollectorY = collectorNodes[collectorNames[0]].y;
+    const lastCollectorY = collectorNodes[collectorNames[collectorNames.length - 1]].y;
+    infraY = (firstCollectorY + lastCollectorY) / 2;
   }
 
   natsNode.y = infraY;
   outputNode.y = infraY;
   prometheusNode.y = infraY;
 
-  // Consul gets the lowest y + ROW
+  // Consul gets the largest y of any other node + ROW
   let maxY = TOP;
   for (const node of nodes) {
-    if (node.y > maxY) {
-      maxY = node.y;
+    if (node.kind !== "consul") {
+      if (node.y > maxY) {
+        maxY = node.y;
+      }
     }
   }
   consulNode.y = maxY + ROW;
