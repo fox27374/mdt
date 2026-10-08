@@ -28,13 +28,13 @@ All mountpoints are host-relative (for example `/` not `/host`).
 
 ## Network Interfaces
 
-The following network interface names appear with their `node_network_speed_bytes` values:
+The following network interface names appear in the data:
 
-- `lo` (loopback): -125000 (unknown/not applicable)
-- `ens192` (Ethernet): 1.25e+09 bytes per second (1.25 gigabytes per second)
-- `docker0` (bridge): -125000 (unknown/not applicable)
+- `lo` (loopback): no `node_network_speed_bytes` sample
+- `ens192` (Ethernet): 1.25e+09 bytes per second (1.25 gigabytes per second = 10 Gbit/s)
+- `docker0` (bridge): -125000 bytes per second (speed unknown)
 
-**Unit:** bytes per second. A value of -1 (shown as -125000 in a different representation) indicates the speed is unknown.
+**Unit:** bytes per second. A negative value indicates the speed is unknown or not applicable.
 
 ## CPU Information
 
