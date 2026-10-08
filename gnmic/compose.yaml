@@ -66,11 +66,10 @@ services:
   node-exporter:
     image: docker.io/prom/node-exporter:v1.12.1
     container_name: node-exporter
-    network_mode: "host"
+    network_mode: host
     pid: host
-    networks: []
     volumes:
-      - /:/host:ro
+      - /:/host:ro,rslave
     command:
       - --path.rootfs=/host
       - --web.listen-address=:9100
