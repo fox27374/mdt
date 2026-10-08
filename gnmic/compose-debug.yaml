@@ -66,9 +66,9 @@ services:
   node-exporter:
     image: docker.io/prom/node-exporter:v1.12.1
     container_name: node-exporter
-    network_mode: host
+    network_mode: "host"
     pid: host
-    networks: {}
+    networks: []
     volumes:
       - /:/host:ro
     command:
@@ -84,6 +84,6 @@ services:
       - "4222:4222"
     command: -m 8222
 
-networks:  
+networks:
   gnmic-net:
     driver: bridge
