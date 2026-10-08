@@ -213,6 +213,14 @@
 			content: "▶";
 		}
 
+		.host-row.expanded .expand-icon::after {
+			content: "▼";
+		}
+
+		.host-row:not(.expanded) .expand-icon::after {
+			content: "▶";
+		}
+
 		.sub-row {
 			display: none;
 			background-color: var(--chip-bg);
@@ -257,6 +265,40 @@
 
 		.badge.error {
 			background-color: var(--error);
+		}
+
+		.badge.level-ok {
+			background-color: var(--ok);
+		}
+
+		.badge.level-warn {
+			background-color: var(--stale);
+			color: #000000;
+		}
+
+		.badge.level-crit {
+			background-color: var(--error);
+		}
+
+		.badge.level-unknown {
+			background-color: var(--waiting);
+			color: #000000;
+		}
+
+		.metric-cell {
+			position: relative;
+		}
+
+		.metric-cell.level-warn {
+			color: var(--stale);
+		}
+
+		.metric-cell.level-crit {
+			color: var(--error);
+		}
+
+		.metric-cell.level-unknown {
+			color: var(--waiting);
 		}
 
 		.view-toggle {
@@ -511,6 +553,27 @@
 
 		<div class="summary" id="summary"></div>
 
+		<div id="hostsPanel" hidden>
+			<div class="summary" id="hostsSummary"></div>
+			<div class="table-wrapper">
+				<table id="hostsTable">
+					<thead>
+						<tr>
+							<th></th>
+							<th>Host</th>
+							<th>Level</th>
+							<th>CPU</th>
+							<th>Memory</th>
+							<th>Disk (worst)</th>
+							<th>Network (worst)</th>
+							<th>Reason</th>
+						</tr>
+					</thead>
+					<tbody id="hostsTableBody"></tbody>
+				</table>
+			</div>
+		</div>
+
 		<div class="view-toggle">
 			<button type="button" id="btnTopology" data-view="topology" class="active" aria-pressed="true">Topology</button>
 			<button type="button" id="btnTable" data-view="table" aria-pressed="false">Table</button>
@@ -581,6 +644,7 @@
 
 		const state = {
 			expandedTargets: new Set(),
+			expandedHosts: new Set(),
 			lastData: null,
 			lastSuccessTime: null,
 			topology: null,
@@ -1083,6 +1147,217 @@
 			}
 		}
 
+		function renderHostSubRows(tbody, hostRow, host) {
+			// Helper to create disk or NIC sub-row
+			function createMetricSubRow(metric, metricType) {
+				const subRow = document.createElement("tr");
+				subRow.className = "sub-row";
+
+				const emptyCell = document.createElement("td");
+				subRow.appendChild(emptyCell);
+
+				const nameCell = document.createElement("td");
+				nameCell.className = "sub-indent";
+				nameCell.textContent = metric.name;
+				subRow.appendChild(nameCell);
+
+				const emptyCell2 = document.createElement("td");
+				subRow.appendChild(emptyCell2);
+
+				const valueCell = document.createElement("td");
+				valueCell.className = `metric-cell level-${metric.level.toLowerCase()}`;
+				if (metric.level === "UNKNOWN") {
+					valueCell.textContent = "n/a";
+				} else {
+					valueCell.textContent = metric.value.toFixed(1) + "%";
+				}
+				subRow.appendChild(valueCell);
+
+				const levelCell = document.createElement("td");
+				const levelBadge = document.createElement("span");
+				levelBadge.className = `badge level-${metric.level.toLowerCase()}`;
+				levelBadge.textContent = metric.level;
+				levelCell.appendChild(levelBadge);
+				subRow.appendChild(levelCell);
+
+				const detailCell = document.createElement("td");
+				detailCell.colSpan = 2;
+				detailCell.textContent = metric.detail || "";
+				subRow.appendChild(detailCell);
+
+				const emptyCell3 = document.createElement("td");
+				subRow.appendChild(emptyCell3);
+
+				return subRow;
+			}
+
+			// Insert after hostRow
+			let insertAfter = hostRow;
+
+			// Add disks
+			if (host.disks && host.disks.length > 0) {
+				for (const disk of host.disks) {
+					const subRow = createMetricSubRow(disk, "disk");
+					insertAfter.parentNode.insertBefore(subRow, insertAfter.nextSibling);
+					insertAfter = subRow;
+				}
+			}
+
+			// Add NICs
+			if (host.nics && host.nics.length > 0) {
+				for (const nic of host.nics) {
+					const subRow = createMetricSubRow(nic, "nic");
+					insertAfter.parentNode.insertBefore(subRow, insertAfter.nextSibling);
+					insertAfter = subRow;
+				}
+			}
+		}
+
+		function removeHostSubRows(hostRow) {
+			let next = hostRow.nextSibling;
+			while (next && next.classList && next.classList.contains("sub-row")) {
+				const toRemove = next;
+				next = next.nextSibling;
+				toRemove.parentNode.removeChild(toRemove);
+			}
+		}
+
+		function renderHosts(hosts) {
+			const panel = document.getElementById("hostsPanel");
+			const summary = document.getElementById("hostsSummary");
+			const tbody = document.getElementById("hostsTableBody");
+
+			if (!hosts || hosts.length === 0) {
+				panel.hidden = true;
+				return;
+			}
+
+			panel.hidden = false;
+			tbody.innerHTML = "";
+
+			// Count levels
+			const levelCounts = {
+				OK: 0,
+				WARN: 0,
+				CRIT: 0,
+				UNKNOWN: 0,
+			};
+
+			for (const host of hosts) {
+				levelCounts[host.level]++;
+			}
+
+			// Build summary line
+			let summaryText = `${hosts.length} hosts`;
+			const parts = [];
+			if (levelCounts.CRIT > 0) parts.push(`${levelCounts.CRIT} CRIT`);
+			if (levelCounts.WARN > 0) parts.push(`${levelCounts.WARN} WARN`);
+			if (levelCounts.UNKNOWN > 0) parts.push(`${levelCounts.UNKNOWN} UNKNOWN`);
+			if (levelCounts.OK > 0) parts.push(`${levelCounts.OK} OK`);
+
+			if (parts.length > 0) {
+				summaryText += ": " + parts.join(", ");
+			}
+
+			summary.textContent = summaryText;
+
+			// Render host rows
+			for (const host of hosts) {
+				const hostRow = document.createElement("tr");
+				hostRow.className = "host-row";
+				hostRow.dataset.name = host.name;
+				if (state.expandedHosts.has(host.name)) {
+					hostRow.classList.add("expanded");
+				}
+
+				// Expand cell
+				const expandCell = document.createElement("td");
+				const expandIcon = document.createElement("span");
+				expandIcon.className = "expand-icon";
+				expandCell.appendChild(expandIcon);
+
+				// Host name cell
+				const nameCell = document.createElement("td");
+				nameCell.textContent = host.name;
+
+				// Level cell
+				const levelCell = document.createElement("td");
+				const levelBadge = document.createElement("span");
+				levelBadge.className = `badge level-${host.level.toLowerCase()}`;
+				levelBadge.textContent = host.level;
+				const updatedDate = new Date(host.updated);
+				levelBadge.title = updatedDate.toISOString();
+				levelCell.appendChild(levelBadge);
+
+				// CPU cell
+				const cpuCell = document.createElement("td");
+				cpuCell.className = `metric-cell level-${host.cpu.level.toLowerCase()}`;
+				if (host.cpu.level === "UNKNOWN") {
+					cpuCell.textContent = "n/a";
+				} else {
+					cpuCell.textContent = host.cpu.value.toFixed(1) + "%";
+				}
+
+				// Memory cell
+				const memCell = document.createElement("td");
+				memCell.className = `metric-cell level-${host.memory.level.toLowerCase()}`;
+				if (host.memory.level === "UNKNOWN") {
+					memCell.textContent = "n/a";
+				} else {
+					memCell.textContent = host.memory.value.toFixed(1) + "%";
+				}
+
+				// Disk cell
+				const diskCell = document.createElement("td");
+				diskCell.className = `metric-cell level-${host.disk.level.toLowerCase()}`;
+				if (host.disk.level === "UNKNOWN") {
+					diskCell.textContent = "n/a";
+				} else {
+					diskCell.textContent = host.disk.value.toFixed(1) + "% " + host.disk.name;
+				}
+
+				// Network cell
+				const netCell = document.createElement("td");
+				netCell.className = `metric-cell level-${host.network.level.toLowerCase()}`;
+				if (host.network.level === "UNKNOWN") {
+					netCell.textContent = "n/a";
+				} else {
+					netCell.textContent = host.network.value.toFixed(1) + "% " + host.network.name;
+				}
+
+				// Reason cell
+				const reasonCell = document.createElement("td");
+				reasonCell.textContent = host.reason || "";
+
+				hostRow.appendChild(expandCell);
+				hostRow.appendChild(nameCell);
+				hostRow.appendChild(levelCell);
+				hostRow.appendChild(cpuCell);
+				hostRow.appendChild(memCell);
+				hostRow.appendChild(diskCell);
+				hostRow.appendChild(netCell);
+				hostRow.appendChild(reasonCell);
+
+				hostRow.addEventListener("click", () => {
+					hostRow.classList.toggle("expanded");
+					if (hostRow.classList.contains("expanded")) {
+						state.expandedHosts.add(host.name);
+						renderHostSubRows(tbody, hostRow, host);
+					} else {
+						state.expandedHosts.delete(host.name);
+						removeHostSubRows(hostRow);
+					}
+				});
+
+				tbody.appendChild(hostRow);
+
+				// Add sub-rows if expanded
+				if (state.expandedHosts.has(host.name)) {
+					renderHostSubRows(tbody, hostRow, host);
+				}
+			}
+		}
+
 		async function fetchStatus() {
 			try {
 				const response = await fetch("/api/status");
@@ -1098,6 +1373,7 @@
 				renderUpdatedTime();
 				renderSummary(data.targets);
 				renderTargets(data.targets);
+				renderHosts(data.hosts);
 				if (typeof buildTopology === "function") {
 					renderTopology(buildTopology(data));
 				}
