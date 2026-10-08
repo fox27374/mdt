@@ -194,6 +194,42 @@ func TestUIHandler(t *testing.T) {
 		if !strings.Contains(body, "arrowhead-stale") {
 			t.Error("expected body to contain 'arrowhead-stale' marker")
 		}
+
+		// Test favicon link is present
+		if !strings.Contains(body, "rel=\"icon\"") {
+			t.Error("expected body to contain 'rel=\"icon\"'")
+		}
+
+		if !strings.Contains(body, "image/svg+xml") {
+			t.Error("expected body to contain 'image/svg+xml'")
+		}
+
+		// Test new logo has the green circle
+		if !strings.Contains(body, "%2334d399") {
+			t.Error("expected body to contain green color '%2334d399' in favicon")
+		}
+
+		// Test header logo has the green circle (in unencoded form in the SVG)
+		if !strings.Contains(body, "fill=\"#34d399\"") {
+			t.Error("expected body to contain green color 'fill=\"#34d399\"' in header logo")
+		}
+
+		// Test old netanchor logo patterns are gone
+		if strings.Contains(body, "M32 16 V34") {
+			t.Error("expected old netanchor logo pattern 'M32 16 V34' to be gone")
+		}
+
+		if strings.Contains(body, "M32 34 L16 48") {
+			t.Error("expected old netanchor logo pattern 'M32 34 L16 48' to be gone")
+		}
+
+		if strings.Contains(body, "M32 34 L48 48") {
+			t.Error("expected old netanchor logo pattern 'M32 34 L48 48' to be gone")
+		}
+
+		if strings.Contains(body, "M32 34 V52") {
+			t.Error("expected old netanchor logo pattern 'M32 34 V52' to be gone")
+		}
 	})
 
 	t.Run("GET /topology.js returns 200 with JavaScript", func(t *testing.T) {
