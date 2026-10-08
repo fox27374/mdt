@@ -76,7 +76,7 @@ Subscriptions are grouped by platform:
   (uses `config/ca.pem` for TLS).
 - **Cisco Catalyst WLC** (`wl_*`) — wireless client signal/SNR/retries, AP utilization
   and noise, client/AP/SSID mappings.
-- **Palo Alto firewalls** (`pan_*` / `panos_*`) — interface counters, CPU, session
+- **Palo Alto firewalls** (`panos_*`) — interface counters, CPU, session
   stats.
 
 Each subscription streams in `sample` mode at its own interval (30s for interface

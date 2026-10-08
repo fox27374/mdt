@@ -117,9 +117,9 @@ targets:
     username: "${FW_USERNAME}"
     password: "${FW_PASSWORD}"
     subscriptions:
-      - pan_if_stats
-      - pan_cpu_stats
-      - pan_session_stats
+      - panos_if_stats
+      - panos_cpu_stats
+      - panos_session_stats
 
 ###################################
 # Subscriptions
