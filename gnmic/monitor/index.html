@@ -256,6 +256,45 @@
 			background-color: var(--error);
 		}
 
+		.view-toggle {
+			display: flex;
+			gap: 8px;
+			margin-bottom: 16px;
+		}
+
+		.view-toggle button {
+			padding: 8px 16px;
+			border: 1px solid var(--border);
+			background-color: var(--chip-bg);
+			color: var(--fg);
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 14px;
+			font-weight: 500;
+			transition: all 0.2s;
+		}
+
+		.view-toggle button:hover {
+			background-color: var(--border);
+		}
+
+		.view-toggle button.active {
+			background-color: var(--fg);
+			color: var(--bg);
+			border-color: var(--fg);
+		}
+
+		#topologyView {
+			border: 1px solid var(--border);
+			border-radius: 4px;
+			padding: 16px;
+			background-color: var(--bg);
+		}
+
+		[hidden] {
+			display: none !important;
+		}
+
 		@media (max-width: 768px) {
 			.container {
 				padding: 8px;
@@ -274,6 +313,15 @@
 			.top-bar {
 				gap: 8px;
 			}
+
+			.view-toggle {
+				margin-bottom: 12px;
+			}
+
+			.view-toggle button {
+				padding: 6px 12px;
+				font-size: 12px;
+			}
 		}
 	</style>
 </head>
@@ -288,24 +336,72 @@
 
 		<div class="summary" id="summary"></div>
 
-		<div class="table-wrapper">
-			<table>
-				<thead>
-					<tr>
-						<th></th>
-						<th>Target</th>
-						<th>Address</th>
-						<th>Owner</th>
-						<th>Status</th>
-						<th>Reason</th>
-					</tr>
-				</thead>
-				<tbody id="targets"></tbody>
-			</table>
+		<div class="view-toggle">
+			<button type="button" id="btnTopology" data-view="topology" class="active" aria-pressed="true">Topology</button>
+			<button type="button" id="btnTable" data-view="table" aria-pressed="false">Table</button>
+		</div>
+
+		<div id="topologyView">
+			<svg id="topologySvg" role="img" aria-label="Pipeline topology" width="100%"></svg>
+		</div>
+
+		<div id="tableView" hidden>
+			<div class="table-wrapper">
+				<table>
+					<thead>
+						<tr>
+							<th></th>
+							<th>Target</th>
+							<th>Address</th>
+							<th>Owner</th>
+							<th>Status</th>
+							<th>Reason</th>
+						</tr>
+					</thead>
+					<tbody id="targets"></tbody>
+				</table>
+			</div>
 		</div>
 	</div>
 
+	<script src="/topology.js"></script>
 	<script>
+		function currentView() {
+			return location.hash === "#table" ? "table" : "topology";
+		}
+
+		function showView(name) {
+			if (name !== "table" && name !== "topology") {
+				name = "topology";
+			}
+
+			const newHash = "#" + name;
+			if (location.hash !== newHash) {
+				location.hash = newHash;
+			}
+
+			const topologyView = document.getElementById("topologyView");
+			const tableView = document.getElementById("tableView");
+			const btnTopology = document.getElementById("btnTopology");
+			const btnTable = document.getElementById("btnTable");
+
+			if (name === "table") {
+				topologyView.hidden = true;
+				tableView.hidden = false;
+				btnTable.classList.add("active");
+				btnTable.setAttribute("aria-pressed", "true");
+				btnTopology.classList.remove("active");
+				btnTopology.setAttribute("aria-pressed", "false");
+			} else {
+				topologyView.hidden = false;
+				tableView.hidden = true;
+				btnTopology.classList.add("active");
+				btnTopology.setAttribute("aria-pressed", "true");
+				btnTable.classList.remove("active");
+				btnTable.setAttribute("aria-pressed", "false");
+			}
+		}
+
 		const state = {
 			expandedTargets: new Set(),
 			lastData: null,
@@ -537,6 +633,23 @@
 				}
 			}
 		}
+
+		// Wire up view toggle buttons
+		document.getElementById("btnTopology").addEventListener("click", () => {
+			showView("topology");
+		});
+
+		document.getElementById("btnTable").addEventListener("click", () => {
+			showView("table");
+		});
+
+		// Listen to hash changes
+		window.addEventListener("hashchange", () => {
+			showView(currentView());
+		});
+
+		// Apply current view on load
+		showView(currentView());
 
 		// Initial fetch and set up auto-refresh
 		fetchStatus();
