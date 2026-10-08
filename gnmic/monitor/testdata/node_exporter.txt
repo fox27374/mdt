@@ -1,0 +1,69 @@
+# HELP node_cpu_seconds_total Seconds the CPUs spent in each mode.
+# TYPE node_cpu_seconds_total counter
+# HELP node_filesystem_avail_bytes Filesystem space available to non-root users in bytes.
+# TYPE node_filesystem_avail_bytes gauge
+# HELP node_filesystem_free_bytes Filesystem free space in bytes.
+# TYPE node_filesystem_free_bytes gauge
+# HELP node_filesystem_size_bytes Filesystem size in bytes.
+# TYPE node_filesystem_size_bytes gauge
+# HELP node_memory_MemAvailable_bytes Memory information field MemAvailable_bytes.
+# TYPE node_memory_MemAvailable_bytes gauge
+# HELP node_memory_MemTotal_bytes Memory information field MemTotal_bytes.
+# TYPE node_memory_MemTotal_bytes gauge
+# HELP node_network_info Non-numeric data from /sys/class/net/<iface>, value is always 1.
+# TYPE node_network_info gauge
+# HELP node_network_receive_bytes_total Network device statistic receive_bytes.
+# TYPE node_network_receive_bytes_total counter
+# HELP node_network_speed_bytes Network device property: speed_bytes
+# TYPE node_network_speed_bytes gauge
+# HELP node_network_transmit_bytes_total Network device statistic transmit_bytes.
+# TYPE node_network_transmit_bytes_total counter
+# HELP node_network_up Value is 1 if operstate is 'up', 0 otherwise.
+# TYPE node_network_up gauge
+node_cpu_seconds_total{cpu="0",mode="idle"} 9.25521135e+06
+node_cpu_seconds_total{cpu="0",mode="iowait"} 6388.1
+node_cpu_seconds_total{cpu="0",mode="irq"} 0
+node_cpu_seconds_total{cpu="0",mode="nice"} 79.77
+node_cpu_seconds_total{cpu="0",mode="softirq"} 27033.14
+node_cpu_seconds_total{cpu="0",mode="steal"} 0
+node_cpu_seconds_total{cpu="0",mode="system"} 131033.71
+node_cpu_seconds_total{cpu="0",mode="user"} 211567.34
+node_cpu_seconds_total{cpu="1",mode="idle"} 9.25603092e+06
+node_cpu_seconds_total{cpu="1",mode="iowait"} 5575.57
+node_cpu_seconds_total{cpu="1",mode="irq"} 0
+node_cpu_seconds_total{cpu="1",mode="nice"} 83.84
+node_cpu_seconds_total{cpu="1",mode="softirq"} 30818.72
+node_cpu_seconds_total{cpu="1",mode="steal"} 0
+node_cpu_seconds_total{cpu="1",mode="system"} 125650.21
+node_cpu_seconds_total{cpu="1",mode="user"} 211492.45
+node_filesystem_avail_bytes{device="/dev/sda1",device_error="",fstype="ext4",mountpoint="/"} 2.998423552e+09
+node_filesystem_avail_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run"} 4.09837568e+08
+node_filesystem_avail_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run/lock"} 5.24288e+06
+node_filesystem_avail_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run/user/1000"} 4.10443776e+08
+node_filesystem_avail_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run/user/10782"} 4.10017792e+08
+node_filesystem_free_bytes{device="/dev/sda1",device_error="",fstype="ext4",mountpoint="/"} 4.57453568e+09
+node_filesystem_free_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run"} 4.09837568e+08
+node_filesystem_free_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run/lock"} 5.24288e+06
+node_filesystem_free_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run/user/1000"} 4.10443776e+08
+node_filesystem_free_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run/user/10782"} 4.10017792e+08
+node_filesystem_size_bytes{device="/dev/sda1",device_error="",fstype="ext4",mountpoint="/"} 3.0516576256e+10
+node_filesystem_size_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run"} 4.1054208e+08
+node_filesystem_size_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run/lock"} 5.24288e+06
+node_filesystem_size_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run/user/1000"} 4.10537984e+08
+node_filesystem_size_bytes{device="tmpfs",device_error="",fstype="tmpfs",mountpoint="/run/user/10782"} 4.10537984e+08
+node_memory_MemAvailable_bytes 1.28589824e+09
+node_memory_MemTotal_bytes 4.105383936e+09
+node_network_info{address="00:00:00:00:00:00",adminstate="up",broadcast="00:00:00:00:00:00",device="lo",duplex="",ifalias="",operstate="unknown"} 1
+node_network_info{address="00:50:56:93:14:9b",adminstate="up",broadcast="ff:ff:ff:ff:ff:ff",device="ens192",duplex="full",ifalias="",operstate="up"} 1
+node_network_info{address="ee:c9:52:f7:0e:b4",adminstate="up",broadcast="ff:ff:ff:ff:ff:ff",device="docker0",duplex="unknown",ifalias="",operstate="down"} 1
+node_network_receive_bytes_total{device="docker0"} 0
+node_network_receive_bytes_total{device="ens192"} 2.02968830218e+11
+node_network_receive_bytes_total{device="lo"} 3.00259175e+09
+node_network_speed_bytes{device="docker0"} -125000
+node_network_speed_bytes{device="ens192"} 1.25e+09
+node_network_transmit_bytes_total{device="docker0"} 0
+node_network_transmit_bytes_total{device="ens192"} 1.08884148161e+11
+node_network_transmit_bytes_total{device="lo"} 3.00259175e+09
+node_network_up{device="docker0"} 0
+node_network_up{device="ens192"} 1
+node_network_up{device="lo"} 0
