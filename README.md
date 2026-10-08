@@ -149,12 +149,50 @@ The monitor reads these environment variables; defaults shown are used if unset:
 | `OUTPUT_URL` | `http://gnmic-output:9273/metrics` | gnmic-output metrics endpoint |
 | `MDT_CONFIG` | `/app/config/mdt.yaml` | Path to gnmic collector configuration |
 | `POLL_INTERVAL` | `15s` | How often to query components for status updates |
+| `HOSTS` | `docker-host=http://node-exporter:9100` | Comma-separated list of hosts to monitor; format: `name=http://host:9100,...` |
+| `HOST_NIC_INCLUDE` | `^(en\|eth\|em\|bond\|ib)[a-z0-9]*$` | Regex pattern for network interfaces to include |
+| `HOST_CPU_WARN` / `HOST_CPU_CRIT` | `80` / `95` | CPU usage thresholds (%) |
+| `HOST_MEM_WARN` / `HOST_MEM_CRIT` | `85` / `95` | Memory usage thresholds (%) |
+| `HOST_DISK_WARN` / `HOST_DISK_CRIT` | `80` / `90` | Disk usage thresholds (%) |
+| `HOST_NET_WARN` / `HOST_NET_CRIT` | `70` / `90` | Network utilization thresholds (%) |
+
+### Host metrics
+
+When `HOSTS` is configured, the monitor scrapes node_exporter instances and displays host metrics in the web UI. Each host shows:
+
+- **CPU** — usage averaged over 5 minutes
+- **Memory** — memory used as a percentage of total
+- **Disks** — used percentage for each real filesystem (excluding virtual/temporary filesystems)
+- **NICs** — utilization as a percentage of link speed, averaged over 1 minute, for each physical network interface (matched by the `HOST_NIC_INCLUDE` regex)
+
+Each metric has one of four levels:
+
+- **OK** — value below the `WARN` threshold
+- **WARN** — value at or above the `WARN` threshold, but below the `CRIT` threshold
+- **CRIT** — value at or above the `CRIT` threshold
+- **UNKNOWN** — metric data not available
+
+A host's overall level is the worst of its metrics.
+
+#### Monitoring an additional host
+
+To monitor a host other than `docker-host`, run `node_exporter` on that host (for example, version v1.12.1 from `docker.io/prom/node-exporter`), then add it to `HOSTS`:
+
+```bash
+export MONITOR_HOSTS="docker-host=http://host.containers.internal:9100,other-host=http://10.0.0.2:9100"
+podman-compose up -d
+```
+
+#### Security
+
+`node_exporter` listens unauthenticated on port 9100 on all interfaces of the host. On production networks, restrict access to port 9100 to the monitor's address using the host firewall.
 
 ## Ports
 
 | Port | Service | Purpose |
 |------|---------|---------|
 | 9273 | gnmic-output | Prometheus `/metrics` endpoint |
+| 9100 | node-exporter | Host metrics endpoint |
 | 4222 | NATS | Message bus |
 | 8500 | Consul | HTTP API / UI |
 | 8600/udp | Consul | DNS |
