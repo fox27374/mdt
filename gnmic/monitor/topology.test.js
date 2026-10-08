@@ -48,7 +48,7 @@ test("1. Multiple targets and collectors with correct node kinds and grouping", 
   for (const owner in targetsByOwner) {
     const groupTargets = targetsByOwner[owner].sort((a, b) => a.y - b.y);
     for (let i = 1; i < groupTargets.length; i++) {
-      assert.equal(groupTargets[i].y - groupTargets[i-1].y, 64, `targets in group should be ROW=64 apart`);
+      assert.equal(groupTargets[i].y - groupTargets[i-1].y, 90, `targets in group should be ROW=90 apart`);
     }
   }
 
@@ -355,6 +355,59 @@ test("8c. All node statuses are valid status values", () => {
   }
 });
 
+test("8d. For N targets, y pitch is at least icon diameter + label height + gap, no overlap", () => {
+  // Icon diameter = 52 (radius 26), label height ~16px, gap ~22px = ~90px minimum
+  // With ROW=90, targets in the same column should not overlap
+  const data = {
+    components: [
+      { name: "collector gnmic-1", ok: true, detail: "healthy" },
+      { name: "nats", ok: true, detail: "ok" },
+      { name: "gnmic-output", ok: true, detail: "ok" },
+      { name: "consul", ok: true, detail: "ok" }
+    ],
+    targets: [
+      { name: "target-a", address: "10.0.0.1:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] },
+      { name: "target-b", address: "10.0.0.2:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] },
+      { name: "target-c", address: "10.0.0.3:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] },
+      { name: "target-d", address: "10.0.0.4:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] },
+      { name: "target-e", address: "10.0.0.5:57400", owner: "gnmic-1", status: "OK", reason: "", subs: [] }
+    ]
+  };
+
+  const topo = buildTopology(data);
+  const ICON_RADIUS = 26;
+  const LABEL_HEIGHT = 16;
+  const MIN_PITCH = ICON_RADIUS * 2 + LABEL_HEIGHT; // ~68px minimum
+
+  // Check that y pitch between consecutive targets in same column is at least MIN_PITCH
+  const targetsByX = {};
+  for (const node of topo.nodes) {
+    if (node.kind === "target") {
+      if (!targetsByX[node.x]) targetsByX[node.x] = [];
+      targetsByX[node.x].push(node);
+    }
+  }
+
+  for (const x in targetsByX) {
+    const column = targetsByX[x].sort((a, b) => a.y - b.y);
+    for (let i = 1; i < column.length; i++) {
+      const pitch = column[i].y - column[i-1].y;
+      assert(pitch >= MIN_PITCH, `y pitch between targets should be >= ${MIN_PITCH}, got ${pitch}`);
+    }
+
+    // Check no overlap: each node spans from (y - ICON_RADIUS) to (y + LABEL_OFFSET + LABEL_HEIGHT)
+    // where LABEL_OFFSET is ~38px from center
+    const LABEL_OFFSET = 38;
+    for (let i = 1; i < column.length; i++) {
+      const topNode = column[i-1];
+      const bottomNode = column[i];
+      const topBottom = topNode.y + LABEL_OFFSET + LABEL_HEIGHT / 2;
+      const bottomTop = bottomNode.y - ICON_RADIUS;
+      assert(topBottom <= bottomTop, `nodes at positions y=${topNode.y} and y=${bottomNode.y} overlap`);
+    }
+  }
+});
+
 test("9. Infrastructure nodes (nats, output, prometheus) y is average of first/last collector y", () => {
   // Test case 1: Two collectors - infraY should be average of their y values
   let data = {
@@ -437,7 +490,7 @@ test("9. Infrastructure nodes (nats, output, prometheus) y is average of first/l
       maxOtherY = node.y;
     }
   }
-  assert.equal(consul.y, maxOtherY + 64, "consul y should be (largest y of any other node) + ROW");
+  assert.equal(consul.y, maxOtherY + 90, "consul y should be (largest y of any other node) + ROW");
 
   // Verify height still follows spec: height = (largest y of any node) + TOP
   let maxY = 0;

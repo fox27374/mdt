@@ -460,27 +460,29 @@
 		.edge {
 			fill: none;
 			vector-effect: non-scaling-stroke;
+			stroke-linecap: round;
+			stroke-linejoin: round;
 		}
 
 		.edge-normal {
 			stroke: var(--line);
-			stroke-width: 2;
+			stroke-width: 1.5;
 		}
 
 		.edge-error {
 			stroke: var(--error);
-			stroke-width: 3;
+			stroke-width: 2;
 		}
 
 		.edge-stale {
 			stroke: var(--warn);
-			stroke-width: 2;
+			stroke-width: 1.5;
 			stroke-dasharray: 4,4;
 		}
 
 		.edge-locker {
 			stroke: var(--line);
-			stroke-width: 2;
+			stroke-width: 1.5;
 			stroke-dasharray: 2,2;
 		}
 
@@ -1001,7 +1003,7 @@
 			// Create defs for markers
 			const defs = document.createElementNS(SVG_NS, "defs");
 
-			// Create markers for each edge type
+			// Create markers for each edge type (smaller arrowheads)
 			const markerTypes = [
 				{ id: "arrowhead-normal", color: "var(--line)" },
 				{ id: "arrowhead-error", color: "var(--error)" },
@@ -1011,13 +1013,13 @@
 			for (const markerType of markerTypes) {
 				const marker = document.createElementNS(SVG_NS, "marker");
 				marker.setAttribute("id", markerType.id);
-				marker.setAttribute("markerWidth", "10");
-				marker.setAttribute("markerHeight", "10");
-				marker.setAttribute("refX", "9");
-				marker.setAttribute("refY", "3");
+				marker.setAttribute("markerWidth", "8");
+				marker.setAttribute("markerHeight", "8");
+				marker.setAttribute("refX", "6");
+				marker.setAttribute("refY", "2");
 				marker.setAttribute("orient", "auto");
 				const poly = document.createElementNS(SVG_NS, "polygon");
-				poly.setAttribute("points", "0 0, 10 3, 0 6");
+				poly.setAttribute("points", "0 0, 6 2, 0 4");
 				poly.setAttribute("fill", markerType.color);
 				marker.appendChild(poly);
 				defs.appendChild(marker);
@@ -1025,7 +1027,7 @@
 
 			svg.appendChild(defs);
 
-			// Draw column headings
+			// Draw column headings above first node row
 			const headings = [
 				{ x: 80, text: "Targets" },
 				{ x: 320, text: "Collectors" },
@@ -1036,7 +1038,7 @@
 			for (const h of headings) {
 				const text = document.createElementNS(SVG_NS, "text");
 				text.setAttribute("x", h.x);
-				text.setAttribute("y", "20");
+				text.setAttribute("y", "28");
 				text.setAttribute("text-anchor", "middle");
 				text.setAttribute("font-size", "11");
 				text.setAttribute("fill", "var(--muted)");
@@ -1044,7 +1046,7 @@
 				svg.appendChild(text);
 			}
 
-			// Draw edges first
+			// Draw edges first with smooth curves
 			for (const edge of model.edges) {
 				const fromNode = model.nodes.find(n => n.id === edge.from);
 				const toNode = model.nodes.find(n => n.id === edge.to);
@@ -1059,7 +1061,8 @@
 				const midX = (x1 + x2) / 2;
 
 				const path = document.createElementNS(SVG_NS, "path");
-				const pathStr = "M " + x1 + "," + y1 + " H " + midX + " V " + y2 + " H " + x2;
+				// Use cubic Bezier curve with horizontal tangents at both ends (S-curve)
+				const pathStr = "M " + x1 + "," + y1 + " C " + midX + "," + y1 + " " + midX + "," + y2 + " " + x2 + "," + y2;
 				path.setAttribute("d", pathStr);
 				path.setAttribute("class", "edge edge-" + edge.style);
 
