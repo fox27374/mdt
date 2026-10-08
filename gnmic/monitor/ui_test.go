@@ -60,6 +60,30 @@ func TestUIHandler(t *testing.T) {
 		if !strings.Contains(body, "function showView") {
 			t.Error("expected body to contain 'function showView'")
 		}
+
+		if !strings.Contains(body, "function renderTopology") {
+			t.Error("expected body to contain 'function renderTopology'")
+		}
+
+		if !strings.Contains(body, "createElementNS") {
+			t.Error("expected body to contain 'createElementNS'")
+		}
+
+		if !strings.Contains(body, "buildTopology(") {
+			t.Error("expected body to contain 'buildTopology('")
+		}
+
+		if !strings.Contains(body, "id=\"topologyLegend\"") {
+			t.Error("expected body to contain 'id=\"topologyLegend\"'")
+		}
+
+		if !strings.Contains(body, "edge-error") {
+			t.Error("expected body to contain 'edge-error'")
+		}
+
+		if !strings.Contains(body, "st-no-data") {
+			t.Error("expected body to contain 'st-no-data'")
+		}
 	})
 
 	t.Run("GET /topology.js returns 200 with JavaScript", func(t *testing.T) {
