@@ -84,6 +84,26 @@ func TestUIHandler(t *testing.T) {
 		if !strings.Contains(body, "st-no-data") {
 			t.Error("expected body to contain 'st-no-data'")
 		}
+
+		if !strings.Contains(body, "id=\"topologyTooltip\"") {
+			t.Error("expected body to contain 'id=\"topologyTooltip\"'")
+		}
+
+		if !strings.Contains(body, "dataset.name") {
+			t.Error("expected body to contain 'dataset.name'")
+		}
+
+		if !strings.Contains(body, "scrollIntoView") {
+			t.Error("expected body to contain 'scrollIntoView'")
+		}
+
+		if !strings.Contains(body, "closest(") {
+			t.Error("expected body to contain 'closest('")
+		}
+
+		if !strings.Contains(body, "class=\"tooltip\"") {
+			t.Error("expected body to contain 'class=\"tooltip\"'")
+		}
 	})
 
 	t.Run("GET /topology.js returns 200 with JavaScript", func(t *testing.T) {

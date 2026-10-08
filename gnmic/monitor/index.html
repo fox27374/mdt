@@ -292,6 +292,52 @@
 			border-radius: 4px;
 			padding: 16px;
 			background-color: var(--bg);
+			position: relative;
+		}
+
+		.tooltip {
+			position: fixed;
+			pointer-events: none;
+			z-index: 10;
+			background-color: var(--chip-bg);
+			border: 1px solid var(--border);
+			border-radius: 4px;
+			padding: 8px 12px;
+			max-width: 280px;
+			color: var(--fg);
+			font-size: 13px;
+		}
+
+		.tooltip > * {
+			margin: 0;
+			padding: 0;
+		}
+
+		.tooltip-line {
+			line-height: 1.4;
+		}
+
+		.tooltip-line:first-child {
+			font-weight: 600;
+			margin-bottom: 4px;
+		}
+
+		@keyframes highlight {
+			0%, 100% {
+				background-color: var(--chip-bg);
+			}
+			50% {
+				background-color: var(--stale);
+				opacity: 0.3;
+			}
+		}
+
+		tbody tr.highlight {
+			animation: highlight 1500ms ease-in-out;
+		}
+
+		.node-target {
+			cursor: pointer;
 		}
 
 		#topologySvg {
@@ -473,6 +519,7 @@
 		<div id="topologyView">
 			<svg id="topologySvg" role="img" aria-label="Pipeline topology" width="100%"></svg>
 			<div id="topologyLegend" class="legend"></div>
+			<div id="topologyTooltip" class="tooltip" hidden></div>
 		</div>
 
 		<div id="tableView" hidden>
@@ -536,6 +583,7 @@
 			expandedTargets: new Set(),
 			lastData: null,
 			lastSuccessTime: null,
+			topology: null,
 		};
 
 		const statusSeverity = {
@@ -774,6 +822,8 @@
 				return;
 			}
 
+			state.topology = model;
+
 			// Clear SVG
 			while (svg.firstChild) {
 				svg.removeChild(svg.firstChild);
@@ -933,6 +983,7 @@
 			for (const target of sorted) {
 				const targetRow = document.createElement("tr");
 				targetRow.className = "target-row";
+				targetRow.dataset.name = target.name;
 				if (state.expandedTargets.has(target.name)) {
 					targetRow.classList.add("expanded");
 				}
@@ -1058,6 +1109,154 @@
 				}
 			}
 		}
+
+		// Tooltip and click-through event delegation
+		const topologySvg = document.getElementById("topologySvg");
+		const topologyTooltip = document.getElementById("topologyTooltip");
+
+		topologySvg.addEventListener("mouseover", (e) => {
+			const nodeGroup = e.target.closest("g.node");
+			if (!nodeGroup) return;
+
+			const nodeId = nodeGroup.getAttribute("data-id");
+			if (!nodeId || !state.topology) return;
+
+			const node = state.topology.nodes.find(n => n.id === nodeId);
+			if (!node) return;
+
+			// Clear tooltip
+			topologyTooltip.innerHTML = "";
+
+			// Line 1: label (bold)
+			const labelLine = document.createElement("div");
+			labelLine.className = "tooltip-line";
+			const labelBold = document.createElement("strong");
+			labelBold.textContent = node.label;
+			labelLine.appendChild(labelBold);
+			topologyTooltip.appendChild(labelLine);
+
+			// Line 2: Status
+			const statusLine = document.createElement("div");
+			statusLine.className = "tooltip-line";
+			const statusText = node.kind === "prometheus" ? "Not monitored" : node.status;
+			statusLine.textContent = "Status: " + statusText;
+			topologyTooltip.appendChild(statusLine);
+
+			// Line 3: reason (if not empty)
+			if (node.reason) {
+				const reasonLine = document.createElement("div");
+				reasonLine.className = "tooltip-line";
+				reasonLine.textContent = node.reason;
+				topologyTooltip.appendChild(reasonLine);
+			}
+
+			// Target-specific lines
+			if (node.kind === "target") {
+				if (node.detail) {
+					const addrLine = document.createElement("div");
+					addrLine.className = "tooltip-line";
+					addrLine.textContent = "Address: " + node.detail;
+					topologyTooltip.appendChild(addrLine);
+				}
+				const lastSeenLine = document.createElement("div");
+				lastSeenLine.className = "tooltip-line";
+				if (node.lastSeen) {
+					const relTime = formatRelativeTime(new Date(node.lastSeen));
+					lastSeenLine.textContent = "Last data: " + relTime;
+				} else {
+					lastSeenLine.textContent = "Last data: never";
+				}
+				topologyTooltip.appendChild(lastSeenLine);
+			} else {
+				// Non-target: detail line (if not empty)
+				if (node.detail) {
+					const detailLine = document.createElement("div");
+					detailLine.className = "tooltip-line";
+					detailLine.textContent = node.detail;
+					topologyTooltip.appendChild(detailLine);
+				}
+			}
+
+			topologyTooltip.hidden = false;
+		});
+
+		topologySvg.addEventListener("mousemove", (e) => {
+			if (topologyTooltip.hidden) return;
+
+			// Position tooltip near pointer, offset 12px, clamped to window
+			const offsetX = 12;
+			const offsetY = 12;
+			let x = e.clientX + offsetX;
+			let y = e.clientY + offsetY;
+
+			// Clamp to window bounds
+			const rect = topologyTooltip.getBoundingClientRect();
+			const tooltipWidth = rect.width || 200; // fallback width
+			const tooltipHeight = rect.height || 100; // fallback height
+
+			if (x + tooltipWidth > window.innerWidth) {
+				x = window.innerWidth - tooltipWidth - 8;
+			}
+			if (x < 0) {
+				x = 8;
+			}
+			if (y + tooltipHeight > window.innerHeight) {
+				y = window.innerHeight - tooltipHeight - 8;
+			}
+			if (y < 0) {
+				y = 8;
+			}
+
+			topologyTooltip.style.left = x + "px";
+			topologyTooltip.style.top = y + "px";
+		});
+
+		topologySvg.addEventListener("mouseout", (e) => {
+			const nodeGroup = e.target.closest("g.node");
+			if (!nodeGroup) return;
+			topologyTooltip.hidden = true;
+		});
+
+		topologySvg.addEventListener("click", (e) => {
+			const nodeGroup = e.target.closest("g.node");
+			if (!nodeGroup) return;
+
+			const nodeId = nodeGroup.getAttribute("data-id");
+			if (!nodeId || !state.topology) return;
+
+			const node = state.topology.nodes.find(n => n.id === nodeId);
+			if (!node || node.kind !== "target") return;
+
+			// Add to expanded targets
+			state.expandedTargets.add(node.target);
+
+			// Switch to table view
+			showView("table");
+
+			// Render targets (which will expand this one)
+			if (state.lastData) {
+				renderTargets(state.lastData.targets);
+
+				// Find and scroll to the target row
+				const targetName = node.target;
+				let targetRow = null;
+				const tbody = document.getElementById("targets");
+				for (const row of tbody.querySelectorAll("tr.target-row")) {
+					if (row.dataset.name === targetName) {
+						targetRow = row;
+						break;
+					}
+				}
+
+				if (targetRow) {
+					targetRow.scrollIntoView({ block: "center" });
+					targetRow.classList.add("highlight");
+					setTimeout(() => {
+						targetRow.classList.remove("highlight");
+					}, 1500);
+				}
+			}
+		});
 
 		// Wire up view toggle buttons
 		document.getElementById("btnTopology").addEventListener("click", () => {
