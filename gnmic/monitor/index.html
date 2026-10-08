@@ -186,7 +186,8 @@
 			font-size: 12px;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
-			color: var(--muted);
+			color: var(--text);
+			background-color: var(--panel);
 		}
 
 		tr {
@@ -414,13 +415,14 @@
 			flex-wrap: wrap;
 			margin-top: 12px;
 			font-size: 12px;
-			color: var(--muted);
+			color: var(--text);
 		}
 
 		.legend-item {
 			display: flex;
 			align-items: center;
 			gap: 6px;
+			color: var(--text);
 		}
 
 		.legend-dot {
@@ -433,6 +435,26 @@
 		.legend-dot.dashed {
 			border: 2px dashed var(--muted);
 			background: transparent;
+		}
+
+		.legend-dot.ok {
+			background-color: var(--ok);
+		}
+
+		.legend-dot.waiting {
+			background-color: var(--muted);
+		}
+
+		.legend-dot.stale {
+			background-color: var(--warn);
+		}
+
+		.legend-dot.no-data {
+			background-color: var(--muted);
+		}
+
+		.legend-dot.error {
+			background-color: var(--error);
 		}
 
 		.edge {
@@ -529,20 +551,45 @@
 			font-family: ui-monospace, Menlo, monospace;
 		}
 
+		.node .label {
+			dominant-baseline: hanging;
+			fill: var(--text);
+		}
+
+		.node .sublabel {
+			dominant-baseline: hanging;
+			font-weight: 400;
+			fill: var(--text);
+		}
+
+		svg text {
+			fill: var(--text);
+		}
+
 		.node:hover circle {
 			stroke: var(--accent) !important;
 		}
-
-		.node .label { dominant-baseline: hanging; }
-		.node .sublabel { dominant-baseline: hanging; font-weight: 400; }
 
 		[hidden] {
 			display: none !important;
 		}
 
+		a {
+			color: var(--accent);
+		}
+
+		a:hover {
+			text-decoration: underline;
+		}
+
 		a:focus-visible, button:focus-visible {
 			outline: 2px solid var(--accent);
 			outline-offset: 2px;
+		}
+
+		option {
+			background-color: var(--panel);
+			color: var(--text);
 		}
 
 		@media (max-width: 768px) {
@@ -644,6 +691,8 @@
 							<th>Target</th>
 							<th>Address</th>
 							<th>Owner</th>
+							<th>Subscription / Interval</th>
+							<th>Last Seen / Events</th>
 							<th>Status</th>
 							<th>Reason</th>
 						</tr>
@@ -951,18 +1000,29 @@
 
 			// Create defs for markers
 			const defs = document.createElementNS(SVG_NS, "defs");
-			const marker = document.createElementNS(SVG_NS, "marker");
-			marker.setAttribute("id", "arrowhead");
-			marker.setAttribute("markerWidth", "10");
-			marker.setAttribute("markerHeight", "10");
-			marker.setAttribute("refX", "9");
-			marker.setAttribute("refY", "3");
-			marker.setAttribute("orient", "auto");
-			const poly = document.createElementNS(SVG_NS, "polygon");
-			poly.setAttribute("points", "0 0, 10 3, 0 6");
-			poly.setAttribute("fill", "var(--edge)");
-			marker.appendChild(poly);
-			defs.appendChild(marker);
+
+			// Create markers for each edge type
+			const markerTypes = [
+				{ id: "arrowhead-normal", color: "var(--line)" },
+				{ id: "arrowhead-error", color: "var(--error)" },
+				{ id: "arrowhead-stale", color: "var(--warn)" }
+			];
+
+			for (const markerType of markerTypes) {
+				const marker = document.createElementNS(SVG_NS, "marker");
+				marker.setAttribute("id", markerType.id);
+				marker.setAttribute("markerWidth", "10");
+				marker.setAttribute("markerHeight", "10");
+				marker.setAttribute("refX", "9");
+				marker.setAttribute("refY", "3");
+				marker.setAttribute("orient", "auto");
+				const poly = document.createElementNS(SVG_NS, "polygon");
+				poly.setAttribute("points", "0 0, 10 3, 0 6");
+				poly.setAttribute("fill", markerType.color);
+				marker.appendChild(poly);
+				defs.appendChild(marker);
+			}
+
 			svg.appendChild(defs);
 
 			// Draw column headings
@@ -979,8 +1039,7 @@
 				text.setAttribute("y", "20");
 				text.setAttribute("text-anchor", "middle");
 				text.setAttribute("font-size", "11");
-				text.setAttribute("fill", "var(--fg)");
-				text.setAttribute("opacity", "0.6");
+				text.setAttribute("fill", "var(--muted)");
 				text.textContent = h.text;
 				svg.appendChild(text);
 			}
@@ -1006,7 +1065,13 @@
 
 				// Add arrowhead for non-locker edges
 				if (edge.style !== "locker") {
-					path.setAttribute("marker-end", "url(#arrowhead)");
+					let markerId = "arrowhead-normal";
+					if (edge.style === "error") {
+						markerId = "arrowhead-error";
+					} else if (edge.style === "stale") {
+						markerId = "arrowhead-stale";
+					}
+					path.setAttribute("marker-end", "url(#" + markerId + ")");
 				}
 
 				svg.appendChild(path);
@@ -1069,12 +1134,11 @@
 
 				const dot = document.createElement("div");
 				dot.className = "legend-dot " + statusClass(status);
-				const colorVar = status === "NO_DATA" ? "--no-data" : "--" + status.toLowerCase();
-				dot.style.backgroundColor = "var(" + colorVar + ")";
 				item.appendChild(dot);
 
 				const label = document.createElement("span");
 				label.textContent = status.replace(/_/g, " ");
+				label.style.color = "var(--text)";
 				item.appendChild(label);
 
 				legend.appendChild(item);
@@ -1088,6 +1152,7 @@
 			unknownItem.appendChild(unknownDot);
 			const unknownLabel = document.createElement("span");
 			unknownLabel.textContent = "Unknown / Not Monitored";
+			unknownLabel.style.color = "var(--text)";
 			unknownItem.appendChild(unknownLabel);
 			legend.appendChild(unknownItem);
 		}
