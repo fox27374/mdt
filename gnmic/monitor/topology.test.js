@@ -501,3 +501,23 @@ test("9. Infrastructure nodes (nats, output, prometheus) y is average of first/l
   }
   assert.equal(topo.height, maxY + 64, "height should be (largest y of any node) + TOP");
 });
+
+test("10. Edge flow only when both ends OK and style normal", () => {
+  const comp = (name, ok) => ({ name, ok, detail: "" });
+  const data = {
+    components: [comp("collector gnmic-1", true), comp("nats", true), comp("gnmic-output", true), comp("consul", true)],
+    targets: [
+      { name: "ok", address: "a", owner: "gnmic-1", status: "OK", reason: "", subs: [] },
+      { name: "bad", address: "b", owner: "gnmic-1", status: "ERROR", reason: "", subs: [] },
+      { name: "wait", address: "c", owner: "gnmic-1", status: "WAITING", reason: "", subs: [] }
+    ]
+  };
+  const topo = buildTopology(data);
+  const flow = (from) => topo.edges.find(e => e.from === from).flow;
+  assert.equal(flow("target:ok"), true);
+  assert.equal(flow("target:bad"), false);
+  assert.equal(flow("target:wait"), false);
+  assert.equal(flow("nats"), true);
+  assert.equal(flow("output"), false, "prometheus is unknown");
+  assert.equal(topo.edges.find(e => e.from === "consul").flow, false);
+});

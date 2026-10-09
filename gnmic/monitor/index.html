@@ -442,6 +442,10 @@
 			stroke-dasharray: 4,4;
 		}
 
+		.flow-dot {
+			fill: var(--ok);
+		}
+
 		.edge-locker {
 			stroke: var(--line);
 			stroke-width: 1.5;
@@ -940,6 +944,10 @@
 
 			state.topology = model;
 
+			const FLOW_DOTS = 3;
+			const FLOW_DUR = 2.4;
+			const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 			// Clear SVG
 			while (svg.firstChild) {
 				svg.removeChild(svg.firstChild);
@@ -1042,6 +1050,23 @@
 				}
 
 				svg.appendChild(path);
+
+				if (edge.flow && !reduceMotion) {
+					// begin is relative to the persistent <svg> timeline, so phase survives the
+					// full rebuild on each poll: dot k is always at (t - k*dur/DOTS) mod dur.
+					for (let k = 0; k < FLOW_DOTS; k++) {
+						const dot = document.createElementNS(SVG_NS, "circle");
+						dot.setAttribute("class", "flow-dot");
+						dot.setAttribute("r", "2.5");
+						const motion = document.createElementNS(SVG_NS, "animateMotion");
+						motion.setAttribute("dur", FLOW_DUR + "s");
+						motion.setAttribute("repeatCount", "indefinite");
+						motion.setAttribute("begin", (k * FLOW_DUR / FLOW_DOTS - FLOW_DUR).toFixed(2) + "s");
+						motion.setAttribute("path", pathStr);
+						dot.appendChild(motion);
+						svg.appendChild(dot);
+					}
+				}
 			}
 
 			// Draw nodes

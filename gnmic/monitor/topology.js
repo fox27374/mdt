@@ -388,6 +388,13 @@ function buildTopology(data) {
     });
   }
 
+  // Flow dots: only on data links whose both ends are OK
+  const statusById = {};
+  for (const node of nodes) statusById[node.id] = node.status;
+  for (const edge of edges) {
+    edge.flow = edge.style === "normal" && statusById[edge.from] === "OK" && statusById[edge.to] === "OK";
+  }
+
   // 7. Calculate height
   let maxNodeY = TOP;
   for (const node of nodes) {
