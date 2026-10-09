@@ -1,10 +1,10 @@
 // Constants for layout
 const TARGET_X = 80;
-const COLLECTOR_X = 320;
-const NATS_X = 540;
-const OUTPUT_X = 720;
+const COLLECTOR_X = 285;
+const NATS_X = 490;
+const OUTPUT_X = 695;
 const PROMETHEUS_X = 900;
-const CONSUL_X = 320;
+const CONSUL_X = 285;
 const NODE_RADIUS = 20;
 const ROW = 76; // node diameter 40 + label (~14px below centre) + gap
 const GROUP_GAP = 32;
