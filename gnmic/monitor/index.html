@@ -1209,8 +1209,34 @@
 					targetRow.classList.toggle("expanded");
 					if (targetRow.classList.contains("expanded")) {
 						state.expandedTargets.add(target.name);
+						// Show all sub-rows for this target
+						let nextRow = targetRow.nextSibling;
+						while (nextRow) {
+							if (!nextRow.classList) {
+								nextRow = nextRow.nextSibling;
+								continue;
+							}
+							if (nextRow.classList.contains("target-row")) break;
+							if (nextRow.classList.contains("sub-row")) {
+								nextRow.style.display = "table-row";
+							}
+							nextRow = nextRow.nextSibling;
+						}
 					} else {
 						state.expandedTargets.delete(target.name);
+						// Hide all sub-rows for this target
+						let nextRow = targetRow.nextSibling;
+						while (nextRow) {
+							if (!nextRow.classList) {
+								nextRow = nextRow.nextSibling;
+								continue;
+							}
+							if (nextRow.classList.contains("target-row")) break;
+							if (nextRow.classList.contains("sub-row")) {
+								nextRow.style.display = "none";
+							}
+							nextRow = nextRow.nextSibling;
+						}
 					}
 				});
 
@@ -1265,6 +1291,21 @@
 						subRow.appendChild(subReasonCell);
 
 						tbody.appendChild(subRow);
+					}
+					// Apply initial visibility state for sub-rows
+					if (state.expandedTargets.has(target.name)) {
+						let nextRow = targetRow.nextSibling;
+						while (nextRow) {
+							if (!nextRow.classList) {
+								nextRow = nextRow.nextSibling;
+								continue;
+							}
+							if (nextRow.classList.contains("target-row")) break;
+							if (nextRow.classList.contains("sub-row")) {
+								nextRow.style.display = "table-row";
+							}
+							nextRow = nextRow.nextSibling;
+						}
 					}
 				}
 			}
