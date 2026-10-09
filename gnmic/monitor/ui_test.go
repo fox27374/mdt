@@ -37,6 +37,10 @@ func TestUIHandler(t *testing.T) {
 			t.Error("expected body to contain '/topology.js'")
 		}
 
+		if !strings.Contains(body, "drop-shadow(0 0 6px var(--ok))") {
+			t.Error("expected body to contain status glow rule")
+		}
+
 		if !strings.Contains(body, "id=\"topologyView\"") {
 			t.Error("expected body to contain 'id=\"topologyView\"'")
 		}

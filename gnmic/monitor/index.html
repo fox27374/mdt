@@ -539,6 +539,11 @@
 		.node-prometheus.st-error circle { stroke: var(--error); }
 		.node-prometheus.st-unknown circle { stroke: var(--muted); stroke-dasharray: 2,2; }
 
+		/* Status glow: SVG ignores box-shadow, so use drop-shadow on the node circle. */
+		.node.st-ok circle { filter: drop-shadow(0 0 6px var(--ok)); }
+		.node.st-error circle { filter: drop-shadow(0 0 6px var(--error)); }
+		.node.st-stale circle { filter: drop-shadow(0 0 6px var(--warn)); }
+
 		.node-icon {
 			stroke: var(--accent);
 			fill: none;
