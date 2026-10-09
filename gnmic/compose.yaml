@@ -58,10 +58,12 @@ services:
       - 8080:8080
     environment:
       - HOSTS=${MONITOR_HOSTS:-docker-host=http://host.containers.internal:9100}
+      - CONTAINER_EXPORTERS=${MONITOR_CONTAINER_EXPORTERS:-docker-host=http://host.containers.internal:9882}
     depends_on:
       - consul
       - nats
       - node-exporter
+      - podman-exporter
 
   node-exporter:
     image: docker.io/prom/node-exporter:v1.12.1
@@ -73,6 +75,22 @@ services:
     command:
       - --path.rootfs=/host
       - --web.listen-address=:9100
+
+  podman-exporter:
+    image: quay.io/navidys/prometheus-podman-exporter:latest
+    container_name: podman-exporter
+    network_mode: host
+    # Rootless podman: the container user must own the host socket, so keep the host uid.
+    # Set PODMAN_UID to the output of `id -u` on the host (default 1000).
+    userns_mode: keep-id
+    user: "${PODMAN_UID:-1000}"
+    environment:
+      - HOME=/tmp
+      - CONTAINER_HOST=unix:///run/podman/podman.sock
+    volumes:
+      - ${XDG_RUNTIME_DIR:-/run/user/1000}/podman/podman.sock:/run/podman/podman.sock:ro
+    command:
+      - --web.listen-address=:9882
 
   nats:
     image: docker.io/nats:alpine3.22
