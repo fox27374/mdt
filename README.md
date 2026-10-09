@@ -151,7 +151,7 @@ The monitor reads these environment variables; defaults shown are used if unset:
 | `POLL_INTERVAL` | `15s` | How often to query components for status updates |
 | `HOSTS` | `docker-host=http://host.containers.internal:9100` | Comma-separated list of hosts to monitor; format: `name=http://host:9100,...` |
 | `HOST_NIC_INCLUDE` | `^(en\|eth\|em\|bond\|ib)[a-z0-9]*$` | Regex pattern for network interfaces to include |
-| `CONTAINER_EXPORTERS` | `docker-host=http://host.containers.internal:9882` | Optional. Comma-separated `name=url` of prometheus-podman-exporter endpoints; `name` must match a `HOSTS` name. Unset: no container rows |
+| `CONTAINER_EXPORTERS` | (empty, no container rows) | Optional. Comma-separated `name=url` of prometheus-podman-exporter endpoints; `name` must match a `HOSTS` name. Unset: no container rows |
 | `CONTAINER_INCLUDE` | (empty, all containers) | Optional regex; only containers whose name matches are shown |
 | `HOST_CPU_WARN` / `HOST_CPU_CRIT` | `80` / `95` | CPU usage thresholds (%) |
 | `HOST_MEM_WARN` / `HOST_MEM_CRIT` | `85` / `95` | Memory usage thresholds (%) |
