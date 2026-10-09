@@ -19,6 +19,7 @@ type Store struct {
 	components      map[string]Component                // name -> component
 	seen            map[string]map[string]SeenRecord    // targetKey -> (sub -> record)
 	hosts           map[string]HostState                // name -> host state
+	containers      map[string][]ContainerState         // host name -> container rows
 	setConfigCount  map[string]int64                    // source -> counter (for determining latest owner)
 	maxSetConfigID  int64                               // monotonically increasing counter
 	hasCollectorSet bool                                // true if any non-"config" source called SetConfig
@@ -32,6 +33,7 @@ func NewStore(started time.Time) *Store {
 		components:     make(map[string]Component),
 		seen:           make(map[string]map[string]SeenRecord),
 		hosts:          make(map[string]HostState),
+		containers:     make(map[string][]ContainerState),
 		setConfigCount: make(map[string]int64),
 	}
 }
@@ -81,6 +83,26 @@ func (s *Store) SetHost(h HostState) {
 	defer s.mu.Unlock()
 
 	s.hosts[h.Name] = h
+}
+
+// SetContainers replaces the container rows for a host. Nil or empty clears them.
+func (s *Store) SetContainers(host string, rows []ContainerState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if len(rows) == 0 {
+		delete(s.containers, host)
+		return
+	}
+	s.containers[host] = rows
+}
+
+// HostMemTotal returns the last known total memory of a host, 0 if unknown.
+func (s *Store) HostMemTotal(host string) float64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.hosts[host].MemTotal
 }
 
 // Seen records one received event for (target, sub).
@@ -365,6 +387,8 @@ func (s *Store) Snapshot(now time.Time) Snapshot {
 		copy(hostCopy.Disks, host.Disks)
 		hostCopy.NICs = make([]MetricState, len(host.NICs))
 		copy(hostCopy.NICs, host.NICs)
+		hostCopy.Containers = make([]ContainerState, len(s.containers[host.Name]))
+		copy(hostCopy.Containers, s.containers[host.Name])
 		snap.Hosts = append(snap.Hosts, hostCopy)
 	}
 

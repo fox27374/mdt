@@ -1,14 +1,22 @@
 // Constants for layout
 const TARGET_X = 80;
-const COLLECTOR_X = 320;
-const NATS_X = 540;
-const OUTPUT_X = 720;
+const COLLECTOR_X = 285;
+const NATS_X = 490;
+const OUTPUT_X = 695;
 const PROMETHEUS_X = 900;
-const CONSUL_X = 320;
-const ROW = 90; // Increased from 64 to prevent label overlap (icon ~52px + label ~16px + gap ~22px)
+const CONSUL_X = 285;
+const NODE_RADIUS = 20;
+const ROW = 76; // node diameter 40 + label (~14px below centre) + gap
 const GROUP_GAP = 32;
-const TOP = 48;
+const TOP = 64; // clears the tier headings drawn in the lane pills
 const WIDTH = 980;
+const COLUMNS = [
+  { x: TARGET_X, label: "Targets" },
+  { x: COLLECTOR_X, label: "Collectors" },
+  { x: NATS_X, label: "NATS" },
+  { x: OUTPUT_X, label: "Output" },
+  { x: PROMETHEUS_X, label: "Prometheus" }
+];
 
 function buildTopology(data) {
   // Defensive: handle missing arrays
@@ -392,6 +400,8 @@ function buildTopology(data) {
   return {
     width: WIDTH,
     height: height,
+    radius: NODE_RADIUS,
+    columns: COLUMNS,
     nodes: nodes,
     edges: edges
   };

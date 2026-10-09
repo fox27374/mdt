@@ -106,49 +106,6 @@
 			flex-wrap: wrap;
 		}
 
-		.components {
-			display: flex;
-			gap: 12px;
-			flex-wrap: wrap;
-		}
-
-		.chip {
-			display: inline-flex;
-			align-items: center;
-			gap: 8px;
-			padding: 8px 12px;
-			border-radius: 999px;
-			background-color: var(--panel);
-			border: 1px solid var(--line);
-			font-size: 12px;
-			font-weight: 500;
-			color: var(--text);
-		}
-
-		.chip-status {
-			width: 12px;
-			height: 12px;
-			border-radius: 50%;
-			flex-shrink: 0;
-		}
-
-		.chip-status.ok {
-			background-color: var(--ok);
-		}
-
-		.chip-status.error {
-			background-color: var(--error);
-		}
-
-		.chip-detail {
-			font-size: 11px;
-			color: var(--fg);
-			opacity: 0.7;
-			max-width: 100px;
-			overflow: hidden;
-			text-overflow: ellipsis;
-		}
-
 		.updated {
 			font-size: 12px;
 			color: var(--fg);
@@ -241,6 +198,10 @@
 		}
 
 		.target-row.expanded + .sub-row {
+			display: table-row;
+		}
+
+		.host-sub-row {
 			display: table-row;
 		}
 
@@ -544,6 +505,23 @@
 		.node.st-error circle { filter: drop-shadow(0 0 6px var(--error)); }
 		.node.st-stale circle { filter: drop-shadow(0 0 6px var(--warn)); }
 
+		.tier-lane {
+			fill: var(--panel);
+			stroke: var(--line);
+			stroke-width: 1;
+		}
+
+		.tier-pill {
+			fill: var(--bg);
+			stroke: var(--line);
+			stroke-width: 1;
+		}
+
+		.tier-label {
+			font-size: 11px;
+			fill: var(--muted);
+		}
+
 		.node-icon {
 			stroke: var(--accent);
 			fill: none;
@@ -624,11 +602,6 @@
 				font-size: 12px;
 			}
 
-			.chip {
-				padding: 6px 10px;
-				font-size: 11px;
-			}
-
 			.top-bar {
 				gap: 8px;
 			}
@@ -652,7 +625,6 @@
 		<div class="banner" id="errorBanner">Cannot reach monitor API</div>
 
 		<div class="top-bar">
-			<div class="components" id="components"></div>
 			<div class="updated" id="updated"></div>
 		</div>
 
@@ -780,32 +752,6 @@
 			return status.toLowerCase().replace(/_/g, "-");
 		}
 
-		function renderComponents(components) {
-			const container = document.getElementById("components");
-			container.innerHTML = "";
-
-			for (const comp of components) {
-				const chip = document.createElement("div");
-				chip.className = "chip";
-				chip.title = comp.detail;
-
-				const status = document.createElement("div");
-				status.className = `chip-status ${comp.ok ? "ok" : "error"}`;
-
-				const name = document.createElement("span");
-				name.textContent = comp.name;
-
-				const detail = document.createElement("div");
-				detail.className = "chip-detail";
-				detail.textContent = comp.detail;
-
-				chip.appendChild(status);
-				chip.appendChild(name);
-				chip.appendChild(detail);
-				container.appendChild(chip);
-			}
-		}
-
 		function renderUpdatedTime() {
 			const el = document.getElementById("updated");
 			if (state.lastSuccessTime) {
@@ -855,7 +801,6 @@
 
 		function iconFor(kind) {
 			const g = document.createElementNS(SVG_NS, "g");
-			const R = 26;
 			const iconSize = 16;
 			const iconX = -iconSize / 2;
 			const iconY = -iconSize / 2;
@@ -1033,22 +978,36 @@
 
 			svg.appendChild(defs);
 
-			// Draw column headings above first node row
-			const headings = [
-				{ x: 80, text: "Targets" },
-				{ x: 320, text: "Collectors" },
-				{ x: 540, text: "NATS" },
-				{ x: 720, text: "Output" },
-				{ x: 900, text: "Prometheus" }
-			];
-			for (const h of headings) {
+			// Draw a tier lane behind each column, with its heading as a pill at the top
+			const LANE_HALF = 76;
+			const R = model.radius;
+			for (const col of model.columns) {
+				const lane = document.createElementNS(SVG_NS, "rect");
+				lane.setAttribute("x", col.x - LANE_HALF);
+				lane.setAttribute("y", "8");
+				lane.setAttribute("width", LANE_HALF * 2);
+				lane.setAttribute("height", model.height - 16);
+				lane.setAttribute("rx", "12");
+				lane.setAttribute("class", "tier-lane");
+				svg.appendChild(lane);
+
+				const pill = document.createElementNS(SVG_NS, "rect");
+				pill.setAttribute("x", col.x - 50);
+				pill.setAttribute("y", "10");
+				pill.setAttribute("width", "100");
+				pill.setAttribute("height", "22");
+				pill.setAttribute("rx", "11");
+				pill.setAttribute("class", "tier-pill");
+				svg.appendChild(pill);
+
 				const text = document.createElementNS(SVG_NS, "text");
-				text.setAttribute("x", h.x);
-				text.setAttribute("y", "28");
+				text.setAttribute("x", col.x);
+				text.setAttribute("y", "21");
 				text.setAttribute("text-anchor", "middle");
-				text.setAttribute("font-size", "11");
+				text.setAttribute("dominant-baseline", "middle");
 				text.setAttribute("fill", "var(--muted)");
-				text.textContent = h.text;
+				text.setAttribute("class", "tier-label");
+				text.textContent = col.label;
 				svg.appendChild(text);
 			}
 
@@ -1059,7 +1018,6 @@
 
 				if (!fromNode || !toNode) continue;
 
-				const R = 26;
 				const x1 = fromNode.x + R;
 				const x2 = toNode.x - R;
 				const y1 = fromNode.y;
@@ -1099,11 +1057,12 @@
 					const circle = document.createElementNS(SVG_NS, "circle");
 					circle.setAttribute("cx", "0");
 					circle.setAttribute("cy", "0");
-					circle.setAttribute("r", "26");
+					circle.setAttribute("r", String(model.radius));
 					g.appendChild(circle);
 
-					// Icon
+					// Icon (scaled to fit the node circle)
 					const icon = iconFor(node.kind);
+					icon.setAttribute("transform", "scale(0.8)");
 					g.appendChild(icon);
 
 					// Label text
@@ -1114,7 +1073,7 @@
 
 					const text = document.createElementNS(SVG_NS, "text");
 					text.setAttribute("x", "0");
-					text.setAttribute("y", "38");
+					text.setAttribute("y", "30");
 					text.setAttribute("class", "label");
 					text.textContent = label;
 					g.appendChild(text);
@@ -1123,7 +1082,7 @@
 					if (node.notMonitored) {
 						const subtext = document.createElementNS(SVG_NS, "text");
 						subtext.setAttribute("x", "0");
-						subtext.setAttribute("y", "52");
+						subtext.setAttribute("y", "46");
 						subtext.setAttribute("class", "sublabel");
 						subtext.textContent = "not monitored";
 						g.appendChild(subtext);
@@ -1318,45 +1277,61 @@
 		function renderHostSubRows(tbody, hostRow, host) {
 			// Helper to create disk or NIC sub-row
 			function createMetricSubRow(metric, metricType) {
+				// Cells line up with the host table: expand, Host, Level, CPU, Memory, Disk, Network, Reason
 				const subRow = document.createElement("tr");
-				subRow.className = "sub-row";
+				subRow.className = "sub-row host-sub-row";
+				const cells = Array.from({ length: 8 }, () => document.createElement("td"));
+				subRow.append(...cells);
 
-				const emptyCell = document.createElement("td");
-				subRow.appendChild(emptyCell);
+				cells[1].className = "sub-indent";
+				cells[1].textContent = metric.name;
 
-				const nameCell = document.createElement("td");
-				nameCell.className = "sub-indent";
-				nameCell.textContent = metric.name;
-				subRow.appendChild(nameCell);
+				const levelBadge = document.createElement("span");
+				levelBadge.className = `badge level-${metric.level.toLowerCase()}`;
+				levelBadge.textContent = metric.level;
+				cells[2].appendChild(levelBadge);
 
-				const emptyCell2 = document.createElement("td");
-				subRow.appendChild(emptyCell2);
-
-				const valueCell = document.createElement("td");
+				const valueCell = cells[metricType === "disk" ? 5 : 6];
 				valueCell.className = `metric-cell level-${metric.level.toLowerCase()}`;
 				if (metric.level === "UNKNOWN") {
 					valueCell.textContent = "n/a";
 				} else {
 					valueCell.textContent = metric.value.toFixed(1) + "%";
 				}
-				subRow.appendChild(valueCell);
 
-				const levelCell = document.createElement("td");
-				const levelBadge = document.createElement("span");
-				levelBadge.className = `badge level-${metric.level.toLowerCase()}`;
-				levelBadge.textContent = metric.level;
-				levelCell.appendChild(levelBadge);
-				subRow.appendChild(levelCell);
-
-				const detailCell = document.createElement("td");
-				detailCell.colSpan = 2;
-				detailCell.textContent = metric.detail || "";
-				subRow.appendChild(detailCell);
-
-				const emptyCell3 = document.createElement("td");
-				subRow.appendChild(emptyCell3);
+				cells[7].textContent = metric.detail || "";
 
 				return subRow;
+			}
+
+			// Helper to create a container sub-row (CPU and memory only)
+			function createContainerSubRow(container) {
+				const subRow = document.createElement("tr");
+				subRow.className = "sub-row host-sub-row";
+				const cells = Array.from({ length: 8 }, () => document.createElement("td"));
+				subRow.append(...cells);
+
+				cells[1].className = "sub-indent";
+				cells[1].textContent = container.name;
+
+				cells[3].className = "metric-cell";
+				cells[3].textContent = container.cpuKnown ? container.cpu.toFixed(1) + "%" : "n/a";
+
+				cells[4].className = "metric-cell";
+				cells[4].textContent = formatBytesUI(container.memUsed) +
+					(container.memLimitSet ? " (" + container.memPct.toFixed(1) + "%)" : "");
+
+				return subRow;
+			}
+
+			function formatBytesUI(bytes) {
+				const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+				let i = 0;
+				while (bytes >= 1024 && i < units.length - 1) {
+					bytes /= 1024;
+					i++;
+				}
+				return bytes.toFixed(1) + " " + units[i];
 			}
 
 			// Insert after hostRow
@@ -1375,6 +1350,15 @@
 			if (host.nics && host.nics.length > 0) {
 				for (const nic of host.nics) {
 					const subRow = createMetricSubRow(nic, "nic");
+					insertAfter.parentNode.insertBefore(subRow, insertAfter.nextSibling);
+					insertAfter = subRow;
+				}
+			}
+
+			// Add containers
+			if (host.containers && host.containers.length > 0) {
+				for (const container of host.containers) {
+					const subRow = createContainerSubRow(container);
 					insertAfter.parentNode.insertBefore(subRow, insertAfter.nextSibling);
 					insertAfter = subRow;
 				}
@@ -1540,12 +1524,6 @@
 				errorBanner.textContent = "Cannot reach monitor API";
 
 				// Render each section with its own error handling
-				try {
-					renderComponents(data.components);
-				} catch (e) {
-					console.error("Components failed to render:", e);
-				}
-
 				try {
 					renderUpdatedTime();
 				} catch (e) {

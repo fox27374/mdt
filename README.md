@@ -151,6 +151,8 @@ The monitor reads these environment variables; defaults shown are used if unset:
 | `POLL_INTERVAL` | `15s` | How often to query components for status updates |
 | `HOSTS` | `docker-host=http://host.containers.internal:9100` | Comma-separated list of hosts to monitor; format: `name=http://host:9100,...` |
 | `HOST_NIC_INCLUDE` | `^(en\|eth\|em\|bond\|ib)[a-z0-9]*$` | Regex pattern for network interfaces to include |
+| `CONTAINER_EXPORTERS` | (empty, no container rows) | Optional. Comma-separated `name=url` of prometheus-podman-exporter endpoints; `name` must match a `HOSTS` name. Unset: no container rows |
+| `CONTAINER_INCLUDE` | (empty, all containers) | Optional regex; only containers whose name matches are shown |
 | `HOST_CPU_WARN` / `HOST_CPU_CRIT` | `80` / `95` | CPU usage thresholds (%) |
 | `HOST_MEM_WARN` / `HOST_MEM_CRIT` | `85` / `95` | Memory usage thresholds (%) |
 | `HOST_DISK_WARN` / `HOST_DISK_CRIT` | `80` / `90` | Disk usage thresholds (%) |
@@ -164,6 +166,13 @@ When `HOSTS` is configured, the monitor scrapes node_exporter instances and disp
 - **Memory** — memory used as a percentage of total
 - **Disks** — used percentage for each real filesystem (excluding virtual/temporary filesystems)
 - **NICs** — utilization as a percentage of link speed, averaged over 1 minute, for each physical network interface (matched by the `HOST_NIC_INCLUDE` regex)
+
+When `CONTAINER_EXPORTERS` is set for a host, its running containers are listed under the host (expand the host row). Each container shows:
+
+- **CPU** — percent of one core, computed from the change in CPU time since the previous poll (can exceed 100% on multi-core containers). `n/a` on the first poll
+- **Memory** — memory in use; with a percentage of the limit when the container has a `--memory` limit
+
+Container values have no thresholds or levels.
 
 Each metric has one of four levels:
 
@@ -183,9 +192,13 @@ export MONITOR_HOSTS="docker-host=http://host.containers.internal:9100,other-hos
 podman-compose up -d
 ```
 
+#### Container metrics
+
+The compose stack runs `prometheus-podman-exporter` (service `podman-exporter`, port 9882) against the rootless podman socket of the host user. Set `PODMAN_UID` to the output of `id -u` on the host (default 1000), and make sure the podman socket exists at `${XDG_RUNTIME_DIR}/podman/podman.sock` (start it with `podman system service --time=0` if not). The monitor reads it through `CONTAINER_EXPORTERS`, which the compose file sets to `docker-host=http://host.containers.internal:9882`. Override with `MONITOR_CONTAINER_EXPORTERS`.
+
 #### Security
 
-`node_exporter` listens unauthenticated on port 9100 on all interfaces of the host. On production networks, restrict access to port 9100 to the monitor's address using the host firewall.
+`node_exporter` listens unauthenticated on port 9100 on all interfaces of the host. On production networks, restrict access to port 9100 to the monitor's address using the host firewall. `prometheus-podman-exporter` listens the same way on port 9882 and exposes container names and resource use; restrict it too.
 
 ## Ports
 
@@ -193,6 +206,7 @@ podman-compose up -d
 |------|---------|---------|
 | 9273 | gnmic-output | Prometheus `/metrics` endpoint |
 | 9100 | node-exporter | Host metrics endpoint |
+| 9882 | podman-exporter | Container metrics endpoint |
 | 4222 | NATS | Message bus |
 | 8500 | Consul | HTTP API / UI |
 | 8600/udp | Consul | DNS |
