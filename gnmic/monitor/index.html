@@ -1202,6 +1202,9 @@
 				targetRow.appendChild(nameCell);
 				targetRow.appendChild(addrCell);
 				targetRow.appendChild(ownerCell);
+				// Subscription / Interval and Last Seen / Events have no target-level value
+				targetRow.appendChild(document.createElement("td"));
+				targetRow.appendChild(document.createElement("td"));
 				targetRow.appendChild(statusCell);
 				targetRow.appendChild(reasonCell);
 
@@ -1266,18 +1269,14 @@
 						intervalCell.textContent = sub.interval;
 						subRow.appendChild(intervalCell);
 
+						// Last Seen / Events share one column: relative time + event count
 						const lastSeenCell = document.createElement("td");
 						const lastSeenDate = sub.last_seen ? new Date(sub.last_seen) : null;
-						lastSeenCell.textContent = formatRelativeTime(lastSeenDate);
+						lastSeenCell.textContent = formatRelativeTime(lastSeenDate) + " · " + sub.count;
 						if (lastSeenDate) {
 							lastSeenCell.title = lastSeenDate.toISOString();
 						}
-						// Insert before the Status column, so we need to rearrange
 						subRow.appendChild(lastSeenCell);
-
-						const eventsCell = document.createElement("td");
-						eventsCell.textContent = sub.count;
-						subRow.appendChild(eventsCell);
 
 						const subStatusCell = document.createElement("td");
 						const subBadge = document.createElement("span");
