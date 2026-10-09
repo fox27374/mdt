@@ -201,6 +201,10 @@
 			display: table-row;
 		}
 
+		.host-sub-row {
+			display: table-row;
+		}
+
 		.sub-indent {
 			padding-left: 36px;
 		}
@@ -1238,43 +1242,29 @@
 		function renderHostSubRows(tbody, hostRow, host) {
 			// Helper to create disk or NIC sub-row
 			function createMetricSubRow(metric, metricType) {
+				// Cells line up with the host table: expand, Host, Level, CPU, Memory, Disk, Network, Reason
 				const subRow = document.createElement("tr");
-				subRow.className = "sub-row";
+				subRow.className = "sub-row host-sub-row";
+				const cells = Array.from({ length: 8 }, () => document.createElement("td"));
+				subRow.append(...cells);
 
-				const emptyCell = document.createElement("td");
-				subRow.appendChild(emptyCell);
+				cells[1].className = "sub-indent";
+				cells[1].textContent = metric.name;
 
-				const nameCell = document.createElement("td");
-				nameCell.className = "sub-indent";
-				nameCell.textContent = metric.name;
-				subRow.appendChild(nameCell);
+				const levelBadge = document.createElement("span");
+				levelBadge.className = `badge level-${metric.level.toLowerCase()}`;
+				levelBadge.textContent = metric.level;
+				cells[2].appendChild(levelBadge);
 
-				const emptyCell2 = document.createElement("td");
-				subRow.appendChild(emptyCell2);
-
-				const valueCell = document.createElement("td");
+				const valueCell = cells[metricType === "disk" ? 5 : 6];
 				valueCell.className = `metric-cell level-${metric.level.toLowerCase()}`;
 				if (metric.level === "UNKNOWN") {
 					valueCell.textContent = "n/a";
 				} else {
 					valueCell.textContent = metric.value.toFixed(1) + "%";
 				}
-				subRow.appendChild(valueCell);
 
-				const levelCell = document.createElement("td");
-				const levelBadge = document.createElement("span");
-				levelBadge.className = `badge level-${metric.level.toLowerCase()}`;
-				levelBadge.textContent = metric.level;
-				levelCell.appendChild(levelBadge);
-				subRow.appendChild(levelCell);
-
-				const detailCell = document.createElement("td");
-				detailCell.colSpan = 2;
-				detailCell.textContent = metric.detail || "";
-				subRow.appendChild(detailCell);
-
-				const emptyCell3 = document.createElement("td");
-				subRow.appendChild(emptyCell3);
+				cells[7].textContent = metric.detail || "";
 
 				return subRow;
 			}
