@@ -48,7 +48,7 @@ test("1. Multiple targets and collectors with correct node kinds and grouping", 
   for (const owner in targetsByOwner) {
     const groupTargets = targetsByOwner[owner].sort((a, b) => a.y - b.y);
     for (let i = 1; i < groupTargets.length; i++) {
-      assert.equal(groupTargets[i].y - groupTargets[i-1].y, 90, `targets in group should be ROW=90 apart`);
+      assert.equal(groupTargets[i].y - groupTargets[i-1].y, 76, `targets in group should be ROW=76 apart`);
     }
   }
 
@@ -356,8 +356,8 @@ test("8c. All node statuses are valid status values", () => {
 });
 
 test("8d. For N targets, y pitch is at least icon diameter + label height + gap, no overlap", () => {
-  // Icon diameter = 52 (radius 26), label height ~16px, gap ~22px = ~90px minimum
-  // With ROW=90, targets in the same column should not overlap
+  // Icon diameter = 40 (radius 20), label height ~16px, gap ~20px = ~76px minimum
+  // With ROW=76, targets in the same column should not overlap
   const data = {
     components: [
       { name: "collector gnmic-1", ok: true, detail: "healthy" },
@@ -375,7 +375,7 @@ test("8d. For N targets, y pitch is at least icon diameter + label height + gap,
   };
 
   const topo = buildTopology(data);
-  const ICON_RADIUS = 26;
+  const ICON_RADIUS = 20;
   const LABEL_HEIGHT = 16;
   const MIN_PITCH = ICON_RADIUS * 2 + LABEL_HEIGHT; // ~68px minimum
 
@@ -461,7 +461,7 @@ test("9. Infrastructure nodes (nats, output, prometheus) y is average of first/l
   assert.equal(output.y, collector.y, "with one collector, output y should equal that collector's y");
   assert.equal(prometheus.y, collector.y, "with one collector, prometheus y should equal that collector's y");
 
-  // Test case 3: No collectors - infraY should be TOP (48)
+  // Test case 3: No collectors - infraY should be TOP (64)
   data = {
     components: [
       { name: "nats", ok: true, detail: "ok" },
@@ -478,9 +478,9 @@ test("9. Infrastructure nodes (nats, output, prometheus) y is average of first/l
   output = topo.nodes.find(n => n.id === "output");
   prometheus = topo.nodes.find(n => n.id === "prometheus");
 
-  assert.equal(nats.y, 48, "with no collectors, nats y should be TOP=48");
-  assert.equal(output.y, 48, "with no collectors, output y should be TOP=48");
-  assert.equal(prometheus.y, 48, "with no collectors, prometheus y should be TOP=48");
+  assert.equal(nats.y, 64, "with no collectors, nats y should be TOP=64");
+  assert.equal(output.y, 64, "with no collectors, output y should be TOP=64");
+  assert.equal(prometheus.y, 64, "with no collectors, prometheus y should be TOP=64");
 
   // Verify consul y is still (largest y of any other node) + ROW
   const consul = topo.nodes.find(n => n.id === "consul");
@@ -490,7 +490,7 @@ test("9. Infrastructure nodes (nats, output, prometheus) y is average of first/l
       maxOtherY = node.y;
     }
   }
-  assert.equal(consul.y, maxOtherY + 90, "consul y should be (largest y of any other node) + ROW");
+  assert.equal(consul.y, maxOtherY + 76, "consul y should be (largest y of any other node) + ROW");
 
   // Verify height still follows spec: height = (largest y of any node) + TOP
   let maxY = 0;
@@ -499,5 +499,5 @@ test("9. Infrastructure nodes (nats, output, prometheus) y is average of first/l
       maxY = node.y;
     }
   }
-  assert.equal(topo.height, maxY + 48, "height should be (largest y of any node) + TOP");
+  assert.equal(topo.height, maxY + 64, "height should be (largest y of any node) + TOP");
 });
