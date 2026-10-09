@@ -73,7 +73,10 @@ type HostState struct {
 	Network MetricState   `json:"network"` // the worst NIC (copy of one entry of NICs)
 	Disks   []MetricState `json:"disks"`
 	NICs    []MetricState `json:"nics"`
-	Updated time.Time     `json:"updated"`
+	// Containers is filled from the container exporter by the store at snapshot time.
+	Containers []ContainerState `json:"containers"`
+	MemTotal   float64          `json:"memTotal"` // bytes; used to tell a set memory limit from none
+	Updated    time.Time        `json:"updated"`
 }
 
 type FSSample struct {
@@ -393,6 +396,7 @@ func EvalHost(name string, samples []HostSample, now time.Time, th HostThreshold
 	// The newest sample is the last one
 	newest := samples[len(samples)-1]
 	state.Updated = newest.At
+	state.MemTotal = newest.MemTotal
 
 	// Evaluate CPU
 	state.CPU = evalCPU(samples, th)

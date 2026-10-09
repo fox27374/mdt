@@ -1269,6 +1269,36 @@
 				return subRow;
 			}
 
+			// Helper to create a container sub-row (CPU and memory only)
+			function createContainerSubRow(container) {
+				const subRow = document.createElement("tr");
+				subRow.className = "sub-row host-sub-row";
+				const cells = Array.from({ length: 8 }, () => document.createElement("td"));
+				subRow.append(...cells);
+
+				cells[1].className = "sub-indent";
+				cells[1].textContent = container.name;
+
+				cells[3].className = "metric-cell";
+				cells[3].textContent = container.cpuKnown ? container.cpu.toFixed(1) + "%" : "n/a";
+
+				cells[4].className = "metric-cell";
+				cells[4].textContent = formatBytesUI(container.memUsed) +
+					(container.memLimitSet ? " (" + container.memPct.toFixed(1) + "%)" : "");
+
+				return subRow;
+			}
+
+			function formatBytesUI(bytes) {
+				const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+				let i = 0;
+				while (bytes >= 1024 && i < units.length - 1) {
+					bytes /= 1024;
+					i++;
+				}
+				return bytes.toFixed(1) + " " + units[i];
+			}
+
 			// Insert after hostRow
 			let insertAfter = hostRow;
 
@@ -1285,6 +1315,15 @@
 			if (host.nics && host.nics.length > 0) {
 				for (const nic of host.nics) {
 					const subRow = createMetricSubRow(nic, "nic");
+					insertAfter.parentNode.insertBefore(subRow, insertAfter.nextSibling);
+					insertAfter = subRow;
+				}
+			}
+
+			// Add containers
+			if (host.containers && host.containers.length > 0) {
+				for (const container of host.containers) {
+					const subRow = createContainerSubRow(container);
 					insertAfter.parentNode.insertBefore(subRow, insertAfter.nextSibling);
 					insertAfter = subRow;
 				}

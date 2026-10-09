@@ -43,6 +43,8 @@ func main() {
 	pollIntervalStr := env("POLL_INTERVAL", "15s")
 	hostsStr := env("HOSTS", "")
 	hostNICIncludeStr := env("HOST_NIC_INCLUDE", "^(en|eth|em|bond|ib)[a-z0-9]*$")
+	containerExportersStr := env("CONTAINER_EXPORTERS", "")
+	containerIncludeStr := env("CONTAINER_INCLUDE", "")
 
 	// Parse collectors
 	cols, err := ParseCollectors(collectorsStr)
@@ -66,6 +68,18 @@ func main() {
 	th, err := ParseThresholds(os.Getenv)
 	if err != nil {
 		log.Fatalf("parse thresholds: %v", err)
+	}
+
+	// Parse container exporters (host name = podman exporter URL)
+	containerExporters, err := ParseHosts(containerExportersStr)
+	if err != nil {
+		log.Fatalf("parse CONTAINER_EXPORTERS: %v", err)
+	}
+
+	// Compile container include pattern (empty matches all containers)
+	containerInclude, err := regexp.Compile(containerIncludeStr)
+	if err != nil {
+		log.Fatalf("compile CONTAINER_INCLUDE pattern: %v", err)
 	}
 
 	// Compile NIC include pattern
@@ -94,6 +108,9 @@ func main() {
 	}, poll)
 	if len(hosts) > 0 {
 		go RunHosts(ctx, st, hosts, th, hostNICInclude, poll)
+	}
+	if len(containerExporters) > 0 {
+		go RunContainers(ctx, st, containerExporters, containerInclude, poll)
 	}
 
 	// Set up HTTP routes
