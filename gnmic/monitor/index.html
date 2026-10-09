@@ -442,6 +442,10 @@
 			stroke-dasharray: 4,4;
 		}
 
+		.edge-flow {
+			stroke: var(--ok);
+		}
+
 		.flow-dot {
 			fill: var(--ok);
 		}
@@ -944,8 +948,8 @@
 
 			state.topology = model;
 
-			const FLOW_DOTS = 3;
-			const FLOW_DUR = 2.4;
+			const FLOW_DOTS = 5;
+			const FLOW_DUR = 4.8;
 			const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 			// Clear SVG
@@ -1036,7 +1040,7 @@
 				// Use cubic Bezier curve with horizontal tangents at both ends (S-curve)
 				const pathStr = "M " + x1 + "," + y1 + " C " + midX + "," + y1 + " " + midX + "," + y2 + " " + x2 + "," + y2;
 				path.setAttribute("d", pathStr);
-				path.setAttribute("class", "edge edge-" + edge.style);
+				path.setAttribute("class", "edge edge-" + edge.style + (edge.flow ? " edge-flow" : ""));
 
 				// Add arrowhead for non-locker edges
 				if (edge.style !== "locker") {
