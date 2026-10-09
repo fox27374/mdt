@@ -539,6 +539,23 @@
 		.node-prometheus.st-error circle { stroke: var(--error); }
 		.node-prometheus.st-unknown circle { stroke: var(--muted); stroke-dasharray: 2,2; }
 
+		.tier-lane {
+			fill: var(--panel);
+			stroke: var(--line);
+			stroke-width: 1;
+		}
+
+		.tier-pill {
+			fill: var(--bg);
+			stroke: var(--line);
+			stroke-width: 1;
+		}
+
+		.tier-label {
+			font-size: 11px;
+			fill: var(--muted);
+		}
+
 		.node-icon {
 			stroke: var(--accent);
 			fill: none;
@@ -1028,22 +1045,36 @@
 
 			svg.appendChild(defs);
 
-			// Draw column headings above first node row
-			const headings = [
-				{ x: 80, text: "Targets" },
-				{ x: 320, text: "Collectors" },
-				{ x: 540, text: "NATS" },
-				{ x: 720, text: "Output" },
-				{ x: 900, text: "Prometheus" }
-			];
-			for (const h of headings) {
+			// Draw a tier lane behind each column, with its heading as a pill at the top
+			const LANE_HALF = 76;
+			const R = model.radius;
+			for (const col of model.columns) {
+				const lane = document.createElementNS(SVG_NS, "rect");
+				lane.setAttribute("x", col.x - LANE_HALF);
+				lane.setAttribute("y", "8");
+				lane.setAttribute("width", LANE_HALF * 2);
+				lane.setAttribute("height", model.height - 16);
+				lane.setAttribute("rx", "12");
+				lane.setAttribute("class", "tier-lane");
+				svg.appendChild(lane);
+
+				const pill = document.createElementNS(SVG_NS, "rect");
+				pill.setAttribute("x", col.x - 50);
+				pill.setAttribute("y", "10");
+				pill.setAttribute("width", "100");
+				pill.setAttribute("height", "22");
+				pill.setAttribute("rx", "11");
+				pill.setAttribute("class", "tier-pill");
+				svg.appendChild(pill);
+
 				const text = document.createElementNS(SVG_NS, "text");
-				text.setAttribute("x", h.x);
-				text.setAttribute("y", "28");
+				text.setAttribute("x", col.x);
+				text.setAttribute("y", "21");
 				text.setAttribute("text-anchor", "middle");
-				text.setAttribute("font-size", "11");
+				text.setAttribute("dominant-baseline", "middle");
 				text.setAttribute("fill", "var(--muted)");
-				text.textContent = h.text;
+				text.setAttribute("class", "tier-label");
+				text.textContent = col.label;
 				svg.appendChild(text);
 			}
 
@@ -1054,7 +1085,6 @@
 
 				if (!fromNode || !toNode) continue;
 
-				const R = 26;
 				const x1 = fromNode.x + R;
 				const x2 = toNode.x - R;
 				const y1 = fromNode.y;
@@ -1094,11 +1124,12 @@
 					const circle = document.createElementNS(SVG_NS, "circle");
 					circle.setAttribute("cx", "0");
 					circle.setAttribute("cy", "0");
-					circle.setAttribute("r", "26");
+					circle.setAttribute("r", String(model.radius));
 					g.appendChild(circle);
 
-					// Icon
+					// Icon (scaled to fit the node circle)
 					const icon = iconFor(node.kind);
+					icon.setAttribute("transform", "scale(0.8)");
 					g.appendChild(icon);
 
 					// Label text
@@ -1109,7 +1140,7 @@
 
 					const text = document.createElementNS(SVG_NS, "text");
 					text.setAttribute("x", "0");
-					text.setAttribute("y", "38");
+					text.setAttribute("y", "30");
 					text.setAttribute("class", "label");
 					text.textContent = label;
 					g.appendChild(text);
@@ -1118,7 +1149,7 @@
 					if (node.notMonitored) {
 						const subtext = document.createElementNS(SVG_NS, "text");
 						subtext.setAttribute("x", "0");
-						subtext.setAttribute("y", "52");
+						subtext.setAttribute("y", "46");
 						subtext.setAttribute("class", "sublabel");
 						subtext.textContent = "not monitored";
 						g.appendChild(subtext);
