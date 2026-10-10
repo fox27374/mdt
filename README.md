@@ -104,10 +104,46 @@ cp gnmic_env.template gnmic_env
 
 ### 2. Start the stack
 
+First start the rootless podman socket that `podman-exporter` mounts. It must exist before
+`up`, otherwise the exporter exits. If `${XDG_RUNTIME_DIR}/podman/podman.sock` is an empty
+directory, remove it with `rmdir` first.
+
 ```bash
-podman-compose up -d
+podman system service --time=0 &
+PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d
 # or, with verbose logging:
-podman-compose -f compose-debug.yaml up
+PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false -f compose-debug.yaml up
+```
+
+Why the flags: `podman-compose` puts all services in one pod by default, but
+`podman-exporter` sets `userns_mode: keep-id`, and podman rejects `--userns` inside a
+pod (`--userns and --pod cannot be set together`). `--in-pod false` runs the services
+without a pod. `PODMAN_UID` and `XDG_RUNTIME_DIR` point `podman-exporter` at your rootless
+podman socket (see [Container metrics](#container-metrics)).
+
+#### Replacing a single service
+
+`podman-compose up` fails with a name-in-use error if the service's container already
+exists. To replace one service, remove its container first, then bring up only that service.
+Podman refuses to remove a container that other containers depend on, so remove the
+dependents too and recreate them. The `monitor` service (container `gnmic-monitor`) depends on
+`podman-exporter`:
+
+```bash
+podman rm -f gnmic-monitor
+podman rm -f podman-exporter
+PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d --no-deps podman-exporter monitor
+```
+
+After a `podman-compose down`, the DNS resolver for the network can go stale (containers
+cannot resolve each other). Fix it by killing `aardvark-dns` and removing its state directory
+`/run/user/$(id -u)/containers/networks/aardvark-dns` (`rm -rf`, it is a directory), then bring the
+stack up again:
+
+```bash
+pkill -x aardvark-dns
+rm -rf /run/user/$(id -u)/containers/networks/aardvark-dns
+PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d
 ```
 
 ### 3. Verify
