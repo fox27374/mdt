@@ -105,10 +105,30 @@ cp gnmic_env.template gnmic_env
 ### 2. Start the stack
 
 ```bash
-podman-compose up -d
+PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d
 # or, with verbose logging:
-podman-compose -f compose-debug.yaml up
+PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false -f compose-debug.yaml up
 ```
+
+Why the flags: `podman-compose` puts all services in one pod by default, but
+`podman-exporter` sets `userns_mode: keep-id`, and podman rejects `--userns` inside a
+pod (`--userns and --pod cannot be set together`). `--in-pod false` runs the services
+without a pod. `PODMAN_UID` and `XDG_RUNTIME_DIR` point `podman-exporter` at your rootless
+podman socket (see [Container metrics](#container-metrics)).
+
+#### Replacing a single service
+
+`podman-compose up` fails with a name-in-use error if the service's container already
+exists. To replace one service, remove its container first, then bring up only that service:
+
+```bash
+podman rm -f podman-exporter
+PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d --no-deps podman-exporter
+```
+
+After a `podman-compose down`, the DNS resolver for the network can go stale (containers
+cannot resolve each other). Fix it by killing `aardvark-dns` and removing
+`/run/user/$(id -u)/containers/networks/aardvark-dns`, then bring the stack up again.
 
 ### 3. Verify
 
