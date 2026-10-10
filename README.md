@@ -124,11 +124,15 @@ podman socket (see [Container metrics](#container-metrics)).
 #### Replacing a single service
 
 `podman-compose up` fails with a name-in-use error if the service's container already
-exists. To replace one service, remove its container first, then bring up only that service:
+exists. To replace one service, remove its container first, then bring up only that service.
+Podman refuses to remove a container that other containers depend on, so remove the
+dependents too and recreate them. The `monitor` service (container `gnmic-monitor`) depends on
+`podman-exporter`:
 
 ```bash
+podman rm -f gnmic-monitor
 podman rm -f podman-exporter
-PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d --no-deps podman-exporter
+PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d --no-deps podman-exporter monitor
 ```
 
 After a `podman-compose down`, the DNS resolver for the network can go stale (containers
