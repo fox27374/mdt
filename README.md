@@ -104,7 +104,12 @@ cp gnmic_env.template gnmic_env
 
 ### 2. Start the stack
 
+First start the rootless podman socket that `podman-exporter` mounts. It must exist before
+`up`, otherwise the exporter exits. If `${XDG_RUNTIME_DIR}/podman/podman.sock` is an empty
+directory, remove it with `rmdir` first.
+
 ```bash
+podman system service --time=0 &
 PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d
 # or, with verbose logging:
 PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false -f compose-debug.yaml up
@@ -127,8 +132,15 @@ PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod f
 ```
 
 After a `podman-compose down`, the DNS resolver for the network can go stale (containers
-cannot resolve each other). Fix it by killing `aardvark-dns` and removing
-`/run/user/$(id -u)/containers/networks/aardvark-dns`, then bring the stack up again.
+cannot resolve each other). Fix it by killing `aardvark-dns` and removing its state directory
+`/run/user/$(id -u)/containers/networks/aardvark-dns` (`rm -rf`, it is a directory), then bring the
+stack up again:
+
+```bash
+pkill -x aardvark-dns
+rm -rf /run/user/$(id -u)/containers/networks/aardvark-dns
+PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d
+```
 
 ### 3. Verify
 
