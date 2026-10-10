@@ -84,6 +84,8 @@ services:
     # Set PODMAN_UID to the output of `id -u` on the host (default 1000).
     userns_mode: keep-id
     user: "${PODMAN_UID:-1000}"
+    # Exits if the socket is missing at start; retry until the user podman.socket unit has created it.
+    restart: unless-stopped
     environment:
       - HOME=/tmp
       - CONTAINER_HOST=unix:///run/podman/podman.sock
