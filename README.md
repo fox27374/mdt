@@ -104,12 +104,10 @@ cp gnmic_env.template gnmic_env
 
 ### 2. Start the stack
 
-First start the rootless podman socket that `podman-exporter` mounts. It must exist before
-`up`, otherwise the exporter exits. If `${XDG_RUNTIME_DIR}/podman/podman.sock` is an empty
-directory, remove it with `rmdir` first.
+The rootless podman socket that `podman-exporter` mounts must exist. Set it up once per host
+(see [Rootless podman socket at boot](#rootless-podman-socket-at-boot)), then:
 
 ```bash
-podman system service --time=0 &
 PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d
 # or, with verbose logging:
 PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false -f compose-debug.yaml up
@@ -230,7 +228,20 @@ podman-compose up -d
 
 #### Container metrics
 
-The compose stack runs `prometheus-podman-exporter` (service `podman-exporter`, port 9882) against the rootless podman socket of the host user. Set `PODMAN_UID` to the output of `id -u` on the host (default 1000), and make sure the podman socket exists at `${XDG_RUNTIME_DIR}/podman/podman.sock` (start it with `podman system service --time=0` if not). The monitor reads it through `CONTAINER_EXPORTERS`, which the compose file sets to `docker-host=http://host.containers.internal:9882`. Override with `MONITOR_CONTAINER_EXPORTERS`.
+The compose stack runs `prometheus-podman-exporter` (service `podman-exporter`, port 9882) against the rootless podman socket of the host user. Set `PODMAN_UID` to the output of `id -u` on the host (default 1000), and make sure the podman socket exists at `${XDG_RUNTIME_DIR}/podman/podman.sock`. The monitor reads it through `CONTAINER_EXPORTERS`, which the compose file sets to `docker-host=http://host.containers.internal:9882`. Override with `MONITOR_CONTAINER_EXPORTERS`.
+
+`podman-exporter` has `restart: unless-stopped`, so if the socket appears after the container has started, the exporter retries on its own and no restart is needed.
+
+#### Rootless podman socket at boot
+
+One-time setup per host, run as the stack user (uid of `PODMAN_UID`). It makes systemd create the socket at every boot without a login:
+
+```bash
+systemctl --user enable --now podman.socket
+sudo loginctl enable-linger "$(whoami)"
+```
+
+Check it with `ls ${XDG_RUNTIME_DIR}/podman/podman.sock` and `curl --unix-socket ${XDG_RUNTIME_DIR}/podman/podman.sock http://d/v5.0.0/libpod/_ping` (expect `OK`). If the path exists as an empty directory (left by a container start before the socket existed), remove it with `rmdir` and restart `podman.socket`.
 
 #### Security
 
