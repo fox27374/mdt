@@ -234,14 +234,17 @@ The compose stack runs `prometheus-podman-exporter` (service `podman-exporter`, 
 
 #### Rootless podman socket at boot
 
-One-time setup per host, run as the stack user (uid of `PODMAN_UID`). It makes systemd create the socket at every boot without a login:
+Optional host prerequisite, not managed by this repo: the rootless podman API socket must exist at every boot. If your host already provides it (for example `systemctl --user enable --now podman.socket`), nothing more is needed. Otherwise install [`scripts/podman-api.service`](scripts/podman-api.service) once, as the stack user (uid of `PODMAN_UID`), from a real login session (ssh or `machinectl shell`), not `su`:
 
 ```bash
-systemctl --user enable --now podman.socket
+mkdir -p ~/.config/systemd/user
+cp scripts/podman-api.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now podman-api.service
 sudo loginctl enable-linger "$(whoami)"
 ```
 
-Check it with `ls ${XDG_RUNTIME_DIR}/podman/podman.sock` and `curl --unix-socket ${XDG_RUNTIME_DIR}/podman/podman.sock http://d/v5.0.0/libpod/_ping` (expect `OK`). If the path exists as an empty directory (left by a container start before the socket existed), remove it with `rmdir` and restart `podman.socket`.
+Do not enable `podman.socket` as well; both bind the same path. Check with `curl --unix-socket ${XDG_RUNTIME_DIR}/podman/podman.sock http://d/v5.0.0/libpod/_ping` (expect `OK`). If the path exists as an empty directory (left by a container start before the socket existed), stop the service, `rmdir` it and start the service again. Without the socket the stack still runs; the monitor just shows no container rows.
 
 #### Security
 

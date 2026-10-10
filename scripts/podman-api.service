@@ -1,0 +1,9 @@
+[Unit]
+Description=Rootless podman API socket for podman-exporter
+
+[Service]
+ExecStart=/usr/bin/podman system service --time=0
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
