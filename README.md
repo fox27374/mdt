@@ -183,9 +183,11 @@ The monitor reads these environment variables; defaults shown are used if unset:
 | `OUTPUT_URL` | `http://gnmic-output:9273/metrics` | gnmic-output metrics endpoint |
 | `MDT_CONFIG` | `/app/config/mdt.yaml` | Path to gnmic collector configuration |
 | `POLL_INTERVAL` | `15s` | How often to query components for status updates |
-| `HOSTS` | `docker-host=http://host.containers.internal:9100` | Comma-separated list of hosts to monitor; format: `name=http://host:9100,...` |
+| `LOCAL_HOST_NAME` | `docker-host` | Display name of the local host; used in the default `HOSTS` and `CONTAINER_EXPORTERS`. Compose sets it from `MONITOR_HOST_NAME` |
+| `LOCAL_CONTAINER_EXPORTER` | (empty) | Set to any non-empty value to default `CONTAINER_EXPORTERS` to the local podman-exporter on port 9882 (compose.yaml sets it) |
+| `HOSTS` | `<LOCAL_HOST_NAME>=http://host.containers.internal:9100` | Comma-separated list of hosts to monitor; format: `name=http://host:9100,...` |
 | `HOST_NIC_INCLUDE` | `^(en\|eth\|em\|bond\|ib)[a-z0-9]*$` | Regex pattern for network interfaces to include |
-| `CONTAINER_EXPORTERS` | (empty, no container rows) | Optional. Comma-separated `name=url` of prometheus-podman-exporter endpoints; `name` must match a `HOSTS` name. Unset: no container rows |
+| `CONTAINER_EXPORTERS` | (empty, no container rows) | Optional. Comma-separated `name=url` of prometheus-podman-exporter endpoints; `name` must match a `HOSTS` name. Unset: no container rows, unless `LOCAL_CONTAINER_EXPORTER` is set |
 | `CONTAINER_INCLUDE` | (empty, all containers) | Optional regex; only containers whose name matches are shown |
 | `HOST_CPU_WARN` / `HOST_CPU_CRIT` | `80` / `95` | CPU usage thresholds (%) |
 | `HOST_MEM_WARN` / `HOST_MEM_CRIT` | `85` / `95` | Memory usage thresholds (%) |
@@ -222,13 +224,15 @@ A host's overall level is the worst of its metrics.
 To monitor a host other than `docker-host`, run `node_exporter` on that host (for example, version v1.12.1 from `docker.io/prom/node-exporter`), then add it to `HOSTS`:
 
 ```bash
-export MONITOR_HOSTS="docker-host=http://host.containers.internal:9100,other-host=http://10.0.0.2:9100"
+export MONITOR_HOSTS="$(hostname)=http://host.containers.internal:9100,other-host=http://10.0.0.2:9100"
 podman-compose up -d
 ```
 
+To rename the local host's row and its container rows without overriding `HOSTS` or `CONTAINER_EXPORTERS`, set `MONITOR_HOST_NAME` (for example `export MONITOR_HOST_NAME=$(hostname)`). `MONITOR_HOSTS` and `MONITOR_CONTAINER_EXPORTERS` fully override the name when set.
+
 #### Container metrics
 
-The compose stack runs `prometheus-podman-exporter` (service `podman-exporter`, port 9882) against the rootless podman socket of the host user. Set `PODMAN_UID` to the output of `id -u` on the host (default 1000), and make sure the podman socket exists at `${XDG_RUNTIME_DIR}/podman/podman.sock`. The monitor reads it through `CONTAINER_EXPORTERS`, which the compose file sets to `docker-host=http://host.containers.internal:9882`. Override with `MONITOR_CONTAINER_EXPORTERS`.
+The compose stack runs `prometheus-podman-exporter` (service `podman-exporter`, port 9882) against the rootless podman socket of the host user. Set `PODMAN_UID` to the output of `id -u` on the host (default 1000), and make sure the podman socket exists at `${XDG_RUNTIME_DIR}/podman/podman.sock`. The monitor reads it through `CONTAINER_EXPORTERS`, which the compose file enables for the local host (`<MONITOR_HOST_NAME or docker-host>=http://host.containers.internal:9882`). Override with `MONITOR_CONTAINER_EXPORTERS`.
 
 `podman-exporter` has `restart: unless-stopped`, so if the socket appears after the container has started, the exporter retries on its own and no restart is needed.
 
