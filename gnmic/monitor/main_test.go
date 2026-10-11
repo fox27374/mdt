@@ -206,3 +206,28 @@ func TestHostsInSnapshot(t *testing.T) {
 		t.Errorf("JSON does not contain correct level, got: %s", jsonStr)
 	}
 }
+
+func TestDefaultHostSpecs(t *testing.T) {
+	mk := func(kv map[string]string) func(string) string {
+		return func(k string) string { return kv[k] }
+	}
+	tests := []struct {
+		name           string
+		env            map[string]string
+		wantHosts      string
+		wantContainers string
+	}{
+		{"nothing set", nil, "docker-host=http://host.containers.internal:9100", ""},
+		{"local name", map[string]string{"LOCAL_HOST_NAME": "myhost"}, "myhost=http://host.containers.internal:9100", ""},
+		{"compose container default", map[string]string{"LOCAL_HOST_NAME": "myhost", "LOCAL_CONTAINER_EXPORTER": "1"}, "myhost=http://host.containers.internal:9100", "myhost=http://host.containers.internal:9882"},
+		{"explicit values win", map[string]string{"LOCAL_HOST_NAME": "myhost", "LOCAL_CONTAINER_EXPORTER": "1", "HOSTS": "x=http://x:9100", "CONTAINER_EXPORTERS": "x=http://x:9882"}, "x=http://x:9100", "x=http://x:9882"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, c := defaultHostSpecs(mk(tt.env))
+			if h != tt.wantHosts || c != tt.wantContainers {
+				t.Errorf("got (%q, %q), want (%q, %q)", h, c, tt.wantHosts, tt.wantContainers)
+			}
+		})
+	}
+}

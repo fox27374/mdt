@@ -20,6 +20,25 @@ func env(key, def string) string {
 	return def
 }
 
+// defaultHostSpecs returns the HOSTS and CONTAINER_EXPORTERS values. The local host name comes from
+// LOCAL_HOST_NAME (default "docker-host"). Explicit values win. CONTAINER_EXPORTERS defaults to the local
+// podman-exporter only when LOCAL_CONTAINER_EXPORTER is set (compose.yaml sets it; nested compose defaults do not parse).
+func defaultHostSpecs(get func(string) string) (hosts, containerExporters string) {
+	name := "docker-host"
+	if v := get("LOCAL_HOST_NAME"); v != "" {
+		name = v
+	}
+	hosts = get("HOSTS")
+	if hosts == "" {
+		hosts = name + "=http://host.containers.internal:9100"
+	}
+	containerExporters = get("CONTAINER_EXPORTERS")
+	if containerExporters == "" && get("LOCAL_CONTAINER_EXPORTER") != "" {
+		containerExporters = name + "=http://host.containers.internal:9882"
+	}
+	return hosts, containerExporters
+}
+
 // statusHandler returns an HTTP handler that serves the current snapshot as JSON.
 func statusHandler(st *Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -41,9 +60,8 @@ func main() {
 	outputURL := env("OUTPUT_URL", "http://gnmic-output:9273/metrics")
 	mdtConfig := env("MDT_CONFIG", "/app/config/mdt.yaml")
 	pollIntervalStr := env("POLL_INTERVAL", "15s")
-	hostsStr := env("HOSTS", "")
+	hostsStr, containerExportersStr := defaultHostSpecs(os.Getenv)
 	hostNICIncludeStr := env("HOST_NIC_INCLUDE", "^(en|eth|em|bond|ib)[a-z0-9]*$")
-	containerExportersStr := env("CONTAINER_EXPORTERS", "")
 	containerIncludeStr := env("CONTAINER_INCLUDE", "")
 
 	// Parse collectors
