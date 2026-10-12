@@ -135,6 +135,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("GET /", uiHandler())
 	mux.HandleFunc("GET /api/status", statusHandler(st))
+	mux.HandleFunc("GET /api/metrics", metricsHandler(outputURL))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})

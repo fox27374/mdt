@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>gnmic monitor</title>
+	<title>gNMIc Monitor</title>
 	<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2064%2064%22%3E%3Ccircle%20cx=%2212%22%20cy=%2214%22%20r=%226%22%20fill=%22%2338bdf8%22/%3E%3Ccircle%20cx=%2212%22%20cy=%2232%22%20r=%226%22%20fill=%22%2338bdf8%22/%3E%3Ccircle%20cx=%2212%22%20cy=%2250%22%20r=%226%22%20fill=%22%2338bdf8%22/%3E%3Ccircle%20cx=%2252%22%20cy=%2232%22%20r=%228%22%20fill=%22%2334d399%22/%3E%3Cpath%20d=%22M18%2014%20C34%2014%2036%2032%2044%2032%22%20stroke=%22%2338bdf8%22%20stroke-width=%224%22%20stroke-linecap=%22round%22%20fill=%22none%22/%3E%3Cpath%20d=%22M18%2032%20L44%2032%22%20stroke=%22%2338bdf8%22%20stroke-width=%224%22%20stroke-linecap=%22round%22%20fill=%22none%22/%3E%3Cpath%20d=%22M18%2050%20C34%2050%2036%2032%2044%2032%22%20stroke=%22%2338bdf8%22%20stroke-width=%224%22%20stroke-linecap=%22round%22%20fill=%22none%22/%3E%3C/svg%3E">
 	<style>
 		:root {
@@ -68,6 +68,12 @@
 			padding: 16px 0;
 			letter-spacing: 0.5px;
 			color: var(--text);
+		}
+
+		.version {
+			font-size: 12px;
+			font-weight: 400;
+			color: var(--muted);
 		}
 
 		header svg {
@@ -211,6 +217,7 @@
 
 		.badge {
 			display: inline-block;
+			white-space: nowrap;
 			padding: 2px 8px;
 			border-radius: 999px;
 			font-size: 12px;
@@ -279,13 +286,13 @@
 			color: var(--muted);
 		}
 
-		.view-toggle {
+		.tabs {
 			display: flex;
 			gap: 8px;
-			margin-bottom: 16px;
+			margin: 16px 0;
 		}
 
-		.view-toggle button {
+		.tabs button {
 			padding: 8px 16px;
 			border: 1px solid var(--line);
 			background-color: var(--panel);
@@ -294,23 +301,74 @@
 			cursor: pointer;
 			font-size: 14px;
 			font-weight: 500;
-			transition: all 0.2s;
 		}
 
-		.view-toggle button:hover {
+		.tabs button:hover {
 			border-color: var(--accent);
 			color: var(--accent);
 		}
 
-		.view-toggle button:focus-visible {
+		.tabs button:focus-visible {
 			outline: 2px solid var(--accent);
 			outline-offset: 2px;
 		}
 
-		.view-toggle button.active {
+		.tabs button.active {
 			background-color: var(--accent);
 			color: #ffffff;
 			border-color: var(--accent);
+		}
+
+		.filters {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-bottom: 12px;
+		}
+
+		.filters label {
+			flex: 1 1 200px;
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			font-size: 12px;
+			color: var(--muted);
+		}
+
+		.filters button {
+			align-self: flex-end;
+		}
+
+		.filters input {
+			padding: 8px 12px;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background-color: var(--field);
+			color: var(--text);
+			font-size: 14px;
+		}
+
+		.filters button {
+			padding: 8px 16px;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background-color: var(--panel);
+			color: var(--text);
+			cursor: pointer;
+		}
+
+		#metricsTable td {
+			font-family: ui-monospace, monospace;
+			font-size: 13px;
+			word-break: break-all;
+		}
+
+		#metricsTable tbody tr {
+			cursor: default;
+		}
+
+				#tableView {
+			margin-top: 16px;
 		}
 
 		#topologyView {
@@ -466,6 +524,12 @@
 			stroke: var(--line);
 		}
 
+		.node .partial-arc {
+			fill: none;
+			stroke: var(--muted);
+			stroke-width: 4;
+		}
+
 		.node-target.st-ok circle { stroke: var(--ok); }
 		.node-target.st-waiting circle { stroke: var(--muted); }
 		.node-target.st-stale circle { stroke: var(--warn); }
@@ -614,20 +678,12 @@
 				gap: 8px;
 			}
 
-			.view-toggle {
-				margin-bottom: 12px;
-			}
-
-			.view-toggle button {
-				padding: 6px 12px;
-				font-size: 12px;
-			}
 		}
 	</style>
 </head>
 <body>
 	<header>
-		<h1><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="gnmic monitor" aria-hidden="true"><circle cx="12" cy="14" r="6" fill="#38bdf8"/><circle cx="12" cy="32" r="6" fill="#38bdf8"/><circle cx="12" cy="50" r="6" fill="#38bdf8"/><circle cx="52" cy="32" r="8" fill="#34d399"/><path d="M18 14 C34 14 36 32 44 32" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M18 32 L44 32" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M18 50 C34 50 36 32 44 32" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" fill="none"/></svg>gnmic monitor</h1>
+		<h1><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="gNMIc Monitor" aria-hidden="true"><circle cx="12" cy="14" r="6" fill="#38bdf8"/><circle cx="12" cy="32" r="6" fill="#38bdf8"/><circle cx="12" cy="50" r="6" fill="#38bdf8"/><circle cx="52" cy="32" r="8" fill="#34d399"/><path d="M18 14 C34 14 36 32 44 32" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M18 32 L44 32" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M18 50 C34 50 36 32 44 32" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" fill="none"/></svg>gNMIc Monitor<span class="version">v__VERSION__</span></h1>
 	</header>
 	<div class="container">
 		<div class="banner" id="errorBanner">Cannot reach monitor API</div>
@@ -638,6 +694,42 @@
 
 		<div class="summary" id="summary"></div>
 
+		<div class="tabs">
+			<button type="button" id="tabOverview" class="active" aria-pressed="true">Overview</button>
+			<button type="button" id="tabSystem" aria-pressed="false">System</button>
+			<button type="button" id="tabMetrics" aria-pressed="false">Metrics</button>
+		</div>
+
+		<div id="overviewTab">
+		<div id="topologyView">
+			<svg id="topologySvg" role="img" aria-label="Pipeline topology" width="100%"></svg>
+			<div id="topologyLegend" class="legend"></div>
+			<div id="topologyTooltip" class="tooltip" hidden></div>
+		</div>
+
+		<div id="tableView">
+			<div class="table-wrapper">
+				<table>
+					<thead>
+						<tr>
+							<th></th>
+							<th>Target</th>
+							<th>Address</th>
+							<th>Owner</th>
+							<th>Subscription / Interval</th>
+							<th>Last Seen / Events</th>
+							<th>Status</th>
+							<th>Reason</th>
+						</tr>
+					</thead>
+					<tbody id="targets"></tbody>
+				</table>
+			</div>
+		</div>
+
+		</div>
+
+		<div id="systemTab" hidden>
 		<div id="hostsPanel" hidden>
 			<div class="summary" id="hostsSummary"></div>
 			<div class="table-wrapper">
@@ -659,33 +751,48 @@
 			</div>
 		</div>
 
-		<div class="view-toggle">
-			<button type="button" id="btnTopology" data-view="topology" class="active" aria-pressed="true">Topology</button>
-			<button type="button" id="btnTable" data-view="table" aria-pressed="false">Table</button>
-		</div>
-
-		<div id="topologyView">
-			<svg id="topologySvg" role="img" aria-label="Pipeline topology" width="100%"></svg>
-			<div id="topologyLegend" class="legend"></div>
-			<div id="topologyTooltip" class="tooltip" hidden></div>
-		</div>
-
-		<div id="tableView" hidden>
+		<div id="containersPanel" hidden>
+			<div class="summary" id="containersSummary"></div>
 			<div class="table-wrapper">
-				<table>
+				<table id="containersTable">
 					<thead>
 						<tr>
-							<th></th>
-							<th>Target</th>
-							<th>Address</th>
-							<th>Owner</th>
-							<th>Subscription / Interval</th>
-							<th>Last Seen / Events</th>
-							<th>Status</th>
-							<th>Reason</th>
+							<th>Host</th>
+							<th>Container</th>
+							<th>CPU</th>
+							<th>Memory</th>
 						</tr>
 					</thead>
-					<tbody id="targets"></tbody>
+					<tbody id="containersTableBody"></tbody>
+				</table>
+			</div>
+		</div>
+		</div>
+
+		<div id="metricsTab" hidden>
+			<div class="filters">
+				<label>Metric name
+					<input type="search" id="fName" placeholder="contains…">
+				</label>
+				<label>Labels
+					<input type="search" id="fLabel" placeholder="key or key=value, comma-separated">
+				</label>
+				<label>Target
+					<input type="search" id="fTarget" placeholder="target / source name">
+				</label>
+				<button type="button" id="fRefresh">Refresh</button>
+			</div>
+			<div class="summary" id="metricsSummary"></div>
+			<div class="table-wrapper">
+				<table id="metricsTable">
+					<thead>
+						<tr>
+							<th>Metric</th>
+							<th>Labels</th>
+							<th>Value</th>
+						</tr>
+					</thead>
+					<tbody id="metricsBody"></tbody>
 				</table>
 			</div>
 		</div>
@@ -693,42 +800,6 @@
 
 	<script src="/topology.js"></script>
 	<script>
-		function currentView() {
-			return location.hash === "#table" ? "table" : "topology";
-		}
-
-		function showView(name) {
-			if (name !== "table" && name !== "topology") {
-				name = "topology";
-			}
-
-			const newHash = "#" + name;
-			if (location.hash !== newHash) {
-				location.hash = newHash;
-			}
-
-			const topologyView = document.getElementById("topologyView");
-			const tableView = document.getElementById("tableView");
-			const btnTopology = document.getElementById("btnTopology");
-			const btnTable = document.getElementById("btnTable");
-
-			if (name === "table") {
-				topologyView.hidden = true;
-				tableView.hidden = false;
-				btnTable.classList.add("active");
-				btnTable.setAttribute("aria-pressed", "true");
-				btnTopology.classList.remove("active");
-				btnTopology.setAttribute("aria-pressed", "false");
-			} else {
-				topologyView.hidden = false;
-				tableView.hidden = true;
-				btnTopology.classList.add("active");
-				btnTopology.setAttribute("aria-pressed", "true");
-				btnTable.classList.remove("active");
-				btnTable.setAttribute("aria-pressed", "false");
-			}
-		}
-
 		const state = {
 			expandedTargets: new Set(),
 			expandedHosts: new Set(),
@@ -1089,6 +1160,15 @@
 					circle.setAttribute("r", String(model.radius));
 					g.appendChild(circle);
 
+					// Partial (some subscriptions still waiting): left half of the ring gray
+					if (node.partial) {
+						const r = model.radius;
+						const arc = document.createElementNS(SVG_NS, "path");
+						arc.setAttribute("d", "M 0," + (-r) + " A " + r + "," + r + " 0 0 0 0," + r);
+						arc.setAttribute("class", "partial-arc");
+						g.appendChild(arc);
+					}
+
 					// Icon (scaled to fit the node circle)
 					const icon = iconFor(node.kind);
 					icon.setAttribute("transform", "scale(0.8)");
@@ -1185,7 +1265,7 @@
 				const statusCell = document.createElement("td");
 				const badge = document.createElement("span");
 				badge.className = `badge ${statusClass(target.status)}`;
-				badge.textContent = target.status;
+				badge.textContent = target.status + (target.waiting > 0 ? ` (${target.waiting} waiting)` : "");
 				statusCell.appendChild(badge);
 
 				const reasonCell = document.createElement("td");
@@ -1333,36 +1413,6 @@
 				return subRow;
 			}
 
-			// Helper to create a container sub-row (CPU and memory only)
-			function createContainerSubRow(container) {
-				const subRow = document.createElement("tr");
-				subRow.className = "sub-row host-sub-row";
-				const cells = Array.from({ length: 8 }, () => document.createElement("td"));
-				subRow.append(...cells);
-
-				cells[1].className = "sub-indent";
-				cells[1].textContent = container.name;
-
-				cells[3].className = "metric-cell";
-				cells[3].textContent = container.cpuKnown ? container.cpu.toFixed(1) + "%" : "n/a";
-
-				cells[4].className = "metric-cell";
-				cells[4].textContent = formatBytesUI(container.memUsed) +
-					(container.memLimitSet ? " (" + container.memPct.toFixed(1) + "%)" : "");
-
-				return subRow;
-			}
-
-			function formatBytesUI(bytes) {
-				const units = ["B", "KiB", "MiB", "GiB", "TiB"];
-				let i = 0;
-				while (bytes >= 1024 && i < units.length - 1) {
-					bytes /= 1024;
-					i++;
-				}
-				return bytes.toFixed(1) + " " + units[i];
-			}
-
 			// Insert after hostRow
 			let insertAfter = hostRow;
 
@@ -1383,15 +1433,43 @@
 					insertAfter = subRow;
 				}
 			}
+		}
 
-			// Add containers
-			if (host.containers && host.containers.length > 0) {
-				for (const container of host.containers) {
-					const subRow = createContainerSubRow(container);
-					insertAfter.parentNode.insertBefore(subRow, insertAfter.nextSibling);
-					insertAfter = subRow;
+		function formatBytesUI(bytes) {
+			const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+			let i = 0;
+			while (bytes >= 1024 && i < units.length - 1) {
+				bytes /= 1024;
+				i++;
+			}
+			return bytes.toFixed(1) + " " + units[i];
+		}
+
+		function renderContainers(hosts) {
+			const panel = document.getElementById("containersPanel");
+			const tbody = document.getElementById("containersTableBody");
+			tbody.innerHTML = "";
+			let n = 0;
+			for (const host of hosts || []) {
+				for (const c of host.containers || []) {
+					n++;
+					const row = document.createElement("tr");
+					const cells = [
+						host.name,
+						c.name,
+						c.cpuKnown ? c.cpu.toFixed(1) + "%" : "n/a",
+						formatBytesUI(c.memUsed) + (c.memLimitSet ? " (" + c.memPct.toFixed(1) + "%)" : ""),
+					].map((text) => {
+						const td = document.createElement("td");
+						td.textContent = text;
+						return td;
+					});
+					row.append(...cells);
+					tbody.appendChild(row);
 				}
 			}
+			panel.hidden = n === 0;
+			document.getElementById("containersSummary").textContent = `${n} containers`;
 		}
 
 		function removeHostSubRows(hostRow) {
@@ -1407,6 +1485,8 @@
 			const panel = document.getElementById("hostsPanel");
 			const summary = document.getElementById("hostsSummary");
 			const tbody = document.getElementById("hostsTableBody");
+
+			renderContainers(hosts);
 
 			if (!hosts || hosts.length === 0) {
 				panel.hidden = true;
@@ -1637,7 +1717,9 @@
 			// Line 2: Status
 			const statusLine = document.createElement("div");
 			statusLine.className = "tooltip-line";
-			const statusText = node.kind === "prometheus" ? "Not monitored" : node.status;
+			let statusText = node.kind === "prometheus" ? "Not monitored" : node.status;
+			if (node.waiting > 0) statusText += " (" + node.waiting + " waiting)";
+			else if (node.partial) statusText += " (targets partly waiting)";
 			statusLine.textContent = "Status: " + statusText;
 			topologyTooltip.appendChild(statusLine);
 
@@ -1728,9 +1810,8 @@
 
 			// Add to expanded targets
 			state.expandedTargets.add(node.target);
-
-			// Switch to table view
-			showView("table");
+			writeHash("overview");
+			showTab("overview");
 
 			// Render targets (which will expand this one)
 			if (state.lastData) {
@@ -1757,22 +1838,101 @@
 			}
 		});
 
-		// Wire up view toggle buttons
-		document.getElementById("btnTopology").addEventListener("click", () => {
-			showView("topology");
-		});
+		// Tabs and metrics explorer. Filters live in the hash: #metrics?name=..&label=..&target=..
+		const metricsInputs = { name: "fName", label: "fLabel", target: "fTarget" };
 
-		document.getElementById("btnTable").addEventListener("click", () => {
-			showView("table");
-		});
+		const TABS = ["overview", "system", "metrics"];
 
-		// Listen to hash changes
-		window.addEventListener("hashchange", () => {
-			showView(currentView());
-		});
+		function showTab(name) {
+			for (const t of TABS) {
+				const on = t === name;
+				document.getElementById(t + "Tab").hidden = !on;
+				const b = document.getElementById("tab" + t[0].toUpperCase() + t.slice(1));
+				b.classList.toggle("active", on);
+				b.setAttribute("aria-pressed", String(on));
+			}
+		}
 
-		// Apply current view on load
-		showView(currentView());
+		function hashState() {
+			const [tab, qs] = location.hash.slice(1).split("?");
+			return { tab: TABS.includes(tab) ? tab : "overview", params: new URLSearchParams(qs || "") };
+		}
+
+		function writeHash(tab) {
+			const params = new URLSearchParams();
+			if (tab === "metrics") {
+				for (const [k, id] of Object.entries(metricsInputs)) {
+					const v = document.getElementById(id).value.trim();
+					if (v) params.set(k, v);
+				}
+			}
+			const qs = params.toString();
+			history.replaceState(null, "", "#" + tab + (qs ? "?" + qs : ""));
+		}
+
+		let metricsSeq = 0;
+		async function loadMetrics() {
+			const seq = ++metricsSeq;
+			const params = new URLSearchParams();
+			for (const [k, id] of Object.entries(metricsInputs)) {
+				params.set(k, document.getElementById(id).value.trim());
+			}
+			const summary = document.getElementById("metricsSummary");
+			const tbody = document.getElementById("metricsBody");
+			try {
+				const resp = await fetch("/api/metrics?" + params);
+				if (!resp.ok) throw new Error((await resp.text()).trim() || resp.statusText);
+				const data = await resp.json();
+				if (seq !== metricsSeq) return; // a newer query superseded this one
+				tbody.innerHTML = "";
+				for (const s of data.series) {
+					const row = document.createElement("tr");
+					const labels = Object.entries(s.labels).map(([k, v]) => k + '="' + v + '"').join(", ");
+					for (const text of [s.name, labels, String(s.value)]) {
+						const td = document.createElement("td");
+						td.textContent = text;
+						row.appendChild(td);
+					}
+					tbody.appendChild(row);
+				}
+				summary.textContent = `${data.shown} of ${data.total} series` +
+					(data.shown < data.total ? " (filtered/capped)" : "");
+			} catch (err) {
+				if (seq !== metricsSeq) return;
+				tbody.innerHTML = "";
+				summary.textContent = "Cannot load metrics: " + err.message;
+			}
+		}
+
+		let metricsTimer;
+		function onFilterInput() {
+			writeHash("metrics");
+			clearTimeout(metricsTimer);
+			metricsTimer = setTimeout(loadMetrics, 250);
+		}
+
+		function applyHash() {
+			const { tab, params } = hashState();
+			for (const [k, id] of Object.entries(metricsInputs)) {
+				document.getElementById(id).value = params.get(k) || "";
+			}
+			showTab(tab);
+			if (tab === "metrics") loadMetrics();
+		}
+
+		for (const id of Object.values(metricsInputs)) {
+			document.getElementById(id).addEventListener("input", onFilterInput);
+		}
+		document.getElementById("fRefresh").addEventListener("click", loadMetrics);
+		for (const t of TABS) {
+			document.getElementById("tab" + t[0].toUpperCase() + t.slice(1)).addEventListener("click", () => {
+				writeHash(t);
+				showTab(t);
+				if (t === "metrics") loadMetrics();
+			});
+		}
+		window.addEventListener("hashchange", applyHash);
+		applyHash();
 
 		// Initial fetch and set up auto-refresh
 		fetchStatus();

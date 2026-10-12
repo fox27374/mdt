@@ -344,9 +344,12 @@ func (s *Store) Snapshot(now time.Time) Snapshot {
 			targetStatus = Worse(targetStatus, sub.Status)
 		}
 
+		targetStatus, waiting := settlePartial(targetStatus, subStates)
+
 		// If target has a reason, status is ERROR
 		if len(targetReasons) > 0 {
 			targetStatus = StatusError
+			waiting = 0
 		}
 
 		snap.Targets = append(snap.Targets, TargetState{
@@ -355,6 +358,7 @@ func (s *Store) Snapshot(now time.Time) Snapshot {
 			Owner:   owner,
 			Status:  targetStatus,
 			Reason:  joinReasons(targetReasons),
+			Waiting: waiting,
 			Subs:    subStates,
 		})
 	}

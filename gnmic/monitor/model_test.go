@@ -231,3 +231,31 @@ func TestParseCollectors(t *testing.T) {
 		})
 	}
 }
+
+func TestSettlePartial(t *testing.T) {
+	subs := func(ss ...Status) []SubState {
+		var out []SubState
+		for _, s := range ss {
+			out = append(out, SubState{Status: s})
+		}
+		return out
+	}
+	cases := []struct {
+		name   string
+		status Status
+		subs   []SubState
+		want   Status
+		waits  int
+	}{
+		{"ok+waiting", StatusWaiting, subs(StatusOK, StatusWaiting, StatusWaiting), StatusOK, 2},
+		{"all waiting", StatusWaiting, subs(StatusWaiting, StatusWaiting), StatusWaiting, 0},
+		{"worse status untouched", StatusStale, subs(StatusOK, StatusStale), StatusStale, 0},
+		{"all ok", StatusOK, subs(StatusOK), StatusOK, 0},
+	}
+	for _, c := range cases {
+		got, w := settlePartial(c.status, c.subs)
+		if got != c.want || w != c.waits {
+			t.Errorf("%s: got (%v,%d), want (%v,%d)", c.name, got, w, c.want, c.waits)
+		}
+	}
+}
