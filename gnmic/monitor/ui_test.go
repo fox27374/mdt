@@ -53,7 +53,7 @@ func TestUIHandler(t *testing.T) {
 			t.Error("expected body to contain 'id=\"topologySvg\"'")
 		}
 
-		for _, want := range []string{"id=\"tabMetrics\"", "id=\"fName\"", "id=\"metricsBody\"", "/api/metrics"} {
+		for _, want := range []string{"id=\"tabOverview\"", "id=\"tabSystem\"", "id=\"tabMetrics\"", "<label>Metric name", "id=\"fName\"", "id=\"metricsBody\"", "/api/metrics"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("expected body to contain %q", want)
 			}

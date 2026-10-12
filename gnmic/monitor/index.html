@@ -325,8 +325,20 @@
 			margin-bottom: 12px;
 		}
 
-		.filters input {
+		.filters label {
 			flex: 1 1 200px;
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			font-size: 12px;
+			color: var(--muted);
+		}
+
+		.filters button {
+			align-self: flex-end;
+		}
+
+		.filters input {
 			padding: 8px 12px;
 			border: 1px solid var(--line);
 			border-radius: 8px;
@@ -354,7 +366,11 @@
 			cursor: default;
 		}
 
-				#topologyView {
+				#tableView {
+			margin-top: 16px;
+		}
+
+		#topologyView {
 			border: 1px solid var(--line);
 			border-radius: 12px;
 			padding: 16px;
@@ -671,18 +687,19 @@
 
 		<div class="summary" id="summary"></div>
 
+		<div class="tabs">
+			<button type="button" id="tabOverview" class="active" aria-pressed="true">Overview</button>
+			<button type="button" id="tabSystem" aria-pressed="false">System</button>
+			<button type="button" id="tabMetrics" aria-pressed="false">Metrics</button>
+		</div>
+
+		<div id="overviewTab">
 		<div id="topologyView">
 			<svg id="topologySvg" role="img" aria-label="Pipeline topology" width="100%"></svg>
 			<div id="topologyLegend" class="legend"></div>
 			<div id="topologyTooltip" class="tooltip" hidden></div>
 		</div>
 
-		<div class="tabs">
-			<button type="button" id="tabStatus" class="active" aria-pressed="true">Status</button>
-			<button type="button" id="tabMetrics" aria-pressed="false">Metrics</button>
-		</div>
-
-		<div id="statusTab">
 		<div id="tableView">
 			<div class="table-wrapper">
 				<table>
@@ -703,6 +720,9 @@
 			</div>
 		</div>
 
+		</div>
+
+		<div id="systemTab" hidden>
 		<div id="hostsPanel" hidden>
 			<div class="summary" id="hostsSummary"></div>
 			<div class="table-wrapper">
@@ -744,9 +764,15 @@
 
 		<div id="metricsTab" hidden>
 			<div class="filters">
-				<input type="search" id="fName" placeholder="metric name contains…" aria-label="Metric name">
-				<input type="search" id="fLabel" placeholder="label: key or key=value, comma-separated" aria-label="Labels">
-				<input type="search" id="fTarget" placeholder="target / source" aria-label="Target">
+				<label>Metric name
+					<input type="search" id="fName" placeholder="contains…">
+				</label>
+				<label>Labels
+					<input type="search" id="fLabel" placeholder="key or key=value, comma-separated">
+				</label>
+				<label>Target
+					<input type="search" id="fTarget" placeholder="target / source name">
+				</label>
 				<button type="button" id="fRefresh">Refresh</button>
 			</div>
 			<div class="summary" id="metricsSummary"></div>
@@ -1767,8 +1793,8 @@
 
 			// Add to expanded targets
 			state.expandedTargets.add(node.target);
-			writeHash("status");
-			showTab("status");
+			writeHash("overview");
+			showTab("overview");
 
 			// Render targets (which will expand this one)
 			if (state.lastData) {
@@ -1798,12 +1824,13 @@
 		// Tabs and metrics explorer. Filters live in the hash: #metrics?name=..&label=..&target=..
 		const metricsInputs = { name: "fName", label: "fLabel", target: "fTarget" };
 
+		const TABS = ["overview", "system", "metrics"];
+
 		function showTab(name) {
-			const metrics = name === "metrics";
-			document.getElementById("statusTab").hidden = metrics;
-			document.getElementById("metricsTab").hidden = !metrics;
-			for (const [id, on] of [["tabStatus", !metrics], ["tabMetrics", metrics]]) {
-				const b = document.getElementById(id);
+			for (const t of TABS) {
+				const on = t === name;
+				document.getElementById(t + "Tab").hidden = !on;
+				const b = document.getElementById("tab" + t[0].toUpperCase() + t.slice(1));
 				b.classList.toggle("active", on);
 				b.setAttribute("aria-pressed", String(on));
 			}
@@ -1811,7 +1838,7 @@
 
 		function hashState() {
 			const [tab, qs] = location.hash.slice(1).split("?");
-			return { tab: tab === "metrics" ? "metrics" : "status", params: new URLSearchParams(qs || "") };
+			return { tab: TABS.includes(tab) ? tab : "overview", params: new URLSearchParams(qs || "") };
 		}
 
 		function writeHash(tab) {
@@ -1880,15 +1907,13 @@
 			document.getElementById(id).addEventListener("input", onFilterInput);
 		}
 		document.getElementById("fRefresh").addEventListener("click", loadMetrics);
-		document.getElementById("tabStatus").addEventListener("click", () => {
-			writeHash("status");
-			showTab("status");
-		});
-		document.getElementById("tabMetrics").addEventListener("click", () => {
-			writeHash("metrics");
-			showTab("metrics");
-			loadMetrics();
-		});
+		for (const t of TABS) {
+			document.getElementById("tab" + t[0].toUpperCase() + t.slice(1)).addEventListener("click", () => {
+				writeHash(t);
+				showTab(t);
+				if (t === "metrics") loadMetrics();
+			});
+		}
 		window.addEventListener("hashchange", applyHash);
 		applyHash();
 
