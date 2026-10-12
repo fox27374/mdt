@@ -783,7 +783,6 @@
 							<th>Metric</th>
 							<th>Labels</th>
 							<th>Value</th>
-							<th>Type</th>
 						</tr>
 					</thead>
 					<tbody id="metricsBody"></tbody>
@@ -1871,7 +1870,7 @@
 				for (const s of data.series) {
 					const row = document.createElement("tr");
 					const labels = Object.entries(s.labels).map(([k, v]) => k + '="' + v + '"').join(", ");
-					for (const text of [s.name, labels, String(s.value), s.type]) {
+					for (const text of [s.name, labels, String(s.value)]) {
 						const td = document.createElement("td");
 						td.textContent = text;
 						row.appendChild(td);

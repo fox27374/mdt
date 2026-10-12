@@ -42,6 +42,8 @@ func TestMetricsHandlerFilter(t *testing.T) {
 		{"", []string{"name=r2"}, "", 1},
 		{"", []string{"subscription"}, "", 1},
 		{"", []string{"subscription=cp"}, "R1", 1},
+		{"", []string{`name="r2"`}, "", 1},
+		{"gnmic_target_up", []string{`name="r1"`}, "", 1},
 		{"", nil, "r1", 2},
 		{"nope", nil, "", 0},
 	}

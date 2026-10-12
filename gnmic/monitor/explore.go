@@ -20,7 +20,6 @@ const seriesLimit = 500
 // Series is one flattened Prometheus sample.
 type Series struct {
 	Name   string            `json:"name"`
-	Type   string            `json:"type"`
 	Labels map[string]string `json:"labels"`
 	Value  float64           `json:"value"`
 }
@@ -37,14 +36,13 @@ type SeriesResult struct {
 func flattenSeries(families map[string]*dto.MetricFamily) []Series {
 	var out []Series
 	for name, f := range families {
-		typ := strings.ToLower(f.GetType().String())
 		for _, m := range f.Metric {
 			labels := make(map[string]string, len(m.Label))
 			for _, l := range m.Label {
 				labels[l.GetName()] = l.GetValue()
 			}
 			add := func(n string, v float64) {
-				out = append(out, Series{Name: n, Type: typ, Labels: labels, Value: v})
+				out = append(out, Series{Name: n, Labels: labels, Value: v})
 			}
 			switch {
 			case m.Gauge != nil:
@@ -66,7 +64,7 @@ func flattenSeries(families map[string]*dto.MetricFamily) []Series {
 }
 
 // filterSeries keeps series whose name contains nameSub, whose labels match every
-// "key" (present) or "key=valueSub" (value contains) in labelSpecs, and whose
+// "key" (present) or "key=valueSub" (value contains; surrounding quotes are ignored) in labelSpecs, and whose
 // name/source label contains target. All matching is case-insensitive.
 func filterSeries(all []Series, nameSub string, labelSpecs []string, target string, limit int) SeriesResult {
 	nameSub = strings.ToLower(nameSub)
@@ -89,7 +87,7 @@ func filterSeries(all []Series, nameSub string, labelSpecs []string, target stri
 				continue
 			}
 			lv, present := s.Labels[k]
-			if !present || (hasV && !strings.Contains(strings.ToLower(lv), strings.ToLower(strings.TrimSpace(v)))) {
+			if !present || (hasV && !strings.Contains(strings.ToLower(lv), strings.ToLower(strings.Trim(strings.TrimSpace(v), `"`)))) {
 				ok = false
 				break
 			}
