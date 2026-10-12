@@ -25,8 +25,8 @@ func TestUIHandler(t *testing.T) {
 		}
 
 		body := w.Body.String()
-		if !strings.Contains(body, "<title>gnmic monitor</title>") {
-			t.Error("expected body to contain '<title>gnmic monitor</title>'")
+		if !strings.Contains(body, "<title>gNMIc Monitor</title>") {
+			t.Error("expected body to contain '<title>gNMIc Monitor</title>'")
 		}
 
 		if !strings.Contains(body, "/api/status") {
@@ -53,16 +53,14 @@ func TestUIHandler(t *testing.T) {
 			t.Error("expected body to contain 'id=\"topologySvg\"'")
 		}
 
-		if !strings.Contains(body, "id=\"btnTopology\"") {
-			t.Error("expected body to contain 'id=\"btnTopology\"'")
+		for _, want := range []string{"id=\"tabMetrics\"", "id=\"fName\"", "id=\"metricsBody\"", "/api/metrics"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("expected body to contain %q", want)
+			}
 		}
 
-		if !strings.Contains(body, "id=\"btnTable\"") {
-			t.Error("expected body to contain 'id=\"btnTable\"'")
-		}
-
-		if !strings.Contains(body, "function showView") {
-			t.Error("expected body to contain 'function showView'")
+		if !strings.Contains(body, `class="version">v`+version+"</span>") || strings.Contains(body, "__VERSION__") {
+			t.Error("expected body to show the version")
 		}
 
 		if !strings.Contains(body, "function renderTopology") {

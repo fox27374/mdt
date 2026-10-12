@@ -1,12 +1,23 @@
 package main
 
 import (
+	"bytes"
 	_ "embed"
 	"net/http"
+	"strings"
 )
 
+//go:embed VERSION
+var versionFile string
+
+// version is the release number from the VERSION file.
+var version = strings.TrimSpace(versionFile)
+
 //go:embed index.html
-var indexHTML []byte
+var indexTemplate []byte
+
+// indexHTML is index.html with the version filled in.
+var indexHTML = bytes.ReplaceAll(indexTemplate, []byte("__VERSION__"), []byte(version))
 
 //go:embed topology.js
 var topologyJS []byte
