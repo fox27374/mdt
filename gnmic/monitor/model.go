@@ -70,6 +70,28 @@ func EvalSub(now, started, lastSeen time.Time, interval time.Duration, errReason
 	return StatusOK
 }
 
+// settlePartial turns a WAITING target into OK when at least one subscription is
+// OK and every other one is only WAITING (e.g. hourly subscriptions that have not
+// reported yet). It returns the resulting status and how many subs are still waiting.
+func settlePartial(status Status, subs []SubState) (Status, int) {
+	if status != StatusWaiting {
+		return status, 0
+	}
+	ok, waiting := 0, 0
+	for _, s := range subs {
+		switch s.Status {
+		case StatusOK:
+			ok++
+		case StatusWaiting:
+			waiting++
+		}
+	}
+	if ok == 0 {
+		return status, 0
+	}
+	return StatusOK, waiting
+}
+
 // Input types (filled by the collectors).
 type SubConfig struct {
 	Name     string
@@ -157,6 +179,7 @@ type TargetState struct {
 	Owner   string     `json:"owner"`
 	Status  Status     `json:"status"`
 	Reason  string     `json:"reason,omitempty"`
+	Waiting int        `json:"waiting,omitempty"` // subs still WAITING on an otherwise OK target
 	Subs    []SubState `json:"subs"`
 }
 

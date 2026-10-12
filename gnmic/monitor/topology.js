@@ -138,6 +138,8 @@ function buildTopology(data) {
           detail: target.address,
           target: target.name,
           lastSeen: getLatestLastSeen(target.subs),
+          waiting: target.waiting || 0,
+          partial: (target.waiting || 0) > 0,
           notMonitored: false
         };
         nodes.push(node);
@@ -166,6 +168,8 @@ function buildTopology(data) {
         detail: target.address,
         target: target.name,
         lastSeen: getLatestLastSeen(target.subs),
+        waiting: target.waiting || 0,
+        partial: (target.waiting || 0) > 0,
         notMonitored: false
       };
       nodes.push(node);
@@ -336,6 +340,13 @@ function buildTopology(data) {
     }
   }
   consulNode.y = maxY + ROW;
+
+  // A collector is partial when it is OK and every target it owns is OK, at least one of them partial
+  for (const name of collectorNames) {
+    const node = collectorNodes[name];
+    const owned = targets.filter(t => t.owner === name);
+    node.partial = node.status === "OK" && owned.some(t => (t.waiting || 0) > 0) && owned.every(t => t.status === "OK");
+  }
 
   // 6. Create edges
   const edges = [];

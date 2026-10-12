@@ -521,3 +521,35 @@ test("10. Edge flow only when both ends OK and style normal", () => {
   assert.equal(flow("output"), false, "prometheus is unknown");
   assert.equal(topo.edges.find(e => e.from === "consul").flow, false);
 });
+
+test("partial: OK target with waiting subs and its collector get partial and keep flow", () => {
+  const topo = buildTopology({
+    components: [
+      { name: "collector gnmic-1", ok: true, detail: "healthy" },
+      { name: "nats", ok: true, detail: "ok" },
+      { name: "gnmic-output", ok: true, detail: "ok" },
+      { name: "consul", ok: true, detail: "ok" }
+    ],
+    targets: [
+      { name: "t1", address: "a", owner: "gnmic-1", status: "OK", waiting: 2, subs: [] },
+      { name: "t2", address: "b", owner: "gnmic-1", status: "OK", subs: [] }
+    ]
+  });
+  const byId = Object.fromEntries(topo.nodes.map(n => [n.id, n]));
+  assert.equal(byId["target:t1"].partial, true);
+  assert.equal(byId["target:t2"].partial, false);
+  assert.equal(byId["collector:gnmic-1"].partial, true);
+  const edge = topo.edges.find(e => e.from === "target:t1" && e.to === "collector:gnmic-1");
+  assert.equal(edge.flow, true);
+});
+
+test("partial: collector with a non-OK target is not partial", () => {
+  const topo = buildTopology({
+    components: [{ name: "collector gnmic-1", ok: true, detail: "healthy" }],
+    targets: [
+      { name: "t1", address: "a", owner: "gnmic-1", status: "OK", waiting: 1, subs: [] },
+      { name: "t2", address: "b", owner: "gnmic-1", status: "STALE", subs: [] }
+    ]
+  });
+  assert.equal(topo.nodes.find(n => n.id === "collector:gnmic-1").partial, false);
+});

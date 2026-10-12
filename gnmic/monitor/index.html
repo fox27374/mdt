@@ -523,6 +523,12 @@
 			stroke: var(--line);
 		}
 
+		.node .partial-arc {
+			fill: none;
+			stroke: var(--muted);
+			stroke-width: 4;
+		}
+
 		.node-target.st-ok circle { stroke: var(--ok); }
 		.node-target.st-waiting circle { stroke: var(--muted); }
 		.node-target.st-stale circle { stroke: var(--warn); }
@@ -1153,6 +1159,15 @@
 					circle.setAttribute("r", String(model.radius));
 					g.appendChild(circle);
 
+					// Partial (some subscriptions still waiting): left half of the ring gray
+					if (node.partial) {
+						const r = model.radius;
+						const arc = document.createElementNS(SVG_NS, "path");
+						arc.setAttribute("d", "M 0," + (-r) + " A " + r + "," + r + " 0 0 0 0," + r);
+						arc.setAttribute("class", "partial-arc");
+						g.appendChild(arc);
+					}
+
 					// Icon (scaled to fit the node circle)
 					const icon = iconFor(node.kind);
 					icon.setAttribute("transform", "scale(0.8)");
@@ -1249,7 +1264,7 @@
 				const statusCell = document.createElement("td");
 				const badge = document.createElement("span");
 				badge.className = `badge ${statusClass(target.status)}`;
-				badge.textContent = target.status;
+				badge.textContent = target.status + (target.waiting > 0 ? ` (${target.waiting} waiting)` : "");
 				statusCell.appendChild(badge);
 
 				const reasonCell = document.createElement("td");
@@ -1701,7 +1716,9 @@
 			// Line 2: Status
 			const statusLine = document.createElement("div");
 			statusLine.className = "tooltip-line";
-			const statusText = node.kind === "prometheus" ? "Not monitored" : node.status;
+			let statusText = node.kind === "prometheus" ? "Not monitored" : node.status;
+			if (node.waiting > 0) statusText += " (" + node.waiting + " waiting)";
+			else if (node.partial) statusText += " (targets partly waiting)";
 			statusLine.textContent = "Status: " + statusText;
 			topologyTooltip.appendChild(statusLine);
 
