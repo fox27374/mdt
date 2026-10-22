@@ -2,6 +2,7 @@
   <label>Network Overview</label>
   <row>
     <panel>
+      <title>CDP topology. Green: switches with telemetry, click for Switch Details</title>
       <viz type="network-diagram-viz.network-diagram-viz">
         <search>
           <query>| mstats latest(_value) WHERE index=cisco_metrics metric_name="mdt_nx_cdp_info_devId" BY extracted_source interface_name devId
@@ -23,8 +24,10 @@
 | stats dc(eval(local_if)) as reported_links by node1 node2 from
 | stats max(reported_links) as links by node1 node2
 | eval from=node1, to=node2, linkwidth=min(2*links, 10)
-| table from to linkwidth</query>
-          <earliest>-15m</earliest>
+| appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
+| append [| `mdt_nodes` | rename node as from | eval color="#53a051"]
+| table from to linkwidth color</query>
+          <earliest>-65m</earliest>
           <latest>now</latest>
           <sampleRatio>1</sampleRatio>
         </search>
