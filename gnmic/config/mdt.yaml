@@ -187,7 +187,8 @@ subscriptions:
       - "rfc7951:/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details/cdp-neighbor-detail/port-id"
     mode: stream
     stream-mode: sample
-    sample-interval: 1h
+    # Lab value; production can go back to a longer interval.
+    sample-interval: 60s
     outputs:
       - nats
 
