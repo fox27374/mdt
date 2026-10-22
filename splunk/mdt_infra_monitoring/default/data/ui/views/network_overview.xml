@@ -4,14 +4,26 @@
     <panel>
       <viz type="network-diagram-viz.network-diagram-viz">
         <search>
-          <query>index="cisco_events" event_group="cdp" 
-| eval from = mvdedup(node), to = mvdedup(neighbour), interface = mvdedup(interface), remote_interface = mvdedup(remote_interface)
-| eval node1 = if(from &lt; to, from, to), node2 = if(from &lt; to, to, from)
-| eval int1 = if(interface &lt; remote_interface, interface, remote_interface), int2 = if(interface &lt; remote_interface, remote_interface, interface)
-| eval conn_id = node1 + node2 + int1 + int2
-| dedup conn_id
-| eval color = "blue", linkcolor = "green"
-| table from to linkcolor</query>
+          <query>| mstats latest(_value) WHERE index=cisco_metrics metric_name="mdt_nx_cdp_info_devId" BY extracted_source interface_name devId
+| eval from=extracted_source, to=devId, local_if=interface_name
+| append
+    [| mstats latest(_value) WHERE index=cisco_metrics metric_name="mdt_xe_cdp_info_device_name" BY extracted_source cdp_neighbor_detail_device_id device_name
+    | join type=left extracted_source cdp_neighbor_detail_device_id
+        [| mstats latest(_value) WHERE index=cisco_metrics metric_name="mdt_xe_cdp_info_local_intf_name" BY extracted_source cdp_neighbor_detail_device_id local_intf_name]
+    | join type=left extracted_source cdp_neighbor_detail_device_id
+        [| mstats latest(_value) WHERE index=cisco_metrics metric_name="mdt_xe_cdp_info_port_id" BY extracted_source cdp_neighbor_detail_device_id port_id]
+    | eval from=extracted_source, to=device_name, local_if=local_intf_name, remote_if=port_id]
+| append
+    [search index="cisco_events" event_group="cdp"
+    | eval from=mvindex(node,0), to=mvindex(neighbour,0), local_if=mvindex(interface,0), remote_if=mvindex(remote_interface,0)]
+| where NOT match(local_if, "(?i)^(mgmt|e0m)") AND NOT match(coalesce(remote_if, ""), "(?i)^(mgmt|e0m)")
+| eval from=lower(replace(from, "[.(].*$", "")), to=lower(replace(to, "[.(].*$", ""))
+| where from!=to
+| eval node1=if(from&lt;to, from, to), node2=if(from&lt;to, to, from)
+| stats dc(eval(local_if)) as reported_links by node1 node2 from
+| stats max(reported_links) as links by node1 node2
+| eval from=node1, to=node2, linkwidth=min(2*links, 10)
+| table from to linkwidth</query>
           <earliest>-15m</earliest>
           <latest>now</latest>
           <sampleRatio>1</sampleRatio>
@@ -26,7 +38,7 @@
         <option name="network-diagram-viz.network-diagram-viz.draggableNodes">true</option>
         <option name="network-diagram-viz.network-diagram-viz.drilldownClick">single</option>
         <option name="network-diagram-viz.network-diagram-viz.enablePhysics">false</option>
-        <option name="network-diagram-viz.network-diagram-viz.hierarchy">false</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchy">true</option>
         <option name="network-diagram-viz.network-diagram-viz.hierarchyDirection">Top-Down</option>
         <option name="network-diagram-viz.network-diagram-viz.hierarchySortMethod">hubsize</option>
         <option name="network-diagram-viz.network-diagram-viz.levelSeparation">250</option>
