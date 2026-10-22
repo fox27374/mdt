@@ -1,0 +1,510 @@
+<dashboard version="2" theme="dark">
+    <label>Wireless Client Details DEV</label>
+    <description></description>
+    <definition><![CDATA[
+{
+	"title": "Wireless Client Details DEV",
+	"description": "",
+	"inputs": {
+		"input_global_trp": {
+			"options": {
+				"defaultValue": "-4h@m,now",
+				"token": "global_time"
+			},
+			"title": "Global Time Range",
+			"type": "input.timerange"
+		},
+		"input_rPuq06Nb": {
+			"context": {
+				"formattedConfig": {
+					"number": {
+						"prefix": ""
+					}
+				},
+				"formattedStatics": ">statics | formatByType(formattedConfig)",
+				"label": ">primary | seriesByName(\"traffic_stats_ms_mac_address\") | renameSeries(\"label\") | formatByType(formattedConfig)",
+				"statics": [],
+				"value": ">primary | seriesByName(\"traffic_stats_ms_mac_address\") | renameSeries(\"value\") | formatByType(formattedConfig)"
+			},
+			"dataSources": {
+				"primary": "ds_amMDCpzx"
+			},
+			"options": {
+				"items": ">frame(label, value) | prepend(formattedStatics) | objects()",
+				"selectFirstSearchResult": true,
+				"token": "tk_client"
+			},
+			"title": "MAC Address",
+			"type": "input.dropdown"
+		},
+		"input_sNLJCcPD": {
+			"options": {
+				"items": [],
+				"token": "extracted_source",
+				"selectFirstSearchResult": true
+			},
+			"title": "WLC",
+			"type": "input.dropdown",
+			"dataSources": {
+				"primary": "ds_iIzSWTGW"
+			}
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			}
+		},
+		"visualizations": {
+			"global": {
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_0aMQNtIm": {
+			"dataSources": {
+				"primary": "ds_speed"
+			},
+			"options": {
+				"dataValuesDisplay": "off",
+				"legendDisplay": "right",
+				"legendMode": "seriesCompare",
+				"legendTruncation": "ellipsisMiddle",
+				"lineDashStylesByField": {
+					"8c:bf:ea:9c:4a:68": "Solid"
+				},
+				"lineWidth": 2,
+				"nullValueDisplay": "connect",
+				"seriesColorsByField": {
+					"8c:bf:ea:9c:4a:68": "#1e93c6"
+				},
+				"showIndependentYRanges": false,
+				"showOverlayY2Axis": false,
+				"showRoundedY2AxisLabels": false,
+				"showSplitSeries": false,
+				"showXMajorGridLines": true,
+				"showY2MajorGridLines": true,
+				"showYAxisWithZero": true,
+				"xAxisLabelRotation": 0,
+				"xAxisTitleVisibility": "show",
+				"y2AxisAbbreviation": "auto",
+				"y2AxisScale": "linear",
+				"y2AxisTitleVisibility": "show",
+				"yAxisAbbreviation": "auto",
+				"yAxisScale": "linear",
+				"yAxisTitleVisibility": "show"
+			},
+			"title": "Speed",
+			"type": "splunk.line"
+		},
+		"viz_Qa6b13sP": {
+			"dataSources": {
+				"primary": "ds_rssi"
+			},
+			"options": {
+				"dataValuesDisplay": "off",
+				"legendDisplay": "right",
+				"legendMode": "seriesCompare",
+				"legendTruncation": "ellipsisMiddle",
+				"lineDashStylesByField": {
+					"8c:bf:ea:9c:4a:68": "Solid",
+					"Avg": "Solid"
+				},
+				"lineWidth": 2,
+				"nullValueDisplay": "connect",
+				"seriesColorsByField": {
+					"8c:bf:ea:9c:4a:68": "#1e93c6",
+					"Avg": "#1e93c6"
+				},
+				"showIndependentYRanges": false,
+				"showOverlayY2Axis": false,
+				"showRoundedY2AxisLabels": false,
+				"showSplitSeries": false,
+				"showXMajorGridLines": true,
+				"showY2MajorGridLines": true,
+				"showYAxisWithZero": true,
+				"xAxisLabelRotation": 0,
+				"xAxisTitleVisibility": "show",
+				"y2AxisAbbreviation": "auto",
+				"y2AxisScale": "linear",
+				"y2AxisTitleVisibility": "show",
+				"yAxisAbbreviation": "auto",
+				"yAxisScale": "linear",
+				"yAxisTitleVisibility": "show"
+			},
+			"title": "RSSI",
+			"type": "splunk.line"
+		},
+		"viz_ap_ip": {
+			"dataSources": {
+				"primary": "ds_ap_lookup"
+			},
+			"options": {
+				"majorValue": "> primary | seriesByName(\"ap_ip\")"
+			},
+			"title": "AP IP",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ap_location": {
+			"dataSources": {
+				"primary": "ds_ap_lookup"
+			},
+			"options": {
+				"majorValue": "> primary | seriesByName(\"ap_location\")"
+			},
+			"title": "AP Location",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ap_name": {
+			"dataSources": {
+				"primary": "ds_ap_lookup"
+			},
+			"options": {
+				"majorValue": "> primary | seriesByName(\"ap_name\")"
+			},
+			"title": "AP Name",
+			"type": "splunk.singlevalue"
+		},
+		"viz_current_rssi": {
+			"dataSources": {
+				"primary": "ds_current_client_metrics"
+			},
+			"options": {
+				"majorValue": "> primary | seriesByName(\"rssi\")"
+			},
+			"title": "Current RSSI",
+			"type": "splunk.singlevalue"
+		},
+		"viz_current_snr": {
+			"dataSources": {
+				"primary": "ds_current_client_metrics"
+			},
+			"options": {
+				"majorValue": "> primary | seriesByName(\"snr\")"
+			},
+			"title": "Current SNR",
+			"type": "splunk.singlevalue"
+		},
+		"viz_current_speed": {
+			"dataSources": {
+				"primary": "ds_current_client_metrics"
+			},
+			"options": {
+				"majorValue": "> primary | seriesByName(\"speed\")"
+			},
+			"title": "Current Speed",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ip": {
+			"dataSources": {
+				"primary": "ds_client_lookup"
+			},
+			"options": {
+				"majorValue": "> primary | seriesByName(\"client_ip\")"
+			},
+			"title": "Client IP",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ipiVYhjo": {
+			"dataSources": {
+				"primary": "ds_snr"
+			},
+			"options": {
+				"dataValuesDisplay": "off",
+				"legendDisplay": "right",
+				"legendMode": "seriesCompare",
+				"legendTruncation": "ellipsisMiddle",
+				"lineDashStylesByField": {
+					"8c:bf:ea:9c:4a:68": "Solid",
+					"Avg": "Solid"
+				},
+				"lineWidth": 2,
+				"nullValueDisplay": "connect",
+				"seriesColorsByField": {
+					"8c:bf:ea:9c:4a:68": "#1e93c6",
+					"Avg": "#1e93c6"
+				},
+				"showIndependentYRanges": false,
+				"showOverlayY2Axis": false,
+				"showRoundedY2AxisLabels": false,
+				"showSplitSeries": false,
+				"showXMajorGridLines": true,
+				"showY2MajorGridLines": true,
+				"showYAxisWithZero": true,
+				"xAxisLabelRotation": 0,
+				"xAxisTitleVisibility": "show",
+				"y2AxisAbbreviation": "auto",
+				"y2AxisScale": "linear",
+				"y2AxisTitleVisibility": "show",
+				"yAxisAbbreviation": "auto",
+				"yAxisScale": "linear",
+				"yAxisTitleVisibility": "show"
+			},
+			"title": "SNR",
+			"type": "splunk.line"
+		},
+		"viz_name": {
+			"dataSources": {
+				"primary": "ds_client_lookup"
+			},
+			"options": {
+				"majorValue": "> primary | seriesByName(\"client_name\")"
+			},
+			"title": "Client Name",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ssid": {
+			"dataSources": {
+				"primary": "ds_client_lookup"
+			},
+			"options": {
+				"majorValue": "> primary | seriesByName(\"ssid\")"
+			},
+			"title": "Client SSID",
+			"type": "splunk.singlevalue"
+		}
+	},
+	"dataSources": {
+		"ds_amMDCpzx": {
+			"name": "Search_1",
+			"options": {
+				"query": "| mpreview index=cisco_metrics filter=\"metric_name=mdt_wl_client_stats_most_recent_snr extracted_source=$extracted_source$\"\n| stats count by traffic_stats_ms_mac_address\n| table traffic_stats_ms_mac_address",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_ap_lookup": {
+			"name": "AP Lookup Base Search",
+			"options": {
+				"query": "| mpreview index=cisco_metrics filter=\"(metric_name=mdt_wl_client_stats_ap_mac_address AND dot11_oper_data_ms_mac_address=$tk_client$) OR metric_name=mdt_wl_info_wtp_mac OR metric_name=mdt_wl_info_eth_mac OR metric_name=mdt_wl_info_ap_ip_addr OR metric_name=mdt_wl_info_floor\"\n| eval ap_eth_mac=coalesce(ap_mac_address, ethernet_mac_wtp_mac_map_ethernet_mac, eth_mac)\n| eval ap_radio_mac=coalesce(wtp_mac, oper_data_wtp_mac, capwap_data_wtp_mac)\n| eval client_mac=dot11_oper_data_ms_mac_address\n| eval ap_name=ap_name_mac_map_wtp_name\n| eval ap_ip=ap_ip_addr\n| eval ap_location=location\n| eventstats latest(ap_ip) as ap_ip_e, latest(ap_location) as ap_location_e by ap_radio_mac\n| stats latest(_time) as last_seen, latest(client_mac) as client_mac, latest(ap_name) as ap_name, latest(ap_radio_mac) as ap_radio_mac, latest(ap_ip_e) as ap_ip, latest(ap_location_e) as ap_location by ap_eth_mac\n| where isnotnull(client_mac)\n| table ap_name ap_ip ap_location",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_client_lookup": {
+			"name": "Client Lookup Base Search",
+			"options": {
+				"query": "| mpreview index=cisco_metrics filter=\"metric_name=mdt_wl_info_vap_ssid OR metric_name=mdt_wl_info_device_hostname OR metric_name=mdt_wl_info_ip_addr AND (dot11_oper_data_ms_mac_address=$tk_client$ OR client_wsa_info_client_mac=$tk_client$ OR sisf_db_mac_mac_addr=$tk_client$)\"\n| eval client_mac=coalesce(dot11_oper_data_ms_mac_address, client_wsa_info_client_mac, sisf_db_mac_mac_addr),\n       ssid=vap_ssid,\n       client_name=device_hostname,\n       client_ip=ip_addr\n| stats latest(ssid) as ssid, latest(client_name) as client_name, latest(client_ip) as client_ip by client_mac",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_client_metrics": {
+			"name": "Client Metrics Base Search",
+			"options": {
+				"query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) latest(mdt_wl_client_stats_most_recent_snr) latest(mdt_wl_client_stats_speed) prestats=true WHERE index=cisco_metrics traffic_stats_ms_mac_address=$tk_client$ span=60s BY traffic_stats_ms_mac_address",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_current_client_metrics": {
+			"name": "Current Client Metrics Base Search",
+			"options": {
+				"query": "| mstats latest(\"mdt_wl_client_stats_most_recent_rssi\") AS rssi latest(\"mdt_wl_client_stats_most_recent_snr\") AS snr latest(\"mdt_wl_client_stats_speed\") AS speed WHERE \"index\"=\"cisco_metrics\" traffic_stats_ms_mac_address=$tk_client$ | stats latest(rssi) as rssi latest(snr) as snr latest(speed) as speed",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_rssi": {
+			"name": "RSSI (chained)",
+			"options": {
+				"extend": "ds_client_metrics",
+				"query": "| timechart latest(mdt_wl_client_stats_most_recent_rssi) span=60s useother=false BY traffic_stats_ms_mac_address"
+			},
+			"type": "ds.chain"
+		},
+		"ds_snr": {
+			"name": "SNR (chained)",
+			"options": {
+				"extend": "ds_client_metrics",
+				"query": "| timechart latest(mdt_wl_client_stats_most_recent_snr) span=60s useother=false BY traffic_stats_ms_mac_address"
+			},
+			"type": "ds.chain"
+		},
+		"ds_speed": {
+			"name": "Speed (chained)",
+			"options": {
+				"extend": "ds_client_metrics",
+				"query": "| timechart latest(mdt_wl_client_stats_speed) span=60s useother=false BY traffic_stats_ms_mac_address"
+			},
+			"type": "ds.chain"
+		},
+		"ds_iIzSWTGW": {
+			"type": "ds.search",
+			"options": {
+				"query": "| mcatalog values(extracted_source) as wlc WHERE index=\"cisco_metrics\" AND metric_name=\"mdt_wl_info_ap_ip_addr\"\n| mvexpand wlc",
+				"queryParameters": {}
+			},
+			"name": "WLC_Search"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_global_trp",
+			"input_sNLJCcPD",
+			"input_rPuq06Nb"
+		],
+		"layoutDefinitions": {
+			"layout_1": {
+				"options": {
+					"height": 960,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_ip",
+						"position": {
+							"h": 94,
+							"w": 720,
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"item": "viz_name",
+						"position": {
+							"h": 97,
+							"w": 720,
+							"x": 0,
+							"y": 94
+						}
+					},
+					{
+						"item": "viz_ssid",
+						"position": {
+							"h": 100,
+							"w": 720,
+							"x": 0,
+							"y": 191
+						}
+					},
+					{
+						"item": "viz_Qa6b13sP",
+						"position": {
+							"h": 300,
+							"w": 1214,
+							"x": 0,
+							"y": 291
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ipiVYhjo",
+						"position": {
+							"h": 300,
+							"w": 1214,
+							"x": 0,
+							"y": 591
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_0aMQNtIm",
+						"position": {
+							"h": 300,
+							"w": 1214,
+							"x": 0,
+							"y": 891
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ap_name",
+						"position": {
+							"h": 94,
+							"w": 720,
+							"x": 720,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ap_ip",
+						"position": {
+							"h": 97,
+							"w": 720,
+							"x": 720,
+							"y": 94
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ap_location",
+						"position": {
+							"h": 100,
+							"w": 720,
+							"x": 720,
+							"y": 191
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_current_rssi",
+						"position": {
+							"h": 300,
+							"w": 226,
+							"x": 1214,
+							"y": 291
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_current_snr",
+						"position": {
+							"h": 300,
+							"w": 226,
+							"x": 1214,
+							"y": 591
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_current_speed",
+						"position": {
+							"h": 300,
+							"w": 226,
+							"x": 1214,
+							"y": 891
+						},
+						"type": "block"
+					}
+				],
+				"type": "grid"
+			}
+		},
+		"options": {},
+		"tabs": {
+			"items": [
+				{
+					"label": "New tab",
+					"layoutId": "layout_1"
+				}
+			]
+		}
+	},
+	"applicationProperties": {}
+}
+    ]]></definition>
+</dashboard>

@@ -1,0 +1,846 @@
+<dashboard version="2" theme="dark">
+    <label>Switch Details</label>
+    <description>Cisco Catalyst Switch Details</description>
+    <definition><![CDATA[
+{
+	"title": "Switch Details",
+	"description": "Cisco Catalyst Switch Details",
+	"inputs": {
+		"input_NEbf0hSH": {
+			"context": {
+				"formattedConfig": {
+					"number": {
+						"prefix": ""
+					}
+				},
+				"formattedStatics": ">statics | formatByType(formattedConfig)",
+				"label": ">primary | seriesByName(\"node\") | renameSeries(\"label\") | formatByType(formattedConfig)",
+				"statics": [
+					[
+						"All"
+					],
+					[
+						"*"
+					]
+				],
+				"value": ">primary | seriesByName(\"values(node)\") | renameSeries(\"value\") | formatByType(formattedConfig)"
+			},
+			"dataSources": {
+				"primary": "ds_eyCMvc7e"
+			},
+			"options": {
+				"defaultValue": "*",
+				"items": ">frame(label, value) | prepend(formattedStatics) | objects()",
+				"token": "tk_node"
+			},
+			"title": "Node",
+			"type": "input.dropdown"
+		},
+		"input_global_trp": {
+			"options": {
+				"defaultValue": "-60m@m,now",
+				"token": "global_time"
+			},
+			"title": "Global Time Range",
+			"type": "input.timerange"
+		},
+		"input_rtCQQP1Y": {
+			"context": {
+				"formattedConfig": {
+					"number": {
+						"prefix": ""
+					}
+				},
+				"formattedStatics": ">statics | formatByType(formattedConfig)",
+				"label": ">primary | seriesByName(\"interface\") | renameSeries(\"label\") | formatByType(formattedConfig)",
+				"statics": [
+					[
+						"All"
+					],
+					[
+						"*"
+					]
+				],
+				"value": ">primary | seriesByName(\"interface\") | renameSeries(\"value\") | formatByType(formattedConfig)"
+			},
+			"dataSources": {
+				"primary": "ds_WOrcLwTK"
+			},
+			"options": {
+				"items": ">frame(label, value) | prepend(formattedStatics) | objects()",
+				"token": "tk_interface"
+			},
+			"title": "Interface",
+			"type": "input.dropdown"
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			}
+		},
+		"visualizations": {
+			"global": {
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_8hHYnYfH": {
+			"containerOptions": {},
+			"dataSources": {
+				"primary": "ds_suvdxEwm"
+			},
+			"eventHandlers": [
+				{
+					"options": {
+						"newTab": false,
+						"type": "auto"
+					},
+					"type": "drilldown.linkToSearch"
+				}
+			],
+			"options": {
+				"columnFormat": {
+					"_time": {
+						"width": 30
+					},
+					"host": {
+						"width": 30
+					}
+				},
+				"tableFormat": {
+					"align": "> table | type() | matchValue(tableAlignByType)"
+				}
+			},
+			"showLastUpdated": false,
+			"showProgressBar": true,
+			"title": "Logs",
+			"type": "splunk.table"
+		},
+		"viz_OwL6aVbb": {
+			"dataSources": {
+				"primary": "ds_OpFYmSKr"
+			},
+			"options": {
+				"count": 100,
+				"dataOverlayMode": "none",
+				"drilldown": "none",
+				"showInternalFields": false,
+				"showRowNumbers": false,
+				"headerVisibility": "none"
+			},
+			"title": "Inactive Ports",
+			"type": "splunk.table"
+		},
+		"viz_SkkwkLpV": {
+			"containerOptions": {},
+			"dataSources": {
+				"primary": "ds_TXiJSqLT"
+			},
+			"eventHandlers": [
+				{
+					"type": "drilldown.linkToDashboard",
+					"options": {
+						"app": "search",
+						"dashboard": "port_details",
+						"newTab": true,
+						"tokens": [
+							{
+								"token": "tk_interface",
+								"value": "trellis.value"
+							},
+							{
+								"token": "tk_node",
+								"value": "$tk_node$"
+							}
+						]
+					}
+				}
+			],
+			"options": {
+				"splitByLayout": "trellis",
+				"trellisColumns": 4,
+				"trellisPageCount": 60
+			},
+			"showLastUpdated": false,
+			"showProgressBar": true,
+			"title": "Interface Utilization",
+			"type": "splunk.area"
+		},
+		"viz_WctDbGCE": {
+			"containerOptions": {},
+			"dataSources": {
+				"primary": "ds_8GAC6F3G"
+			},
+			"options": {
+				"nullValueDisplay": "connect"
+			},
+			"showLastUpdated": false,
+			"showProgressBar": true,
+			"title": "CPU Usage [%]",
+			"type": "splunk.line"
+		},
+		"viz_k0D28f6E": {
+			"dataSources": {
+				"primary": "ds_sXhZGdAg"
+			},
+			"options": {
+				"count": 20,
+				"dataOverlayMode": "none",
+				"drilldown": "none",
+				"showInternalFields": false,
+				"showRowNumbers": false
+			},
+			"title": "CDP",
+			"type": "splunk.table"
+		},
+		"viz_oDwrvkVT": {
+			"containerOptions": {
+				"visibility": {
+					"hideWhenNoData": true
+				}
+			},
+			"dataSources": {
+				"primary": "ds_lc7JT0KR"
+			},
+			"options": {
+				"collapseThreshold": 0.01,
+				"seriesColors": [
+					"#DD9900",
+					"#00CDAF",
+					"#7B56DB",
+					"#009CEB",
+					"#FF677B",
+					"#CB2196",
+					"#813193",
+					"#0051B5",
+					"#008C80",
+					"#99B100",
+					"#FFA476",
+					"#FF6ACE",
+					"#AE8CFF",
+					"#00689D",
+					"#00490A",
+					"#465D00",
+					"#9D6300",
+					"#F6540B",
+					"#FF969E",
+					"#E47BFE"
+				],
+				"seriesColorsByField": {
+					"Avg": "#1e93c6",
+					"ibk-lab-sw05": "#1e93c6",
+					"ibk-lab-sw11": "#f2b827",
+					"ibk-lab-sw12": "#d6563c",
+					"ibk-lab-sw13": "#6a5c9e"
+				},
+				"showDonutHole": true,
+				"labelDisplay": "off"
+			},
+			"title": "PoE",
+			"type": "splunk.pie"
+		},
+		"viz_s75NIQMk": {
+			"containerOptions": {},
+			"dataSources": {
+				"primary": "ds_OlLuCBPe"
+			},
+			"options": {
+				"nullValueDisplay": "connect",
+				"seriesColors": [
+					"#DD9900",
+					"#7B56DB",
+					"#009CEB",
+					"#00CDAF",
+					"#FF677B",
+					"#CB2196",
+					"#813193",
+					"#0051B5",
+					"#008C80",
+					"#99B100",
+					"#FFA476",
+					"#FF6ACE",
+					"#AE8CFF",
+					"#00689D",
+					"#00490A",
+					"#465D00",
+					"#9D6300",
+					"#F6540B",
+					"#FF969E",
+					"#E47BFE"
+				]
+			},
+			"showLastUpdated": false,
+			"showProgressBar": true,
+			"title": "Memory Usage [%]",
+			"type": "splunk.line"
+		},
+		"viz_wWBlYuIO": {
+			"context": {
+				"convertedColorRange": [
+					{
+						"from": 100,
+						"value": "#dc4e41"
+					},
+					{
+						"from": 70,
+						"to": 100,
+						"value": "#f1813f"
+					},
+					{
+						"from": 30,
+						"to": 70,
+						"value": "#f8be34"
+					},
+					{
+						"from": 0,
+						"to": 30,
+						"value": "#0877a6"
+					},
+					{
+						"to": 0,
+						"value": "#53a051"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_1uZj8cxl"
+			},
+			"options": {
+				"majorColor": "#708794",
+				"numberPrecision": 0,
+				"shouldUseThousandSeparators": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"unitPosition": "after"
+			},
+			"title": "Used Ports",
+			"type": "splunk.singlevalue"
+		},
+		"viz_xk020SNL": {
+			"context": {
+				"convertedColorRange": [
+					{
+						"from": 100,
+						"value": "#dc4e41"
+					},
+					{
+						"from": 70,
+						"to": 100,
+						"value": "#f1813f"
+					},
+					{
+						"from": 30,
+						"to": 70,
+						"value": "#f8be34"
+					},
+					{
+						"from": 0,
+						"to": 30,
+						"value": "#0877a6"
+					},
+					{
+						"to": 0,
+						"value": "#53a051"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_ARMGxku5"
+			},
+			"options": {
+				"majorColor": "#708794",
+				"shouldUseThousandSeparators": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"unit": "%",
+				"unitPosition": "after"
+			},
+			"title": "Used Ports %",
+			"type": "splunk.singlevalue"
+		}
+	},
+	"dataSources": {
+		"ds_1uZj8cxl": {
+			"name": "Single value search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status \n    WHERE index=\"cisco_metrics\" node=$tk_node$ interface=* \n    BY interface node\n| stats \n    count AS total,\n    count(eval(oper_status=1)) AS total_up\n    BY node\n| eval port_util = round(total_up/total*100, 0)\n| fields - node - port_util - total",
+				"queryParameters": {
+					"earliest": "-60m@m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_3AOd70aN": {
+			"name": "OUT Error Rate search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.out_errors\") as out_errors WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(out_errors) as prev_out_errors by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_out_errors = out_errors - prev_out_errors\n| where delta_time_sec > 0\n| timechart span=5m latest(delta_out_errors) as \"Outbound Error rate\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_49oa7jGq": {
+			"name": "Table search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ interface=* BY interface node\n| join node\n    [| mstats latest(\"if-stats.oper_status\") AS oper_status WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ interface=* BY interface node\n    | where oper_status = 0 \n    | stats count(oper_status) as total_down by node\n    ]\n| stats count as total by total_down, node\n| eval perc_down=round(total_down/total*100, 0)\n| fields node total total_down perc_down",
+				"queryParameters": {
+					"earliest": "-24h@h",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_5PRbvZYc": {
+			"name": "Memory Usage ___ search",
+			"options": {
+				"query": "| mstats avg(\"mem-stats.usage\") prestats=true WHERE \"index\"=\"cisco_metrics\" span=10s BY node\n| timechart avg(\"mem-stats.usage\") span=10s useother=false BY node WHERE max in top5\n| fields - _span*",
+				"queryParameters": {
+					"earliest": "-1h",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_6DX8nvsd": {
+			"name": "Inbount Error Rate search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.in_errors\") as in_errors WHERE index=\"cisco_metrics\" node=ibk-lab-sw05 interface=TenGigabitEthernet1/1/4 span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(in_errors) as prev_in_errors by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_in_errors = in_errors - prev_in_errors\n| stats latest(delta_in_errors)",
+				"queryParameters": {
+					"earliest": "-60m@m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_8GAC6F3G": {
+			"name": "CPU Usage search",
+			"options": {
+				"query": "| mstats avg(\"cpu-util.usage\") prestats=true WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ span=10s BY node\n| timechart avg(\"cpu-util.usage\") span=10s useother=false BY node WHERE max in top10\n| fields - _span*",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_8cyS0c8z": {
+			"name": "Logs 2 search",
+			"options": {
+				"extend": "ds_suvdxEwm",
+				"query": "| fieldsummary maxvals=10"
+			},
+			"type": "ds.chain"
+		},
+		"ds_9GVn3Mpt": {
+			"name": "node_interface_top10",
+			"options": {
+				"query": "| mstats avg(\"if-stats.rx_kbps\") prestats=true WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=10s BY node interface \n| eval node_interface = node.\":\".interface\n| timechart avg(\"if-stats.rx_kbps\") span=10s useother=f by node_interface where max in top10\n| fields - _span*",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_ARMGxku5": {
+			"name": "Ports Used search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status \n    WHERE index=\"cisco_metrics\" node=$tk_node$ interface=* \n    BY interface node\n| stats \n    count AS total,\n    count(eval(oper_status=1)) AS total_up\n    BY node\n| eval port_util = round(total_up/total*100, 0)\n| fields - node - total_up - total",
+				"queryParameters": {
+					"earliest": "-60m@m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_BvOlTRz9": {
+			"name": "Inbound Utilisation",
+			"options": {
+				"query": "| mstats latest(\"if-stats.in_octets\") as in_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(in_octets) as prev_in_octets by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_in_octets = in_octets - prev_in_octets\n| where delta_time_sec > 0\n| eval in_bps = round((delta_in_octets*8)/delta_time_sec)\n| eval in_util_perc = round((in_bps/speed)*100, 2)\n| where in_util_perc < 50\n| timechart span=5m latest(in_util_perc) as \"Inbound Utilization (%)\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_FGDngMqx": {
+			"name": "Outbound Utilization",
+			"options": {
+				"query": "| mstats latest(\"if-stats.out_octets\") as out_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(out_octets) as prev_out_octets by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_out_octets = out_octets - prev_out_octets\n| where delta_time_sec > 0\n| eval out_bps = round((delta_out_octets*8)/delta_time_sec)\n| eval out_util_perc = round((out_bps/speed)*100, 2)\n| where out_util_perc < 50\n| timechart span=5m latest(out_util_perc) as \"Outbound Utilization (%)\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_GB7QFbed": {
+			"name": "Inbound Utilization _ search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.in_octets\") as in_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(in_octets) as prev_in_octets by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_in_octets = in_octets - prev_in_octets\n| where delta_time_sec > 0\n| eval in_bps = round((delta_in_octets*8)/delta_time_sec)\n| eval in_util_perc = round((in_bps/speed)*100, 2)\n| stats latest(in_util_perc)",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_OlLuCBPe": {
+			"name": "Memory Usage search",
+			"options": {
+				"query": "| mstats avg(\"mem-stats.usage\") prestats=true WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ span=10s BY node\n| timechart avg(\"mem-stats.usage\") span=10s useother=false BY node WHERE max in top10\n| fields - _span*",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_OpFYmSKr": {
+			"name": "Inactive Ports search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status, latest(\"if-stats.last_change\") AS last_change WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ interface=* BY interface node\n| where oper_status = 0\n| eval time_difference = now() - last_change\n| eval days = floor(time_difference / 86400)\n| eval hours = floor((time_difference % 86400) / 3600)\n| eval disconnected = days.\"d \".hours.\"h\"\n| table interface, disconnected",
+				"queryParameters": {
+					"earliest": "-10m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_TXiJSqLT": {
+			"name": "Interface Utilization search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.in_octets\") as in_octets latest(\"if-stats.out_octets\") as out_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=$tk_node$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(in_octets) as prev_in_octets by node interface\n| streamstats current=f latest(out_octets) as prev_out_octets by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_in_octets = in_octets - prev_in_octets\n| eval delta_out_octets = out_octets - prev_out_octets\n| where delta_time_sec > 0\n| eval in_bps = round((delta_in_octets*8)/delta_time_sec)\n| eval in_util_perc = (round((in_bps/speed)*100, 2))\n| eval out_bps = round((delta_out_octets*8)/delta_time_sec)\n| eval out_util_perc = (round((out_bps/speed)*100, 2)) * -1\n| timechart span=5m useother=false limit=0 latest(in_util_perc) as \"Inbound Utilization (%)\" latest(out_util_perc) as \"Outbound Utilization (%)\" by interface",
+				"queryParameters": {
+					"earliest": "-60m@m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_WOrcLwTK": {
+			"name": "interface_names",
+			"options": {
+				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ interface=* BY interface node\n| where oper_status = 1 | sort interface",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_XR3YtZbo": {
+			"name": "OUT Single value search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.out_octets\") as out_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(out_octets) as prev_out_octets by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_out_octets = out_octets - prev_out_octets\n| where delta_time_sec > 0\n| eval out_bps = round((delta_out_octets*8)/delta_time_sec)\n| eval out_util_perc = round((out_bps/speed)*100, 2)\n| stats latest(out_util_perc)",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_aT0d2Bvk": {
+			"name": "Total Ports search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status\n  WHERE index=\"cisco_metrics\" node=$tk_node$\n  BY interface node\n| stats count AS total",
+				"queryParameters": {
+					"earliest": "-60m@m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_amK7UHGs": {
+			"name": "IN Error Rate search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.in_errors\") as in_errors WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(in_errors) as prev_in_errors by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_in_errors = in_errors - prev_in_errors\n| where delta_time_sec > 0\n| timechart span=5m latest(delta_in_errors) as \"Inbound Error rate\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_eyCMvc7e": {
+			"name": "node_names",
+			"options": {
+				"query": "| mcatalog values(node) WHERE metric_name=cpu-util.usage AND index=cisco_metrics GROUPBY node",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_gnfQ3bvG": {
+			"name": "VLANs search",
+			"options": {
+				"query": "index=\"cisco_events\" event_group=mac node=ibk-lab-sw05 interface=Gi1/0/5\n| stats values(vlan) as vlan",
+				"queryParameters": {
+					"earliest": "-15m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_iBX6iE4S": {
+			"name": "DEV kbps calc search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.in_octets\") as in_octets latest(\"if-stats.out_octets\") as out_octets latest(\"if-stats.speed\") as speed WHERE \"index\"=\"cisco_metrics\" node=ibk-lab-sw03 interface=\"GigabitEthernet1/1/4\" span=1s \n| sort - _time \n| head 2 \n| sort _time \n| delta in_octets as in_delta_octets\n| delta out_octets as out_delta_octets \n| delta _time as delta_time_sec \n| eval in_bps = (in_delta_octets*8)/delta_time_sec, out_bps = (out_delta_octets*8)/delta_time_sec\n| eval in_kbps = in_bps/1000, out_kbps = out_bps/1000\n| eval in_mbps = in_bps/1000000, out_mbps = out_bps/1000000\n| eval in_util = (in_bps/speed)*100, out_util = (out_bps/speed)*100",
+				"queryParameters": {
+					"earliest": "-1h",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_j8W1wF68": {
+			"name": "Top RX Interfaces search",
+			"options": {
+				"query": "| mstats avg(\"if-stats.tx_kbps\") prestats=true WHERE \"index\"=\"cisco_metrics\" span=5s BY node, interface\n| timechart avg(\"if-stats.tx_kbps\") span=5s useother=false BY node WHERE max in top5\n| fields - _span*",
+				"queryParameters": {
+					"earliest": "-15m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_k616WeeH": {
+			"name": "Outbound Error Rate search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.out_errors\") as out_errors WHERE index=\"cisco_metrics\" node=ibk-lab-sw05 interface=TenGigabitEthernet1/1/4 span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(out_errors) as prev_out_errors by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_out_errors = out_errors - prev_out_errors\n| stats latest(delta_out_errors)",
+				"queryParameters": {
+					"earliest": "-60m@m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_lc7JT0KR": {
+			"name": "PoE search",
+			"options": {
+				"query": "| mstats latest(\"poe-stats.allocated\") AS allocated latest(\"poe-stats.available\") AS available WHERE \"index\"=\"cisco_metrics\" node=$tk_node$\n| transpose 0\n| rename column as category \"row 1\" as value",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_sXhZGdAg": {
+			"name": "CDP search",
+			"options": {
+				"query": "index=\"cisco_events\" event_group=cdp node=ibk-lab-sw05 interface=*\n| stats values(neighbour) as neighbour",
+				"queryParameters": {
+					"earliest": "-24h@h",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_suvdxEwm": {
+			"name": "Logs 1 search",
+			"options": {
+				"query": "index=cisco_syslog host=$tk_node$\n| mvexpand severity\n| mvexpand message\n| dedup severity message\n| table _time host message",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_tnaaEfUS": {
+			"name": "Interface Utilisation search",
+			"options": {
+				"query": "| mstats latest(\"if-stats.in_octets\") as in_octets latest(\"if-stats.out_octets\") as out_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=ibk-lab-sw03 interface=\"GigabitEthernet1/0/11\" span=60s\n| streamstats current=f last(_time) as prev_time_ms\n| eval delta_time_sec = (_time - prev_time_ms) / 1000\n| delta in_octets as in_delta_octets\n| delta out_octets as out_delta_octets\n| where delta_time_sec > 0\n| eval in_bps = (in_delta_octets*8)/delta_time_sec, out_bps = (out_delta_octets*8)/delta_time_sec\n| eval in_kbps = in_bps/1000, out_kbps = out_bps/1000\n| eval in_mbps = in_bps/1000000, out_mbps = out_bps/1000000\n| eval in_util = (in_bps/speed)*100, out_util = (out_bps/speed)*100\n| timechart span=5m avg(in_util) as \"Inbound Utilization (%)\" avg(out_util) as \"Outbound Utilization (%)\"",
+				"queryParameters": {
+					"earliest": "-4h@m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_wMDTIRJn": {
+			"name": "CPU Usage ___ search",
+			"options": {
+				"query": "| mcatalog values(node) WHERE metric_name=cpu-util.usage AND index=cisco_metrics",
+				"queryParameters": {
+					"earliest": "-1h",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_y7JsEcfy": {
+			"name": "MAC Addresses search",
+			"options": {
+				"query": "index=\"cisco_events\" event_group=mac node=ibk-lab-sw05 interface=Gi1/0/5\n| stats values(mac) as mac",
+				"queryParameters": {
+					"earliest": "-15m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_global_trp",
+			"input_NEbf0hSH",
+			"input_rtCQQP1Y"
+		],
+		"layoutDefinitions": {
+			"layout_1": {
+				"options": {
+					"height": 960,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_WctDbGCE",
+						"position": {
+							"h": 428,
+							"w": 511,
+							"x": 0,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_wWBlYuIO",
+						"position": {
+							"h": 168,
+							"w": 390,
+							"x": 0,
+							"y": 428
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_8hHYnYfH",
+						"position": {
+							"h": 300,
+							"w": 1440,
+							"x": 0,
+							"y": 596
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_k0D28f6E",
+						"position": {
+							"h": 300,
+							"w": 1440,
+							"x": 0,
+							"y": 896
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_SkkwkLpV",
+						"position": {
+							"h": 704,
+							"w": 1440,
+							"x": 0,
+							"y": 1196
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_xk020SNL",
+						"position": {
+							"h": 168,
+							"w": 504,
+							"x": 390,
+							"y": 428
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_s75NIQMk",
+						"position": {
+							"h": 428,
+							"w": 500,
+							"x": 511,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_OwL6aVbb",
+						"position": {
+							"h": 168,
+							"w": 546,
+							"x": 894,
+							"y": 428
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_oDwrvkVT",
+						"position": {
+							"h": 428,
+							"w": 429,
+							"x": 1011,
+							"y": 0
+						},
+						"type": "block"
+					}
+				],
+				"type": "grid"
+			}
+		},
+		"options": {},
+		"tabs": {
+			"items": [
+				{
+					"label": "New tab",
+					"layoutId": "layout_1"
+				}
+			]
+		}
+	},
+	"applicationProperties": {}
+}
+    ]]></definition>
+</dashboard>

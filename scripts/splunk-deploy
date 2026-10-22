@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Deploy the Splunk app splunk/mdt_infra_monitoring to the Splunk host (ibk-free-splunk) and reload it.
+#
+#   SPLUNK_AUTH=admin:<password> SPLUNKHOST_PASS=<sudo password> scripts/splunk-deploy
+#
+# Replaces the app's default/ and metadata/default.meta. Refuses to run when the host has views in
+# local/ (edits made in Splunk Web): copy them into the repo and delete them on the host first.
+# Env: SPLUNKHOST (default claude@172.24.89.194), SPLUNK_AUTH (required), SPLUNKHOST_PASS (required, sudo),
+#      SPLUNKHOST_KEY (optional ssh private key).
+set -euo pipefail
+host=${SPLUNKHOST:-claude@172.24.89.194}
+: "${SPLUNK_AUTH:?set SPLUNK_AUTH=admin:<password>}" "${SPLUNKHOST_PASS:?set SPLUNKHOST_PASS to the sudo password}"
+app=mdt_infra_monitoring
+dest=/opt/splunk/etc/apps/$app
+ssh_cmd=(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "$host")
+[ -n "${SPLUNKHOST_KEY:-}" ] && ssh_cmd=(ssh -i "$SPLUNKHOST_KEY" -o IdentitiesOnly=yes "${ssh_cmd[@]:1}")
+root=$(git rev-parse --show-toplevel)
+exec 2> >(grep -v -E 'setlocale|Warning: Permanently' >&2)
+
+COPYFILE_DISABLE=1 tar --no-xattrs -C "$root/splunk" --exclude=.DS_Store -czf - "$app" | "${ssh_cmd[@]}" "cat > /tmp/$app.tgz"
+# One sudo for the whole block: the password goes in on stdin, and the host's sudo ticket is
+# per parent process, so a later sudo inside \$(...) would not reuse it.
+"${ssh_cmd[@]}" "sudo -S -p '' bash -c \"set -e; trap 'rm -f /tmp/$app.tgz' EXIT
+  drift=\\\$(find $dest/local -name '*.xml' 2>/dev/null || true)
+  if [ -n \\\"\\\$drift\\\" ]; then echo 'views edited in Splunk Web, copy into the repo first:' >&2; echo \\\"\\\$drift\\\" >&2; exit 1; fi
+  rm -rf $dest/default $dest/metadata/default.meta
+  runuser -u splunk -- tar -xzf /tmp/$app.tgz -C /opt/splunk/etc/apps --no-same-owner\"" <<<"$SPLUNKHOST_PASS"
+
+api=https://${host#*@}:8089
+for ep in services/apps/local servicesNS/nobody/$app/data/ui/views servicesNS/nobody/$app/data/ui/nav; do
+  curl -fsk -u "$SPLUNK_AUTH" -o /dev/null -X POST "$api/$ep/_reload"
+done
+echo "deployed $app"
