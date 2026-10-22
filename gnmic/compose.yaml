@@ -76,6 +76,7 @@ services:
       - gnmic-net
     ports:
       - 57000:57000
+      - 9464:9464
     volumes:
       - ./config/otel.yaml:/etc/otelcol-contrib/config.yaml:ro,z
       - /:/hostfs:ro,rslave

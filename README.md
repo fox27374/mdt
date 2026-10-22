@@ -162,6 +162,9 @@ PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod f
 The `otel-collector` service runs the pinned `otel/opentelemetry-collector-contrib:0.154.0` image with `config/otel.yaml`. It:
 
 - receives network device telemetry over gRPC on host port **57000** (`yang_grpc`, the device dial-out target),
+  keeps only the metrics the Splunk dashboards use (`filter/cisco`) and gives them the gnmic label names
+  `source` and `interface_name` with only identifying labels (`transform/cisco`),
+- serves that dial-out data as Prometheus metrics on host port **9464** (`/metrics`), next to the dial-in data on 9273,
 - scrapes gnmic-output (`gnmic-output:9273`) and collects host metrics from the host root mounted at `/hostfs`,
 - exports the metrics to Splunk HEC. The token is read from `SPLUNK_HEC_TOKEN` in `gnmic/otel_env` (git-ignored).
 
@@ -313,6 +316,7 @@ the edited view into the repo, delete it on the host, then deploy.
 |------|---------|---------|
 | 9273 | gnmic-output | Prometheus `/metrics` endpoint |
 | 57000 | otel-collector | Device telemetry (`yang_grpc`) |
+| 9464 | otel-collector | Prometheus `/metrics` for device dial-out data (`yang_grpc`); dial-in data is on 9273 |
 | 13133 | otel-collector | Health check (internal to the compose network) |
 | 8888 | otel-collector | Collector self-telemetry, `/metrics` (internal) |
 | 9100 | node-exporter | Host metrics endpoint |
