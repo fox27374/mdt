@@ -845,7 +845,7 @@
    "name": "throughput",
    "options": {
     "extend": "ds_rates",
-    "query": "| bin _time span=5m | stats avg(in_bps) as in avg(out_bps) as out by _time interface | stats sum(in) as in sum(out) as out by _time | eval \"In (Mb/s)\"=round(in / 1000000, 2), \"Out (Mb/s)\"=round(out / 1000000, 2) | fields - in out"
+    "query": "| bin _time span=5m | where _time + 300 <= now() | stats avg(in_bps) as in avg(out_bps) as out by _time interface | stats sum(in) as in sum(out) as out by _time | eval \"In (Mb/s)\"=round(in / 1000000, 2), \"Out (Mb/s)\"=round(out / 1000000, 2) | fields - in out"
    }
   },
   "ds_errors": {
@@ -853,7 +853,7 @@
    "name": "errors",
    "options": {
     "extend": "ds_rates",
-    "query": "| timechart span=5m sum(in_errs) as \"In errors\" sum(out_errs) as \"Out errors\""
+    "query": "| bin _time span=5m | where _time + 300 <= now() | timechart span=5m sum(in_errs) as \"In errors\" sum(out_errs) as \"Out errors\""
    }
   },
   "ds_top_util": {
