@@ -424,9 +424,25 @@ processors:
   nx-normalize-interfaces:
     event-jq:
       expression: |
+        # NX-OS sends whole lists as one event with indexed keys (interface.3/name,
+        # If-list.3/adj-items/AdjEp-list.0/devId). Without splitting them per list entry,
+        # path-base renaming collapses every entry onto the same metric name.
         .[] |
         . as $ev |
-        if ($ev.tags["subscription-name"] == "nx_if_stats") then
+        # One object per list entry: {<last path element>: value, ...}
+        def rows($re): [$ev.values | to_entries[]
+            | {idx: (.key | capture($re) | .idx), f: (.key | split("/") | last), v: .value}]
+          | group_by(.idx) | map(map({(.f): .v}) | add);
+        def entry($tags; $values): {name: $ev.name, timestamp: $ev.timestamp,
+          tags: ($ev.tags + ($tags | map_values(tostring))), values: $values};
+        if ($ev.tags["subscription-name"] == "nx_cdp_info") then
+          # ponytail: one neighbour per port; a second adjacency on the same port is dropped
+          rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(.devId != null)
+          | entry({interface_name: .id}; {devId: .devId})
+        elif ($ev.tags["subscription-name"] == "nx_mac_info") then
+          rows("MacAddressEntry-list\\.(?P<idx>[0-9]+)/")[]
+          | entry({port: .port, vlan: .vlan, mac: .macAddress, type: .type}; {age: .age})
+        elif ($ev.tags["subscription-name"] == "nx_if_stats" or $ev.tags["subscription-name"] == "nx_if_info") then
           ( $ev.values | to_entries
             | group_by(.key | capture("interface\\.(?P<idx>[0-9]+)/") | .idx)
             | map({
