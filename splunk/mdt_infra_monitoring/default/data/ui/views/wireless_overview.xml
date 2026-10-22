@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark">
-    <label>Wireless Overview DEV</label>
+    <label>Wireless Overview</label>
     <description></description>
     <definition><![CDATA[
 {
@@ -709,7 +709,7 @@
 			}
 		}
 	},
-	"title": "Wireless Overview DEV",
+	"title": "Wireless Overview",
 	"description": "",
 	"defaults": {
 		"dataSources": {

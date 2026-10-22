@@ -1,9 +1,9 @@
 <dashboard version="2" theme="dark">
-    <label>Wireless Client Details DEV</label>
+    <label>Wireless Client Details</label>
     <description></description>
     <definition><![CDATA[
 {
-	"title": "Wireless Client Details DEV",
+	"title": "Wireless Client Details",
 	"description": "",
 	"inputs": {
 		"input_global_trp": {

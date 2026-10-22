@@ -2,7 +2,6 @@
   <view name="switch_overview" default="true" />
   <view name="switch_details" />
   <view name="wireless_overview" />
-  <view name="wireless_ap_details" />
-  <view name="wireless_client_details_dev" />
+  <view name="wireless_client_details" />
   <view name="search" />
 </nav>
