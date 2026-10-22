@@ -17,7 +17,7 @@
     [search index="cisco_events" event_group="cdp"
     | eval from=mvindex(node,0), to=mvindex(neighbour,0), local_if=mvindex(interface,0), remote_if=mvindex(remote_interface,0)]
 | where NOT match(local_if, "(?i)^(mgmt|e0m)") AND NOT match(coalesce(remote_if, ""), "(?i)^(mgmt|e0m)")
-| eval from=lower(replace(from, "[.(].*$", "")), to=lower(replace(to, "[.(].*$", ""))
+| eval from=lower(replace(from, "[.(].*$$", "")), to=lower(replace(to, "[.(].*$$", ""))
 | where from!=to
 | eval node1=if(from&lt;to, from, to), node2=if(from&lt;to, to, from)
 | stats dc(eval(local_if)) as reported_links by node1 node2 from
