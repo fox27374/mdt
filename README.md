@@ -313,6 +313,7 @@ the edited view into the repo, delete it on the host, then deploy.
 |------|---------|---------|
 | 9273 | gnmic-output | Prometheus `/metrics` endpoint |
 | 57000 | otel-collector | Device telemetry (`yang_grpc`) |
+| 9464 | otel-collector | Prometheus `/metrics` for device dial-out data (`yang_grpc`); dial-in data is on 9273 |
 | 13133 | otel-collector | Health check (internal to the compose network) |
 | 8888 | otel-collector | Collector self-telemetry, `/metrics` (internal) |
 | 9100 | node-exporter | Host metrics endpoint |
