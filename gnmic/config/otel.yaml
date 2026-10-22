@@ -39,7 +39,37 @@ processors:
       metric:
         - 'not IsMatch(name, "^(cisco\\.)?(in-octets|out-octets|in-errors|out-errors|speed|one-minute|used-memory|total-memory|power-allocated|power-budget|device-name_info|port_info)$")'
 
+  # Same label names as the gnmic data (source, interface_name), and only labels that identify a series:
+  # values that change all the time (timestamps, counters as text) would start a new series on every change.
+  transform/cisco:
+    error_mode: ignore
+    metric_statements:
+      - context: resource
+        statements:
+          - delete_matching_keys(resource.attributes, "^cisco\\.")
+      - context: metric
+        statements:
+          - copy_metric(name="cisco.last-change") where metric.name == "cisco.speed"
+      - context: datapoint
+        statements:
+          - set(datapoint.attributes["source"], datapoint.attributes["node_id"])
+          - set(datapoint.attributes["interface_name"], datapoint.attributes["name"]) where not IsMatch(metric.name, "memory$")
+          - set(datapoint.attributes["interface_name"], datapoint.attributes["local-intf-name"]) where metric.name == "cisco.device-name_info"
+          - set(datapoint.attributes["pool"], datapoint.attributes["name"]) where IsMatch(metric.name, "memory$")
+          - set(datapoint.value_int, UnixSeconds(Time(Substring(datapoint.attributes["last-change"], 0, 19), "%Y-%m-%dT%H:%M:%S"))) where metric.name == "cisco.last-change"
+          - keep_keys(datapoint.attributes, ["source", "interface_name"]) where IsMatch(metric.name, "^cisco\\.((in|out)-(octets|errors)|last-change)$")
+          - keep_keys(datapoint.attributes, ["source", "interface_name", "oper-status", "admin-status"]) where metric.name == "cisco.speed"
+          - keep_keys(datapoint.attributes, ["source", "pool"]) where IsMatch(metric.name, "memory$")
+          - keep_keys(datapoint.attributes, ["source"]) where metric.name == "cisco.one-minute"
+          - keep_keys(datapoint.attributes, ["source", "power-stack-name"]) where IsMatch(metric.name, "^cisco\\.power-")
+          - keep_keys(datapoint.attributes, ["source", "interface_name", "device-name", "port-id", "platform-name", "ip-address"]) where metric.name == "cisco.device-name_info"
+          - keep_keys(datapoint.attributes, ["source", "mac", "port"]) where metric.name == "cisco.port_info"
+
 exporters:
+  # Device dial-out data for any Prometheus scraper (gnmic dial-in data is on gnmic-output :9273).
+  prometheus/devices:
+    endpoint: 0.0.0.0:9464
+
   splunk_hec/splunkfree:
     token: "${env:SPLUNK_HEC_TOKEN}"
     endpoint: "https://172.24.89.194:8088/services/collector"
@@ -66,6 +96,6 @@ service:
       exporters: [splunk_hec/splunkfree]
     metrics/test:
       receivers: [yang_grpc]
-      processors: [filter/cisco, batch]
-      exporters: [splunk_hec/splunkfree]
+      processors: [filter/cisco, transform/cisco, batch]
+      exporters: [splunk_hec/splunkfree, prometheus/devices]
   extensions: [health_check, pprof, zpages]
