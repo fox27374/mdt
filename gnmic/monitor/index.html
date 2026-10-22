@@ -767,6 +767,35 @@
 				</table>
 			</div>
 		</div>
+		<div id="otelPanel" hidden>
+			<div class="summary" id="otelSummary"></div>
+			<div class="table-wrapper">
+				<table id="otelExportersTable">
+					<thead>
+						<tr>
+							<th>Exporter</th>
+							<th>Sent / s</th>
+							<th>Failed / s</th>
+							<th>Queue used</th>
+						</tr>
+					</thead>
+					<tbody id="otelExportersBody"></tbody>
+				</table>
+			</div>
+			<div class="table-wrapper">
+				<table id="otelReceiversTable">
+					<thead>
+						<tr>
+							<th>Receiver</th>
+							<th>Accepted / s</th>
+							<th>Refused / s</th>
+							<th>Failed / s</th>
+						</tr>
+					</thead>
+					<tbody id="otelReceiversBody"></tbody>
+				</table>
+			</div>
+		</div>
 		</div>
 
 		<div id="metricsTab" hidden>
@@ -1472,6 +1501,63 @@
 			document.getElementById("containersSummary").textContent = `${n} containers`;
 		}
 
+		function formatUptimeUI(seconds) {
+			const s = Math.floor(seconds);
+			const d = Math.floor(s / 86400);
+			const h = Math.floor((s % 86400) / 3600);
+			const m = Math.floor((s % 3600) / 60);
+			if (d > 0) return `${d}d ${h}h`;
+			if (h > 0) return `${h}h ${m}m`;
+			return `${m}m`;
+		}
+
+		function renderOtel(otel) {
+			const panel = document.getElementById("otelPanel");
+			const exBody = document.getElementById("otelExportersBody");
+			const rcvBody = document.getElementById("otelReceiversBody");
+			exBody.innerHTML = "";
+			rcvBody.innerHTML = "";
+
+			if (!otel) {
+				panel.hidden = true;
+				return;
+			}
+			panel.hidden = false;
+
+			const addRow = (tbody, texts) => {
+				const row = document.createElement("tr");
+				row.append(...texts.map((text) => {
+					const td = document.createElement("td");
+					td.textContent = text;
+					return td;
+				}));
+				tbody.appendChild(row);
+			};
+			const perSec = (value, known) => (known ? value.toFixed(1) : "n/a");
+
+			document.getElementById("otelSummary").textContent =
+				`collector: ${formatBytesUI(otel.rss)} RSS, CPU ${otel.cpuKnown ? otel.cpuPct.toFixed(1) + "%" : "n/a"}, up ${formatUptimeUI(otel.uptime)}`;
+
+			for (const e of otel.exporters || []) {
+				const pct = e.queueCap > 0 ? Math.round((100 * e.queueSize) / e.queueCap) : 0;
+				addRow(exBody, [
+					e.name,
+					perSec(e.sentPerSec, e.ratesKnown),
+					perSec(e.failedPerSec, e.ratesKnown),
+					`${e.queueSize} / ${e.queueCap} (${pct}%)`,
+				]);
+			}
+
+			for (const r of otel.receivers || []) {
+				addRow(rcvBody, [
+					r.name,
+					perSec(r.acceptedPerSec, r.ratesKnown),
+					perSec(r.refusedPerSec, r.ratesKnown),
+					perSec(r.failedPerSec, r.ratesKnown),
+				]);
+			}
+		}
+
 		function removeHostSubRows(hostRow) {
 			let next = hostRow.nextSibling;
 			while (next && next.classList && next.classList.contains("sub-row")) {
@@ -1658,6 +1744,12 @@
 				}
 
 				try {
+					renderOtel(data.otel);
+				} catch (e) {
+					console.error("Collector failed to render:", e);
+				}
+
+				try {
 					if (typeof buildTopology === "function") {
 						renderTopology(buildTopology(data));
 					}
@@ -1717,7 +1809,7 @@
 			// Line 2: Status
 			const statusLine = document.createElement("div");
 			statusLine.className = "tooltip-line";
-			let statusText = node.kind === "prometheus" ? "Not monitored" : node.status;
+			let statusText = node.notMonitored ? "Not monitored" : node.status;
 			if (node.waiting > 0) statusText += " (" + node.waiting + " waiting)";
 			else if (node.partial) statusText += " (targets partly waiting)";
 			statusLine.textContent = "Status: " + statusText;

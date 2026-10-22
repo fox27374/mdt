@@ -6,6 +6,7 @@
 #
 # The command runs in the repo root of the copy (/home/claude/work/mdt) with HOME=/home/claude
 # (the real home; podman storage lives there). gnmic/gnmic_env is copied host-side from /opt/gnmic/gnmic_env.
+# gnmic/otel_env (Splunk HEC token for otel-collector) is copied from /home/claude/mdt/gnmic/otel_env if it exists.
 # Env: MDTHOST (default claude@172.24.89.69), MDTHOST_PASS (optional, else ssh keys are used).
 set -euo pipefail
 host=${MDTHOST:-claude@172.24.89.69}
@@ -17,4 +18,4 @@ if [ -n "${MDTHOST_PASS:-}" ]; then
 fi
 root=$(git rev-parse --show-toplevel)
 COPYFILE_DISABLE=1 tar -C "$root" --exclude=.git --exclude=.DS_Store --exclude=gnmic-monitor -czf - . |
-  "${ssh_cmd[@]}" "set -e; export HOME=/home/claude LC_ALL=C; rm -rf $dir; mkdir -p $dir; tar -xzf - -C $dir; cp /opt/gnmic/gnmic_env $dir/gnmic/gnmic_env; cd $dir; $1" 2> >(grep -v -E 'setlocale|chdir|Warning: Permanently|extended header' >&2)
+  "${ssh_cmd[@]}" "set -e; export HOME=/home/claude LC_ALL=C; rm -rf $dir; mkdir -p $dir; tar -xzf - -C $dir; cp /opt/gnmic/gnmic_env $dir/gnmic/gnmic_env; [ -f /home/claude/mdt/gnmic/otel_env ] && cp /home/claude/mdt/gnmic/otel_env $dir/gnmic/otel_env; cd $dir; $1" 2> >(grep -v -E 'setlocale|chdir|Warning: Permanently|extended header' >&2)

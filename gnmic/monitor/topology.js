@@ -300,19 +300,20 @@ function buildTopology(data) {
   nodes.push(consulNode);
   nodeMap["consul"] = consulNode;
 
-  // Prometheus node (always)
+  // Scraper of gnmic-output: the OTel collector when monitored, else a placeholder Prometheus node
+  const otelComp = getComponent("otel-collector");
   const prometheusNode = {
     id: "prometheus",
     kind: "prometheus",
-    label: "Prometheus",
+    label: otelComp ? "OTel collector" : "Prometheus",
     x: PROMETHEUS_X,
     y: 0,
-    status: "UNKNOWN",
+    status: otelComp ? getComponentStatus(otelComp) : "UNKNOWN",
     reason: "",
-    detail: "not monitored",
+    detail: otelComp ? getComponentDetail(otelComp) : "not monitored",
     target: "",
     lastSeen: null,
-    notMonitored: true
+    notMonitored: !otelComp
   };
   nodes.push(prometheusNode);
   nodeMap["prometheus"] = prometheusNode;

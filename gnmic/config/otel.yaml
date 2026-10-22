@@ -1,17 +1,14 @@
 extensions:
   health_check:
+    endpoint: 0.0.0.0:13133
   pprof:
     endpoint: 0.0.0.0:1777
   zpages:
     endpoint: 0.0.0.0:55679
 
 receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-      http:
-        endpoint: 0.0.0.0:4318
+  yang_grpc:
+    endpoint: "0.0.0.0:57000"
 
   prometheus/gnmic:
     config:
@@ -19,10 +16,11 @@ receivers:
       - job_name: "gnmic"
         scrape_interval: 60s
         static_configs:
-        - targets: ["0.0.0.0:9273"]
+        - targets: ["gnmic-output:9273"]
 
   hostmetrics:
     collection_interval: 10s
+    root_path: /hostfs
     scrapers:
       cpu:
       disk:
@@ -34,11 +32,8 @@ processors:
   batch:
 
 exporters:
-  debug:
-    verbosity: detailed
-
   splunk_hec/splunkfree:
-    token: "2ea31d5e-8cef-4ec9-9d27-9319237dfa29"
+    token: "${env:SPLUNK_HEC_TOKEN}"
     endpoint: "https://172.24.89.194:8088/services/collector"
     tls:
       insecure_skip_verify: true
@@ -48,27 +43,21 @@ exporters:
     profiling_data_enabled: false
 
 service:
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
   pipelines:
     metrics:
-      receivers:
-        - otlp
-        - prometheus/gnmic
-        - hostmetrics
-      processors:
-        - batch
-      exporters:
-        - debug
-        - splunk_hec/splunkfree
-
-    logs:
-      receivers:
-        - otlp
-      processors:
-        - batch
-      exporters:
-        - debug
-
-  extensions:
-    - health_check
-    - pprof
-    - zpages
+      receivers: [prometheus/gnmic, hostmetrics]
+      processors: [batch]
+      exporters: [splunk_hec/splunkfree]
+    metrics/test:
+      receivers: [yang_grpc]
+      processors: [batch]
+      exporters: [splunk_hec/splunkfree]
+  extensions: [health_check, pprof, zpages]

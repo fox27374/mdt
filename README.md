@@ -51,13 +51,16 @@ of Podman containers managed with `podman-compose`.
 
 | File | Purpose |
 |------|---------|
-| [compose.yaml](compose.yaml) | Main Compose stack: Consul, two clustered gnmic collectors, gnmic output, and NATS. |
+| [compose.yaml](compose.yaml) | Main Compose stack: Consul, two clustered gnmic collectors, gnmic output, NATS, and the OpenTelemetry collector. |
 | [compose-debug.yaml](compose-debug.yaml) | Identical stack to `compose.yaml` but with `--debug` added to every gnmic command — used for troubleshooting. |
 | [config/mdt.yaml](config/mdt.yaml) | The core gnmic **collector** config: global auth, clustering, targets, subscriptions, processors, and the NATS output. |
 | [config/output.yaml](config/output.yaml) | The gnmic **output** config: reads from NATS and exposes the Prometheus endpoint. |
+| [config/otel.yaml](config/otel.yaml) | The OpenTelemetry **collector** config: receives Cisco model-driven telemetry (`yang_grpc`), scrapes gnmic-output and host metrics, and exports to Splunk HEC. |
 | [config/ca.pem](config/ca.pem) | CA certificate used to verify the NX-OS switch gRPC endpoints. |
 | [gnmic_env.template](gnmic_env.template) | Template for device credentials. Copy to `gnmic_env` and fill in. |
 | `gnmic_env` | Actual device credentials (git-ignored). |
+| [otel_env.template](gnmic/otel_env.template) | Template for the collector's Splunk HEC token (`SPLUNK_HEC_TOKEN`). Copy to `otel_env` and fill in. |
+| `otel_env` | Actual Splunk HEC token for the collector (git-ignored). |
 | [monitor/](monitor/) | The gnmic-monitor web service: health status and health API for the entire stack. |
 
 > **Note:** The Compose files mount this repo's `config/` directory straight into the
@@ -100,7 +103,11 @@ counters, up to 1h for slow-changing info like CDP/MAC).
 ```bash
 cp gnmic_env.template gnmic_env
 # edit gnmic_env and set SWITCH_USERNAME/PASSWORD and FW_USERNAME/PASSWORD
+cp otel_env.template otel_env
+# edit otel_env and set SPLUNK_HEC_TOKEN
 ```
+
+`compose.yaml` needs both files: `up` fails if `otel_env` is missing.
 
 ### 2. Start the stack
 
@@ -150,13 +157,23 @@ PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod f
 - Consul UI (cluster/target ownership): <http://localhost:8500>
 - NATS: `localhost:4222`
 
+## OpenTelemetry collector
+
+The `otel-collector` service runs the pinned `otel/opentelemetry-collector-contrib:0.154.0` image with `config/otel.yaml`. It:
+
+- receives network device telemetry over gRPC on host port **57000** (`yang_grpc`, the device dial-out target),
+- scrapes gnmic-output (`gnmic-output:9273`) and collects host metrics from the host root mounted at `/hostfs`,
+- exports the metrics to Splunk HEC. The token is read from `SPLUNK_HEC_TOKEN` in `gnmic/otel_env` (git-ignored).
+
+Inside the compose network it serves the health check on `:13133` and its own Prometheus self-telemetry on `:8888/metrics`. The monitor reads both (see [Environment variables](#environment-variables)).
+
 ## Monitoring
 
 The `monitor` service provides a web UI and JSON API for inspecting the health and status of the entire MDT pipeline. Access it at <http://localhost:8080> or query the JSON API at `/api/status`.
 
 The UI and API display:
 
-- **Component health** — live status of Consul, NATS server, NATS consumer, gnmic-output collectors, and each gnmic collector (gnmic-1, gnmic-2).
+- **Component health** — live status of Consul, NATS server, NATS consumer, gnmic-output, each gnmic collector (gnmic-1, gnmic-2), and the `otel-collector` (see [OpenTelemetry collector check](#opentelemetry-collector-check)).
 - **Target list** — all targets from the configuration with their owner collector and current status.
 - **Subscription status** — each target's subscriptions with their last-seen timestamp and data-point count.
 
@@ -186,6 +203,10 @@ The monitor reads these environment variables; defaults shown are used if unset:
 | `LOCAL_HOST_NAME` | `docker-host` | Display name of the local host; used in the default `HOSTS` and `CONTAINER_EXPORTERS`. Compose sets it from `MONITOR_HOST_NAME` |
 | `LOCAL_CONTAINER_EXPORTER` | (empty) | Set to any non-empty value to default `CONTAINER_EXPORTERS` to the local podman-exporter on port 9882 (compose.yaml sets it) |
 | `HOSTS` | `<LOCAL_HOST_NAME>=http://host.containers.internal:9100` | Comma-separated list of hosts to monitor; format: `name=http://host:9100,...` |
+| `OTEL_HEALTH_URL` | `http://otel-collector:13133/` | OpenTelemetry collector health_check endpoint. Set to empty to skip this check |
+| `OTEL_METRICS_URL` | `http://otel-collector:8888/metrics` | OpenTelemetry collector self-telemetry (Prometheus). Set to empty to skip this check. Both empty turns the collector check and the System tab panel off |
+| `OTEL_FAIL_PCT` | `1` | Export failure threshold (%): failed / (sent + failed) metric points since the previous poll. At or above, the collector is not OK |
+| `OTEL_QUEUE_PCT` | `80` | Exporter retry queue threshold (%): used / capacity. At or above, the collector is not OK |
 | `HOST_NIC_INCLUDE` | `^(en\|eth\|em\|bond\|ib)[a-z0-9]*$` | Regex pattern for network interfaces to include |
 | `CONTAINER_EXPORTERS` | (empty, no container rows) | Optional. Comma-separated `name=url` of prometheus-podman-exporter endpoints; `name` must match a `HOSTS` name. Unset: no container rows, unless `LOCAL_CONTAINER_EXPORTER` is set |
 | `CONTAINER_INCLUDE` | (empty, all containers) | Optional regex; only containers whose name matches are shown |
@@ -193,6 +214,19 @@ The monitor reads these environment variables; defaults shown are used if unset:
 | `HOST_MEM_WARN` / `HOST_MEM_CRIT` | `85` / `95` | Memory usage thresholds (%) |
 | `HOST_DISK_WARN` / `HOST_DISK_CRIT` | `80` / `90` | Disk usage thresholds (%) |
 | `HOST_NET_WARN` / `HOST_NET_CRIT` | `70` / `90` | Network utilization thresholds (%) |
+
+#### OpenTelemetry collector check
+
+The `otel-collector` component is OK only when all of these hold:
+
+- the health endpoint returns HTTP 200 with status `Server available`,
+- the self-telemetry scrape succeeds,
+- the export failure ratio since the previous poll is below `OTEL_FAIL_PCT` (no metric points sent or failed in that interval counts as no failure),
+- every exporter's retry queue is below `OTEL_QUEUE_PCT`.
+
+On the first poll there is no previous sample, so only health and queue are judged. The detail shows the first failing reason, or a short summary such as `sent 1200 points/s, 0.0% failed, queue 0%`.
+
+The System tab shows an **OpenTelemetry collector** panel, present only when the metrics scrape works: a summary line (RSS, CPU, uptime), one row per exporter (sent/s, failed/s, queue used out of capacity) and one row per receiver (accepted/s, refused/s, failed/s). Rates show `n/a` until there are two polls.
 
 ### Host metrics
 
@@ -259,6 +293,9 @@ Do not enable `podman.socket` as well; both bind the same path. Check with `curl
 | Port | Service | Purpose |
 |------|---------|---------|
 | 9273 | gnmic-output | Prometheus `/metrics` endpoint |
+| 57000 | otel-collector | Device telemetry (`yang_grpc`) |
+| 13133 | otel-collector | Health check (internal to the compose network) |
+| 8888 | otel-collector | Collector self-telemetry, `/metrics` (internal) |
 | 9100 | node-exporter | Host metrics endpoint |
 | 9882 | podman-exporter | Container metrics endpoint |
 | 4222 | NATS | Message bus |

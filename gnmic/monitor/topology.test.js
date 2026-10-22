@@ -553,3 +553,19 @@ test("partial: collector with a non-OK target is not partial", () => {
   });
   assert.equal(topo.nodes.find(n => n.id === "collector:gnmic-1").partial, false);
 });
+
+test("otel-collector component drives the scraper node", () => {
+  const plain = buildTopology({ components: [] }).nodes.find(n => n.id === "prometheus");
+  assert.equal(plain.notMonitored, true);
+  assert.equal(plain.label, "Prometheus");
+  const topo = buildTopology({ components: [
+    { name: "gnmic-output", ok: true, detail: "" },
+    { name: "otel-collector", ok: true, detail: "sent 10/s" }
+  ] });
+  const node = topo.nodes.find(n => n.id === "prometheus");
+  assert.equal(node.label, "OTel collector");
+  assert.equal(node.status, "OK");
+  assert.equal(node.detail, "sent 10/s");
+  assert.equal(node.notMonitored, false);
+  assert.equal(topo.edges.find(e => e.from === "output").flow, true);
+});
