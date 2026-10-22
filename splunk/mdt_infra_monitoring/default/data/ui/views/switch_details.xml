@@ -70,6 +70,140 @@
   }
  },
  "visualizations": {
+  "viz_ports": {
+   "type": "splunk.table",
+   "title": "Ports (green up, black down, grey admin down; click a port to filter)",
+   "dataSources": {
+    "primary": "ds_ports"
+   },
+   "options": {
+    "count": 20,
+    "columnFormat": {
+     "1-2": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s1-2\") | matchValue(stateColors)"
+     },
+     "3-4": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s3-4\") | matchValue(stateColors)"
+     },
+     "5-6": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s5-6\") | matchValue(stateColors)"
+     },
+     "7-8": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s7-8\") | matchValue(stateColors)"
+     },
+     "9-10": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s9-10\") | matchValue(stateColors)"
+     },
+     "11-12": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s11-12\") | matchValue(stateColors)"
+     },
+     "13-14": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s13-14\") | matchValue(stateColors)"
+     },
+     "15-16": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s15-16\") | matchValue(stateColors)"
+     },
+     "17-18": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s17-18\") | matchValue(stateColors)"
+     },
+     "19-20": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s19-20\") | matchValue(stateColors)"
+     },
+     "21-22": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s21-22\") | matchValue(stateColors)"
+     },
+     "23-24": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s23-24\") | matchValue(stateColors)"
+     },
+     "25-26": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s25-26\") | matchValue(stateColors)"
+     },
+     "27-28": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s27-28\") | matchValue(stateColors)"
+     },
+     "29-30": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s29-30\") | matchValue(stateColors)"
+     },
+     "31-32": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s31-32\") | matchValue(stateColors)"
+     },
+     "33-34": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s33-34\") | matchValue(stateColors)"
+     },
+     "35-36": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s35-36\") | matchValue(stateColors)"
+     },
+     "37-38": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s37-38\") | matchValue(stateColors)"
+     },
+     "39-40": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s39-40\") | matchValue(stateColors)"
+     },
+     "41-42": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s41-42\") | matchValue(stateColors)"
+     },
+     "43-44": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s43-44\") | matchValue(stateColors)"
+     },
+     "45-46": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s45-46\") | matchValue(stateColors)"
+     },
+     "47-48": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s47-48\") | matchValue(stateColors)"
+     },
+     "49-50": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s49-50\") | matchValue(stateColors)"
+     },
+     "51-52": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s51-52\") | matchValue(stateColors)"
+     },
+     "53-54": {
+      "rowBackgroundColors": "> table | seriesByName(\"_s53-54\") | matchValue(stateColors)"
+     },
+     "U1-2": {
+      "rowBackgroundColors": "> table | seriesByName(\"_sU1-2\") | matchValue(stateColors)"
+     },
+     "U3-4": {
+      "rowBackgroundColors": "> table | seriesByName(\"_sU3-4\") | matchValue(stateColors)"
+     },
+     "U5-6": {
+      "rowBackgroundColors": "> table | seriesByName(\"_sU5-6\") | matchValue(stateColors)"
+     },
+     "U7-8": {
+      "rowBackgroundColors": "> table | seriesByName(\"_sU7-8\") | matchValue(stateColors)"
+     }
+    }
+   },
+   "context": {
+    "stateColors": [
+     {
+      "match": "up",
+      "value": "#53a051"
+     },
+     {
+      "match": "down",
+      "value": "#1a1c21"
+     },
+     {
+      "match": "admin down",
+      "value": "#6b7280"
+     }
+    ]
+   },
+   "eventHandlers": [
+    {
+     "type": "drilldown.setToken",
+     "options": {
+      "tokens": [
+       {
+        "token": "tk_interface",
+        "key": "click.value2"
+       }
+      ]
+     }
+    }
+   ]
+  },
   "viz_nodata": {
    "type": "splunk.table",
    "dataSources": {
@@ -239,7 +373,7 @@
    "type": "ds.search",
    "name": "rates",
    "options": {
-    "query": "| `mdt_if_counters($tk_node$,$tk_interface$)` | `mdt_physical_ports` | `mdt_if_rates` | join type=left node interface [| `mdt_if_status($tk_node$)` | fields node interface speed] | eval util=round(max(in_bps, out_bps) / speed * 100, 2)"
+    "query": "| `mdt_if_counters($tk_node$,*$tk_interface$)` | `mdt_physical_ports` | `mdt_if_rates` | join type=left node interface [| `mdt_if_status($tk_node$)` | fields node interface speed] | eval util=round(max(in_bps, out_bps) / speed * 100, 2)"
    }
   },
   "ds_poe": {
@@ -267,7 +401,7 @@
    "type": "ds.search",
    "name": "mac",
    "options": {
-    "query": "| `mdt_mac($tk_node$,$tk_interface$)` | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node"
+    "query": "| `mdt_mac($tk_node$,*$tk_interface$)` | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node"
    }
   },
   "ds_logs": {
@@ -275,6 +409,14 @@
    "name": "logs",
    "options": {
     "query": "index=cisco_syslog host=\"$tk_node$\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) | table _time severity message | sort - _time | head 200"
+   }
+  },
+  "ds_ports": {
+   "type": "ds.chain",
+   "name": "ports",
+   "options": {
+    "extend": "ds_status",
+    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | eval parts=split(path, \"/\"), port=tonumber(mvindex(parts, -1)), unit=mvindex(parts, 0), uplink=if(mvcount(parts)=3 AND mvindex(parts, 1)!=\"0\", \"U\", \"\") | where isnotnull(port) | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval pair=floor((port - 1) / 2) * 2 + 1, col=uplink.pair.\"-\".(pair + 1), row=unit.if(port % 2 == 1, \"a\", \"b\") | eval {col}=path, s_{col}=state | fields - interface path parts port unit uplink state pair col node admin_up oper_up speed last_change neighbour remote_interface | stats values(*) as * by row | rename s_* as _s* | sort row | eval Unit=if(like(row, \"%a\"), \"Switch \".substr(row, 1, len(row) - 1), \"\") | table Unit \"1-2\" \"3-4\" \"5-6\" \"7-8\" \"9-10\" \"11-12\" \"13-14\" \"15-16\" \"17-18\" \"19-20\" \"21-22\" \"23-24\" \"25-26\" \"27-28\" \"29-30\" \"31-32\" \"33-34\" \"35-36\" \"37-38\" \"39-40\" \"41-42\" \"43-44\" \"45-46\" \"47-48\" \"49-50\" \"51-52\" \"53-54\" \"U1-2\" \"U3-4\" \"U5-6\" \"U7-8\" \"_s1-2\" \"_s3-4\" \"_s5-6\" \"_s7-8\" \"_s9-10\" \"_s11-12\" \"_s13-14\" \"_s15-16\" \"_s17-18\" \"_s19-20\" \"_s21-22\" \"_s23-24\" \"_s25-26\" \"_s27-28\" \"_s29-30\" \"_s31-32\" \"_s33-34\" \"_s35-36\" \"_s37-38\" \"_s39-40\" \"_s41-42\" \"_s43-44\" \"_s45-46\" \"_s47-48\" \"_s49-50\" \"_s51-52\" \"_s53-54\" \"_sU1-2\" \"_sU3-4\" \"_sU5-6\" \"_sU7-8\""
    }
   },
   "ds_ifaces": {
@@ -314,7 +456,7 @@
    "name": "ifaces_table",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | search interface=\"$tk_interface$\" | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), tostring(round(now() - last_change), \"duration\"), null()) | rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""
+    "query": "| `mdt_physical_ports` | search interface=\"*$tk_interface$\" | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), tostring(round(now() - last_change), \"duration\"), null()) | rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""
    }
   },
   "ds_poe_used": {
@@ -370,7 +512,7 @@
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 2110
+     "height": 2350
     },
     "structure": [
      {
@@ -424,11 +566,21 @@
       }
      },
      {
-      "item": "viz_cpu",
+      "item": "viz_ports",
       "type": "block",
       "position": {
        "x": 0,
        "y": 230,
+       "w": 1440,
+       "h": 240
+      }
+     },
+     {
+      "item": "viz_cpu",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 470,
        "w": 720,
        "h": 300
       }
@@ -438,7 +590,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 230,
+       "y": 470,
        "w": 720,
        "h": 300
       }
@@ -448,7 +600,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 530,
+       "y": 770,
        "w": 720,
        "h": 320
       }
@@ -458,7 +610,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 530,
+       "y": 770,
        "w": 720,
        "h": 320
       }
@@ -468,7 +620,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 850,
+       "y": 1090,
        "w": 1440,
        "h": 360
       }
@@ -478,7 +630,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1210,
+       "y": 1450,
        "w": 1440,
        "h": 480
       }
@@ -488,7 +640,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1690,
+       "y": 1930,
        "w": 600,
        "h": 420
       }
@@ -498,7 +650,7 @@
       "type": "block",
       "position": {
        "x": 600,
-       "y": 1690,
+       "y": 1930,
        "w": 840,
        "h": 420
       }
