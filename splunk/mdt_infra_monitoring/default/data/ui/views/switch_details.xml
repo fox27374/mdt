@@ -72,105 +72,274 @@
  "visualizations": {
   "viz_ports": {
    "type": "splunk.table",
-   "title": "Ports (green up, black down, grey admin down; click a port to filter)",
+   "title": "Ports: green up, dark down, light grey admin down. Column = odd port number. Click a port to filter.",
    "dataSources": {
     "primary": "ds_ports"
    },
    "options": {
     "count": 20,
+    "fontSize": "extraSmall",
+    "table": "> primary | frameWithoutSeriesNames(\"_s01\", \"_s03\", \"_s05\", \"_s07\", \"_s09\", \"_s11\", \"_s13\", \"_s15\", \"_s17\", \"_s19\", \"_s21\", \"_s23\", \"_s25\", \"_s27\", \"_s29\", \"_s31\", \"_s33\", \"_s35\", \"_s37\", \"_s39\", \"_s41\", \"_s43\", \"_s45\", \"_s47\", \"_s49\", \"_s51\", \"_s53\", \"_s55\", \"_s57\", \"_s59\", \"_s61\", \"_s63\", \"_s65\", \"_s67\", \"_s69\", \"_s71\", \"_s73\", \"_s75\", \"_s77\", \"_s79\", \"_s81\", \"_s83\", \"_s85\", \"_s87\", \"_s89\", \"_s91\", \"_s93\", \"_s95\", \"_sU1\", \"_sU3\", \"_sU5\", \"_sU7\")",
     "columnFormat": {
-     "1-2": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s1-2\") | matchValue(stateColors)"
+     "01": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s01\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s01\") | matchValue(textColors)"
      },
-     "3-4": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s3-4\") | matchValue(stateColors)"
+     "03": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s03\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s03\") | matchValue(textColors)"
      },
-     "5-6": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s5-6\") | matchValue(stateColors)"
+     "05": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s05\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s05\") | matchValue(textColors)"
      },
-     "7-8": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s7-8\") | matchValue(stateColors)"
+     "07": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s07\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s07\") | matchValue(textColors)"
      },
-     "9-10": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s9-10\") | matchValue(stateColors)"
+     "09": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s09\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s09\") | matchValue(textColors)"
      },
-     "11-12": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s11-12\") | matchValue(stateColors)"
+     "11": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s11\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s11\") | matchValue(textColors)"
      },
-     "13-14": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s13-14\") | matchValue(stateColors)"
+     "13": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s13\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s13\") | matchValue(textColors)"
      },
-     "15-16": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s15-16\") | matchValue(stateColors)"
+     "15": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s15\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s15\") | matchValue(textColors)"
      },
-     "17-18": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s17-18\") | matchValue(stateColors)"
+     "17": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s17\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s17\") | matchValue(textColors)"
      },
-     "19-20": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s19-20\") | matchValue(stateColors)"
+     "19": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s19\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s19\") | matchValue(textColors)"
      },
-     "21-22": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s21-22\") | matchValue(stateColors)"
+     "21": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s21\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s21\") | matchValue(textColors)"
      },
-     "23-24": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s23-24\") | matchValue(stateColors)"
+     "23": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s23\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s23\") | matchValue(textColors)"
      },
-     "25-26": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s25-26\") | matchValue(stateColors)"
+     "25": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s25\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s25\") | matchValue(textColors)"
      },
-     "27-28": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s27-28\") | matchValue(stateColors)"
+     "27": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s27\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s27\") | matchValue(textColors)"
      },
-     "29-30": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s29-30\") | matchValue(stateColors)"
+     "29": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s29\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s29\") | matchValue(textColors)"
      },
-     "31-32": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s31-32\") | matchValue(stateColors)"
+     "31": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s31\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s31\") | matchValue(textColors)"
      },
-     "33-34": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s33-34\") | matchValue(stateColors)"
+     "33": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s33\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s33\") | matchValue(textColors)"
      },
-     "35-36": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s35-36\") | matchValue(stateColors)"
+     "35": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s35\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s35\") | matchValue(textColors)"
      },
-     "37-38": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s37-38\") | matchValue(stateColors)"
+     "37": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s37\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s37\") | matchValue(textColors)"
      },
-     "39-40": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s39-40\") | matchValue(stateColors)"
+     "39": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s39\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s39\") | matchValue(textColors)"
      },
-     "41-42": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s41-42\") | matchValue(stateColors)"
+     "41": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s41\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s41\") | matchValue(textColors)"
      },
-     "43-44": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s43-44\") | matchValue(stateColors)"
+     "43": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s43\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s43\") | matchValue(textColors)"
      },
-     "45-46": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s45-46\") | matchValue(stateColors)"
+     "45": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s45\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s45\") | matchValue(textColors)"
      },
-     "47-48": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s47-48\") | matchValue(stateColors)"
+     "47": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s47\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s47\") | matchValue(textColors)"
      },
-     "49-50": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s49-50\") | matchValue(stateColors)"
+     "49": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s49\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s49\") | matchValue(textColors)"
      },
-     "51-52": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s51-52\") | matchValue(stateColors)"
+     "51": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s51\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s51\") | matchValue(textColors)"
      },
-     "53-54": {
-      "rowBackgroundColors": "> table | seriesByName(\"_s53-54\") | matchValue(stateColors)"
+     "53": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s53\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s53\") | matchValue(textColors)"
      },
-     "U1-2": {
-      "rowBackgroundColors": "> table | seriesByName(\"_sU1-2\") | matchValue(stateColors)"
+     "55": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s55\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s55\") | matchValue(textColors)"
      },
-     "U3-4": {
-      "rowBackgroundColors": "> table | seriesByName(\"_sU3-4\") | matchValue(stateColors)"
+     "57": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s57\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s57\") | matchValue(textColors)"
      },
-     "U5-6": {
-      "rowBackgroundColors": "> table | seriesByName(\"_sU5-6\") | matchValue(stateColors)"
+     "59": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s59\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s59\") | matchValue(textColors)"
      },
-     "U7-8": {
-      "rowBackgroundColors": "> table | seriesByName(\"_sU7-8\") | matchValue(stateColors)"
+     "61": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s61\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s61\") | matchValue(textColors)"
+     },
+     "63": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s63\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s63\") | matchValue(textColors)"
+     },
+     "65": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s65\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s65\") | matchValue(textColors)"
+     },
+     "67": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s67\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s67\") | matchValue(textColors)"
+     },
+     "69": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s69\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s69\") | matchValue(textColors)"
+     },
+     "71": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s71\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s71\") | matchValue(textColors)"
+     },
+     "73": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s73\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s73\") | matchValue(textColors)"
+     },
+     "75": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s75\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s75\") | matchValue(textColors)"
+     },
+     "77": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s77\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s77\") | matchValue(textColors)"
+     },
+     "79": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s79\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s79\") | matchValue(textColors)"
+     },
+     "81": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s81\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s81\") | matchValue(textColors)"
+     },
+     "83": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s83\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s83\") | matchValue(textColors)"
+     },
+     "85": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s85\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s85\") | matchValue(textColors)"
+     },
+     "87": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s87\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s87\") | matchValue(textColors)"
+     },
+     "89": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s89\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s89\") | matchValue(textColors)"
+     },
+     "91": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s91\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s91\") | matchValue(textColors)"
+     },
+     "93": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s93\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s93\") | matchValue(textColors)"
+     },
+     "95": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s95\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s95\") | matchValue(textColors)"
+     },
+     "U1": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_sU1\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_sU1\") | matchValue(textColors)"
+     },
+     "U3": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_sU3\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_sU3\") | matchValue(textColors)"
+     },
+     "U5": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_sU5\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_sU5\") | matchValue(textColors)"
+     },
+     "U7": {
+      "width": 54,
+      "rowBackgroundColors": "> primary | seriesByName(\"_sU7\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_sU7\") | matchValue(textColors)"
      }
     }
    },
@@ -182,11 +351,25 @@
      },
      {
       "match": "down",
-      "value": "#1a1c21"
+      "value": "#30363d"
      },
      {
       "match": "admin down",
-      "value": "#6b7280"
+      "value": "#8a929b"
+     }
+    ],
+    "textColors": [
+     {
+      "match": "up",
+      "value": "#ffffff"
+     },
+     {
+      "match": "down",
+      "value": "#ffffff"
+     },
+     {
+      "match": "admin down",
+      "value": "#ffffff"
      }
     ]
    },
@@ -197,7 +380,7 @@
       "tokens": [
        {
         "token": "tk_interface",
-        "key": "click.value2"
+        "key": "value"
        }
       ]
      }
@@ -416,7 +599,7 @@
    "name": "ports",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | eval parts=split(path, \"/\"), port=tonumber(mvindex(parts, -1)), unit=mvindex(parts, 0), uplink=if(mvcount(parts)=3 AND mvindex(parts, 1)!=\"0\", \"U\", \"\") | where isnotnull(port) | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval pair=floor((port - 1) / 2) * 2 + 1, col=uplink.pair.\"-\".(pair + 1), row=unit.if(port % 2 == 1, \"a\", \"b\") | eval {col}=path, s_{col}=state | fields - interface path parts port unit uplink state pair col node admin_up oper_up speed last_change neighbour remote_interface | stats values(*) as * by row | rename s_* as _s* | sort row | eval Unit=if(like(row, \"%a\"), \"Switch \".substr(row, 1, len(row) - 1), \"\") | table Unit \"1-2\" \"3-4\" \"5-6\" \"7-8\" \"9-10\" \"11-12\" \"13-14\" \"15-16\" \"17-18\" \"19-20\" \"21-22\" \"23-24\" \"25-26\" \"27-28\" \"29-30\" \"31-32\" \"33-34\" \"35-36\" \"37-38\" \"39-40\" \"41-42\" \"43-44\" \"45-46\" \"47-48\" \"49-50\" \"51-52\" \"53-54\" \"U1-2\" \"U3-4\" \"U5-6\" \"U7-8\" \"_s1-2\" \"_s3-4\" \"_s5-6\" \"_s7-8\" \"_s9-10\" \"_s11-12\" \"_s13-14\" \"_s15-16\" \"_s17-18\" \"_s19-20\" \"_s21-22\" \"_s23-24\" \"_s25-26\" \"_s27-28\" \"_s29-30\" \"_s31-32\" \"_s33-34\" \"_s35-36\" \"_s37-38\" \"_s39-40\" \"_s41-42\" \"_s43-44\" \"_s45-46\" \"_s47-48\" \"_s49-50\" \"_s51-52\" \"_s53-54\" \"_sU1-2\" \"_sU3-4\" \"_sU5-6\" \"_sU7-8\""
+    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | eval parts=split(path, \"/\"), port=tonumber(mvindex(parts, -1)), unit=mvindex(parts, 0), uplink=if(mvcount(parts)=3 AND mvindex(parts, 1)!=\"0\", \"U\", \"\") | where isnotnull(port) | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval pair=floor((port - 1) / 2) * 2 + 1, col=uplink.if(uplink=\"\" AND pair < 10, \"0\", \"\").pair, row=unit.if(port % 2 == 1, \"a\", \"b\") | eval {col}=path, s_{col}=state | fields row 0* 1* 2* 3* 4* 5* 6* 7* 8* 9* U* s_* | stats values(*) as * by row | rename s_* as _s* | sort row | fields - row"
    }
   },
   "ds_ifaces": {
@@ -512,7 +695,7 @@
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 2350
+     "height": 2280
     },
     "structure": [
      {
@@ -572,7 +755,7 @@
        "x": 0,
        "y": 230,
        "w": 1440,
-       "h": 240
+       "h": 170
       }
      },
      {
@@ -580,7 +763,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 470,
+       "y": 400,
        "w": 720,
        "h": 300
       }
@@ -590,7 +773,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 470,
+       "y": 400,
        "w": 720,
        "h": 300
       }
@@ -600,7 +783,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 770,
+       "y": 700,
        "w": 720,
        "h": 320
       }
@@ -610,7 +793,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 770,
+       "y": 700,
        "w": 720,
        "h": 320
       }
@@ -620,7 +803,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1090,
+       "y": 1020,
        "w": 1440,
        "h": 360
       }
@@ -630,7 +813,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1450,
+       "y": 1380,
        "w": 1440,
        "h": 480
       }
@@ -640,7 +823,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1930,
+       "y": 1860,
        "w": 600,
        "h": 420
       }
@@ -650,7 +833,7 @@
       "type": "block",
       "position": {
        "x": 600,
-       "y": 1930,
+       "y": 1860,
        "w": 840,
        "h": 420
       }
