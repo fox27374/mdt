@@ -27,7 +27,7 @@
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
 | append [| `mdt_nodes` | rename node as from | eval color="#53a051"]
 | table from to linkwidth color</query>
-          <earliest>-65m</earliest>
+          <earliest>-15m</earliest>
           <latest>now</latest>
           <sampleRatio>1</sampleRatio>
         </search>
