@@ -630,7 +630,10 @@
    "dataSources": {
     "primary": "ds_cpu"
    },
-   "options": {},
+   "options": {
+    "nullValueDisplay": "connect",
+    "legendDisplay": "off"
+   },
    "showProgressBar": true
   },
   "viz_mem": {
@@ -641,7 +644,9 @@
    },
    "options": {
     "yAxisMax": 100,
-    "yAxisMin": 0
+    "yAxisMin": 0,
+    "nullValueDisplay": "connect",
+    "legendDisplay": "off"
    },
    "showProgressBar": true
   },
@@ -665,13 +670,27 @@
    },
    "showProgressBar": true
   },
-  "viz_busiest": {
-   "type": "splunk.line",
-   "title": "Busiest interfaces: peak utilization % (in or out)",
+  "viz_top_util": {
+   "type": "splunk.bar",
+   "title": "Top 5 interfaces by peak utilization % (in or out)",
    "dataSources": {
-    "primary": "ds_busiest"
+    "primary": "ds_top_util"
    },
-   "options": {},
+   "options": {
+    "legendDisplay": "off"
+   },
+   "showProgressBar": true
+  },
+  "viz_top_errors": {
+   "type": "splunk.bar",
+   "title": "Top 5 interfaces with errors",
+   "dataSources": {
+    "primary": "ds_top_errors"
+   },
+   "options": {
+    "stackMode": "stacked",
+    "legendDisplay": "bottom"
+   },
    "showProgressBar": true
   },
   "viz_ifaces": {
@@ -837,12 +856,20 @@
     "query": "| timechart span=5m sum(in_errs) as \"In errors\" sum(out_errs) as \"Out errors\""
    }
   },
-  "ds_busiest": {
+  "ds_top_util": {
    "type": "ds.chain",
-   "name": "busiest",
+   "name": "top_util",
    "options": {
     "extend": "ds_rates",
-    "query": "| timechart span=5m max(util) by interface useother=f where max in top10"
+    "query": "| stats max(util) as \"Peak utilization %\" by interface | sort - \"Peak utilization %\" | head 5"
+   }
+  },
+  "ds_top_errors": {
+   "type": "ds.chain",
+   "name": "top_errors",
+   "options": {
+    "extend": "ds_rates",
+    "query": "| stats sum(in_errs) as \"In errors\" sum(out_errs) as \"Out errors\" by interface | eval total='In errors' + 'Out errors' | where total > 0 | sort - total | head 5 | fields - total"
    }
   }
  },
@@ -858,7 +885,7 @@
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 2280
+     "height": 1930
     },
     "structure": [
      {
@@ -877,28 +904,68 @@
       "position": {
        "x": 0,
        "y": 80,
-       "w": 480,
-       "h": 150
+       "w": 280,
+       "h": 200
       }
      },
      {
       "item": "viz_poe_watts",
       "type": "block",
       "position": {
-       "x": 480,
+       "x": 280,
        "y": 80,
-       "w": 400,
-       "h": 150
+       "w": 260,
+       "h": 200
       }
      },
      {
       "item": "viz_poe",
       "type": "block",
       "position": {
-       "x": 880,
+       "x": 540,
        "y": 80,
-       "w": 560,
-       "h": 150
+       "w": 300,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_cpu",
+      "type": "block",
+      "position": {
+       "x": 840,
+       "y": 80,
+       "w": 300,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_mem",
+      "type": "block",
+      "position": {
+       "x": 1140,
+       "y": 80,
+       "w": 300,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_top_util",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 280,
+       "w": 720,
+       "h": 260
+      }
+     },
+     {
+      "item": "viz_top_errors",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 280,
+       "w": 720,
+       "h": 260
       }
      },
      {
@@ -906,29 +973,9 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 230,
+       "y": 540,
        "w": 1440,
        "h": 170
-      }
-     },
-     {
-      "item": "viz_cpu",
-      "type": "block",
-      "position": {
-       "x": 0,
-       "y": 400,
-       "w": 720,
-       "h": 300
-      }
-     },
-     {
-      "item": "viz_mem",
-      "type": "block",
-      "position": {
-       "x": 720,
-       "y": 400,
-       "w": 720,
-       "h": 300
       }
      },
      {
@@ -936,7 +983,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 700,
+       "y": 710,
        "w": 720,
        "h": 320
       }
@@ -946,19 +993,9 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 700,
+       "y": 710,
        "w": 720,
        "h": 320
-      }
-     },
-     {
-      "item": "viz_busiest",
-      "type": "block",
-      "position": {
-       "x": 0,
-       "y": 1020,
-       "w": 1440,
-       "h": 360
       }
      },
      {
@@ -966,7 +1003,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1380,
+       "y": 1030,
        "w": 1440,
        "h": 480
       }
@@ -976,7 +1013,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1860,
+       "y": 1510,
        "w": 600,
        "h": 420
       }
@@ -986,7 +1023,7 @@
       "type": "block",
       "position": {
        "x": 600,
-       "y": 1860,
+       "y": 1510,
        "w": 840,
        "h": 420
       }
