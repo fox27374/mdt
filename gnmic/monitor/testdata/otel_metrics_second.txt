@@ -1,0 +1,102 @@
+# HELP otelcol_exporter_in_flight_requests Number of export requests currently in-flight (including retry backoff). [Development]
+# TYPE otelcol_exporter_in_flight_requests gauge
+otelcol_exporter_in_flight_requests{data_type="metrics",exporter="splunk_hec/splunkfree"} 0
+# HELP otelcol_exporter_queue_capacity Fixed capacity of the retry queue (in batches). [Alpha]
+# TYPE otelcol_exporter_queue_capacity gauge
+otelcol_exporter_queue_capacity{data_type="metrics",exporter="splunk_hec/splunkfree"} 1000
+# HELP otelcol_exporter_queue_size Current size of the retry queue (in batches). [Alpha]
+# TYPE otelcol_exporter_queue_size gauge
+otelcol_exporter_queue_size{data_type="metrics",exporter="splunk_hec/splunkfree"} 0
+# HELP otelcol_exporter_send_failed_metric_points Number of metric points in failed attempts to send to destination. At detailed telemetry level, includes attributes: error.type (semantic convention), error.permanent. [Alpha]
+# TYPE otelcol_exporter_send_failed_metric_points counter
+otelcol_exporter_send_failed_metric_points{exporter="splunk_hec/splunkfree"} 57994
+# HELP otelcol_exporter_sent_metric_points Number of metric points successfully sent to destination. [Alpha]
+# TYPE otelcol_exporter_sent_metric_points counter
+otelcol_exporter_sent_metric_points{exporter="splunk_hec/splunkfree"} 895910
+# HELP otelcol_process_cpu_seconds Total CPU user and system time in seconds [Alpha]
+# TYPE otelcol_process_cpu_seconds counter
+otelcol_process_cpu_seconds 43.81
+# HELP otelcol_process_memory_rss Total physical memory (resident set size) [Alpha]
+# TYPE otelcol_process_memory_rss gauge
+otelcol_process_memory_rss 3.21069056e+08
+# HELP otelcol_process_runtime_heap_alloc_bytes Bytes of allocated heap objects (see 'go doc runtime.MemStats.HeapAlloc') [Alpha]
+# TYPE otelcol_process_runtime_heap_alloc_bytes gauge
+otelcol_process_runtime_heap_alloc_bytes 4.8301872e+07
+# HELP otelcol_process_runtime_total_alloc_bytes Cumulative bytes allocated for heap objects (see 'go doc runtime.MemStats.TotalAlloc') [Alpha]
+# TYPE otelcol_process_runtime_total_alloc_bytes counter
+otelcol_process_runtime_total_alloc_bytes 4.676582656e+09
+# HELP otelcol_process_runtime_total_sys_memory_bytes Total bytes of memory obtained from the OS (see 'go doc runtime.MemStats.Sys') [Alpha]
+# TYPE otelcol_process_runtime_total_sys_memory_bytes gauge
+otelcol_process_runtime_total_sys_memory_bytes 1.140776968e+09
+# HELP otelcol_process_uptime Uptime of the process [Alpha]
+# TYPE otelcol_process_uptime counter
+otelcol_process_uptime 1833.258362937
+# HELP otelcol_processor_batch_batch_send_size Number of units in the batch [Development]
+# TYPE otelcol_processor_batch_batch_send_size histogram
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="10"} 36
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="25"} 45
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="50"} 45
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="75"} 45
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="100"} 45
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="250"} 226
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="500"} 287
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="750"} 301
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="1000"} 304
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="2000"} 471
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="3000"} 494
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="4000"} 494
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="5000"} 494
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="6000"} 494
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="7000"} 494
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="8000"} 528
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="9000"} 539
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="10000"} 554
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="20000"} 554
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="30000"} 554
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="50000"} 554
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="100000"} 554
+otelcol_processor_batch_batch_send_size_bucket{processor="batch",le="+Inf"} 554
+otelcol_processor_batch_batch_send_size_sum{processor="batch"} 923874
+otelcol_processor_batch_batch_send_size_count{processor="batch"} 554
+# HELP otelcol_processor_batch_batch_size_trigger_send Number of times the batch was sent due to a size trigger [Development]
+# TYPE otelcol_processor_batch_batch_size_trigger_send counter
+otelcol_processor_batch_batch_size_trigger_send{processor="batch"} 26
+# HELP otelcol_processor_batch_metadata_cardinality Number of distinct metadata value combinations being processed [Development]
+# TYPE otelcol_processor_batch_metadata_cardinality gauge
+otelcol_processor_batch_metadata_cardinality{processor="batch"} 2
+# HELP otelcol_processor_batch_timeout_trigger_send Number of times the batch was sent due to a timeout trigger [Development]
+# TYPE otelcol_processor_batch_timeout_trigger_send counter
+otelcol_processor_batch_timeout_trigger_send{processor="batch"} 528
+# HELP otelcol_receiver_accepted_metric_points Number of metric points successfully pushed into the pipeline. [Alpha]
+# TYPE otelcol_receiver_accepted_metric_points counter
+otelcol_receiver_accepted_metric_points{receiver="hostmetrics",transport=""} 18581
+otelcol_receiver_accepted_metric_points{receiver="prometheus/gnmic",transport="http"} 63990
+# HELP otelcol_receiver_failed_metric_points The number of metric points that failed to be processed by the receiver due to internal errors. [Alpha]
+# TYPE otelcol_receiver_failed_metric_points counter
+otelcol_receiver_failed_metric_points{receiver="hostmetrics",transport=""} 0
+otelcol_receiver_failed_metric_points{receiver="prometheus/gnmic",transport="http"} 0
+# HELP otelcol_receiver_refused_metric_points Number of metric points that could not be pushed into the pipeline. [Alpha]
+# TYPE otelcol_receiver_refused_metric_points counter
+otelcol_receiver_refused_metric_points{receiver="hostmetrics",transport=""} 0
+otelcol_receiver_refused_metric_points{receiver="prometheus/gnmic",transport="http"} 0
+# HELP otelcol_scraper_errored_metric_points Number of metric points that were unable to be scraped. [Alpha]
+# TYPE otelcol_scraper_errored_metric_points counter
+otelcol_scraper_errored_metric_points{receiver="hostmetrics",scraper="cpu"} 0
+otelcol_scraper_errored_metric_points{receiver="hostmetrics",scraper="disk"} 0
+otelcol_scraper_errored_metric_points{receiver="hostmetrics",scraper="filesystem"} 0
+otelcol_scraper_errored_metric_points{receiver="hostmetrics",scraper="load"} 0
+otelcol_scraper_errored_metric_points{receiver="hostmetrics",scraper="memory"} 0
+# HELP otelcol_scraper_scraped_metric_points Number of metric points successfully scraped. [Alpha]
+# TYPE otelcol_scraper_scraped_metric_points counter
+otelcol_scraper_scraped_metric_points{receiver="hostmetrics",scraper="cpu"} 181
+otelcol_scraper_scraped_metric_points{receiver="hostmetrics",scraper="disk"} 1267
+otelcol_scraper_scraped_metric_points{receiver="hostmetrics",scraper="filesystem"} 362
+otelcol_scraper_scraped_metric_points{receiver="hostmetrics",scraper="load"} 543
+otelcol_scraper_scraped_metric_points{receiver="hostmetrics",scraper="memory"} 181
+# HELP promhttp_metric_handler_errors_total Total number of internal errors encountered by the promhttp metric handler.
+# TYPE promhttp_metric_handler_errors_total counter
+promhttp_metric_handler_errors_total{cause="encoding"} 0
+promhttp_metric_handler_errors_total{cause="gathering"} 0
+# HELP target_info Target metadata
+# TYPE target_info gauge
+target_info{service_instance_id="bfcca7aa-a554-45f6-b340-5b96e9dde64d",service_name="otelcol-contrib",service_version="0.154.0"} 1

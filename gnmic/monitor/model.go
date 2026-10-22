@@ -194,6 +194,7 @@ type Snapshot struct {
 	Components []Component   `json:"components"`
 	Targets    []TargetState `json:"targets"`
 	Hosts      []HostState   `json:"hosts"`
+	Otel       *OtelState    `json:"otel,omitempty"` // nil when the collector check is off
 }
 
 // Helper functions for string parsing

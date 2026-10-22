@@ -20,6 +20,7 @@ type Store struct {
 	seen            map[string]map[string]SeenRecord    // targetKey -> (sub -> record)
 	hosts           map[string]HostState                // name -> host state
 	containers      map[string][]ContainerState         // host name -> container rows
+	otel            *OtelState                          // OpenTelemetry collector view, nil when off
 	setConfigCount  map[string]int64                    // source -> counter (for determining latest owner)
 	maxSetConfigID  int64                               // monotonically increasing counter
 	hasCollectorSet bool                                // true if any non-"config" source called SetConfig
@@ -95,6 +96,14 @@ func (s *Store) SetContainers(host string, rows []ContainerState) {
 		return
 	}
 	s.containers[host] = rows
+}
+
+// SetOtel replaces the OpenTelemetry collector view. Nil clears it.
+func (s *Store) SetOtel(o *OtelState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.otel = o
 }
 
 // HostMemTotal returns the last known total memory of a host, 0 if unknown.
@@ -395,6 +404,9 @@ func (s *Store) Snapshot(now time.Time) Snapshot {
 		copy(hostCopy.Containers, s.containers[host.Name])
 		snap.Hosts = append(snap.Hosts, hostCopy)
 	}
+
+	// The OtelState is replaced as a whole on each poll and never modified, so sharing the pointer is safe
+	snap.Otel = s.otel
 
 	// Sort hosts by level severity descending, then by name ascending
 	sort.Slice(snap.Hosts, func(i, j int) bool {

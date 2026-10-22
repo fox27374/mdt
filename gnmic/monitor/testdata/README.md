@@ -29,5 +29,8 @@ The `/varz` endpoint returns a JSON object with integer fields: `connections` (n
 - `api_targets_gnmic-1.json`, `api_targets_gnmic-2.json`: Responses from gnmic collector API
 - `metrics_gnmic-1.txt`, `metrics_gnmic-2.txt`: Prometheus metrics (gnmic_* lines only)
 - `nats_varz.json`, `nats_healthz.json`: NATS server stats and health
+- `otel_health.json`: OpenTelemetry collector health_check response (`status` "Server available")
+- `otel_metrics.txt`: OpenTelemetry collector self-telemetry (Prometheus text, otelcol-contrib 0.154.0, `:8888/metrics`), captured live from the test host
+- `otel_metrics_second.txt`: the same scrape 30 seconds later, hand-derived from `otel_metrics.txt` with increased counters (exporter sent +30000, failed +30; prometheus/gnmic receiver accepted +900; hostmetrics accepted +300; process CPU +0.3 s; uptime +30 s), for rate tests
 - `nats_mdt_1.json` through `nats_mdt_5.json`: Individual NATS messages from the `mdt` subject
 - `consul_*.json`: Consul service registration and KV data

@@ -39,6 +39,20 @@ func defaultHostSpecs(get func(string) string) (hosts, containerExporters string
 	return hosts, containerExporters
 }
 
+// otelURLs returns the collector health and metrics URLs. A variable that is not set takes its compose
+// default; a variable set to the empty string turns that check off. Both empty disables the collector check.
+func otelURLs(lookup func(key string) (string, bool)) (health, metrics string) {
+	return otelURL(lookup, "OTEL_HEALTH_URL", "http://otel-collector:13133/"),
+		otelURL(lookup, "OTEL_METRICS_URL", "http://otel-collector:8888/metrics")
+}
+
+func otelURL(lookup func(key string) (string, bool), key, def string) string {
+	if v, ok := lookup(key); ok {
+		return v
+	}
+	return def
+}
+
 // statusHandler returns an HTTP handler that serves the current snapshot as JSON.
 func statusHandler(st *Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +102,13 @@ func main() {
 		log.Fatalf("parse thresholds: %v", err)
 	}
 
+	// Parse OpenTelemetry collector thresholds
+	otelTh, err := ParseOtelThresholds(os.Getenv)
+	if err != nil {
+		log.Fatalf("parse otel thresholds: %v", err)
+	}
+	otelHealthURL, otelMetricsURL := otelURLs(os.LookupEnv)
+
 	// Parse container exporters (host name = podman exporter URL)
 	containerExporters, err := ParseHosts(containerExportersStr)
 	if err != nil {
@@ -124,6 +145,13 @@ func main() {
 		OutputURL:  outputURL,
 		Collectors: cols,
 	}, poll)
+	if otelHealthURL != "" || otelMetricsURL != "" {
+		go RunOtel(ctx, st, OtelConfig{
+			HealthURL:  otelHealthURL,
+			MetricsURL: otelMetricsURL,
+			Thresholds: otelTh,
+		}, poll)
+	}
 	if len(hosts) > 0 {
 		go RunHosts(ctx, st, hosts, th, hostNICInclude, poll)
 	}

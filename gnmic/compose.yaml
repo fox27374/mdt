@@ -66,6 +66,22 @@ services:
       - nats
       - node-exporter
       - podman-exporter
+      - otel-collector
+
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.154.0
+    container_name: otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    networks:
+      - gnmic-net
+    ports:
+      - 57000:57000
+    volumes:
+      - ./config/otel.yaml:/etc/otelcol-contrib/config.yaml:ro,z
+      - /:/hostfs:ro,rslave
+    env_file: ./otel_env
+    depends_on:
+      - gnmic-output
 
   node-exporter:
     image: docker.io/prom/node-exporter:v1.12.1
