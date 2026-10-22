@@ -557,7 +557,7 @@ test("partial: collector with a non-OK target is not partial", () => {
 test("otel-collector component drives the scraper node", () => {
   const plain = buildTopology({ components: [] }).nodes.find(n => n.id === "prometheus");
   assert.equal(plain.notMonitored, true);
-  assert.equal(plain.label, "Prometheus");
+  assert.equal(plain.label, "Scraper");
   const topo = buildTopology({ components: [
     { name: "gnmic-output", ok: true, detail: "" },
     { name: "otel-collector", ok: true, detail: "sent 10/s" }

@@ -216,16 +216,9 @@ func buildOtelState(prev *OtelSample, cur OtelSample) OtelState {
 	}
 	sort.Slice(st.Exporters, func(i, j int) bool { return st.Exporters[i].Name < st.Exporters[j].Name })
 
-	for name, r := range cur.Receivers {
-		row := OtelReceiverState{Name: name}
-		if p, ok := prev.receiver(name); ok {
-			acc, okAcc := counterRate(p.Accepted, r.Accepted, dt)
-			ref, okRef := counterRate(p.Refused, r.Refused, dt)
-			fail, okFail := counterRate(p.Failed, r.Failed, dt)
-			row.AcceptedPerSec, row.RefusedPerSec, row.FailedPerSec = acc, ref, fail
-			row.RatesKnown = okAcc && okRef && okFail
-		}
-		st.Receivers = append(st.Receivers, row)
+	// Receiver rates are filled in by receiverRates, which needs state across polls
+	for name := range cur.Receivers {
+		st.Receivers = append(st.Receivers, OtelReceiverState{Name: name})
 	}
 	sort.Slice(st.Receivers, func(i, j int) bool { return st.Receivers[i].Name < st.Receivers[j].Name })
 
@@ -245,12 +238,44 @@ func (s *OtelSample) exporter(name string) (OtelExporter, bool) {
 	return e, ok
 }
 
-func (s *OtelSample) receiver(name string) (OtelReceiver, bool) {
-	if s == nil {
-		return OtelReceiver{}, false
+// otelRateStale is how long a receiver counter may stand still before its held rate drops to zero.
+const otelRateStale = 5 * time.Minute
+
+// receiverMark is the last point at which a receiver's counters changed, and the rates measured then.
+type receiverMark struct {
+	at  time.Time
+	r   OtelReceiver
+	row OtelReceiverState
+}
+
+// receiverRates fills in the receiver rows of one poll. Scraping receivers bump their counters once per
+// scrape interval (often longer than the poll), so a plain poll-to-poll rate is mostly zero. Instead each
+// rate is measured between two changes of the counters and held until the next change, dropping to zero
+// once nothing changed for otelRateStale. marks keeps that state between polls.
+func receiverRates(marks map[string]receiverMark, cur OtelSample, rows []OtelReceiverState) {
+	for i := range rows {
+		name := rows[i].Name
+		r := cur.Receivers[name]
+		m, ok := marks[name]
+		switch {
+		case !ok || r.Accepted < m.r.Accepted || r.Refused < m.r.Refused || r.Failed < m.r.Failed:
+			// First sight or collector restart: start measuring from here
+			marks[name] = receiverMark{at: cur.At, r: r, row: rows[i]}
+		case r == m.r:
+			if cur.At.Sub(m.at) > otelRateStale {
+				rows[i] = OtelReceiverState{Name: name, RatesKnown: true}
+			} else {
+				rows[i] = m.row
+			}
+		default:
+			dt := cur.At.Sub(m.at).Seconds()
+			acc, _ := counterRate(m.r.Accepted, r.Accepted, dt)
+			ref, _ := counterRate(m.r.Refused, r.Refused, dt)
+			fail, _ := counterRate(m.r.Failed, r.Failed, dt)
+			rows[i] = OtelReceiverState{Name: name, AcceptedPerSec: acc, RefusedPerSec: ref, FailedPerSec: fail, RatesKnown: true}
+			marks[name] = receiverMark{at: cur.At, r: r, row: rows[i]}
+		}
 	}
-	r, ok := s.Receivers[name]
-	return r, ok
 }
 
 // exportDelta sums, over the exporters present in both samples, the metric points sent and failed
@@ -410,9 +435,13 @@ func pollOtel(ctx context.Context, hc *http.Client, cfg OtelConfig, prev *OtelSa
 func RunOtel(ctx context.Context, st *Store, cfg OtelConfig, every time.Duration) {
 	hc := &http.Client{Timeout: 5 * time.Second}
 	var prev *OtelSample
+	marks := make(map[string]receiverMark)
 
 	poll := func() {
 		comp, state, cur := pollOtel(ctx, hc, cfg, prev, time.Now())
+		if state != nil {
+			receiverRates(marks, *cur, state.Receivers)
+		}
 		st.SetComponent(comp)
 		st.SetOtel(state)
 		if cur != nil {

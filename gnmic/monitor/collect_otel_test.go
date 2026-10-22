@@ -146,17 +146,46 @@ func TestBuildOtelStateRates(t *testing.T) {
 	if e.QueueCap != 1000 || e.QueueSize != 0 {
 		t.Errorf("exporter queue = %+v", e)
 	}
-	var gnmic OtelReceiverState
-	for _, r := range st.Receivers {
-		if r.Name == "prometheus/gnmic" {
-			gnmic = r
-		}
-	}
-	if !gnmic.RatesKnown || !near(gnmic.AcceptedPerSec, 30) || gnmic.RefusedPerSec != 0 {
-		t.Errorf("receiver rates = %+v, want 30 accepted/s", gnmic)
-	}
 	if !st.CPUKnown || !near(st.CPUPct, 1) {
 		t.Errorf("cpu = %v known %v, want 1%% of one core", st.CPUPct, st.CPUKnown)
+	}
+}
+
+func TestReceiverRates(t *testing.T) {
+	t0 := time.Date(2026, 10, 22, 5, 0, 0, 0, time.UTC)
+	marks := make(map[string]receiverMark)
+	poll := func(after time.Duration, accepted float64) OtelReceiverState {
+		cur := OtelSample{At: t0.Add(after), Receivers: map[string]OtelReceiver{"p": {Accepted: accepted}}}
+		rows := []OtelReceiverState{{Name: "p"}}
+		receiverRates(marks, cur, rows)
+		return rows[0]
+	}
+
+	if r := poll(0, 1000); r.RatesKnown {
+		t.Errorf("first sight should have no rate: %+v", r)
+	}
+	// Polled every 15s, scraped every 60s: the rate is measured over the full scrape interval and held
+	if r := poll(15*time.Second, 1000); r.RatesKnown {
+		t.Errorf("no change yet should still have no rate: %+v", r)
+	}
+	if r := poll(60*time.Second, 4000); !r.RatesKnown || !near(r.AcceptedPerSec, 50) {
+		t.Errorf("after first change = %+v, want 50/s", r)
+	}
+	for _, after := range []time.Duration{75, 90, 105} {
+		if r := poll(after*time.Second, 4000); !near(r.AcceptedPerSec, 50) {
+			t.Errorf("at %ds held rate = %+v, want 50/s", after, r)
+		}
+	}
+	if r := poll(120*time.Second, 7000); !near(r.AcceptedPerSec, 50) {
+		t.Errorf("after second change = %+v, want 50/s", r)
+	}
+	// Stalled longer than otelRateStale drops to zero
+	if r := poll(120*time.Second+otelRateStale+time.Second, 7000); !r.RatesKnown || r.AcceptedPerSec != 0 {
+		t.Errorf("stalled = %+v, want known 0/s", r)
+	}
+	// Collector restart: counters went down, measuring starts over
+	if r := poll(20*time.Minute, 10); r.RatesKnown {
+		t.Errorf("after reset = %+v, want no rate", r)
 	}
 }
 
