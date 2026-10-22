@@ -15,7 +15,7 @@ const COLUMNS = [
   { x: COLLECTOR_X, label: "Collectors" },
   { x: NATS_X, label: "NATS" },
   { x: OUTPUT_X, label: "Output" },
-  { x: PROMETHEUS_X, label: "Prometheus" }
+  { x: PROMETHEUS_X, label: "Scraper" }
 ];
 
 function buildTopology(data) {
@@ -300,12 +300,12 @@ function buildTopology(data) {
   nodes.push(consulNode);
   nodeMap["consul"] = consulNode;
 
-  // Scraper of gnmic-output: the OTel collector when monitored, else a placeholder Prometheus node
+  // Scraper of gnmic-output: the OTel collector when monitored, else a placeholder node
   const otelComp = getComponent("otel-collector");
   const prometheusNode = {
     id: "prometheus",
     kind: "prometheus",
-    label: otelComp ? "OTel collector" : "Prometheus",
+    label: otelComp ? "OTel collector" : "Scraper",
     x: PROMETHEUS_X,
     y: 0,
     status: otelComp ? getComponentStatus(otelComp) : "UNKNOWN",
