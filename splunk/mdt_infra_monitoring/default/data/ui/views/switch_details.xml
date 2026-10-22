@@ -772,7 +772,7 @@
    "type": "ds.search",
    "name": "rates",
    "options": {
-    "query": "| `mdt_if_counters($tk_node$,*$tk_interface$)` | `mdt_physical_ports` | `mdt_if_rates` | join type=left node interface [| `mdt_if_status($tk_node$)` | fields node interface speed] | eval util=round(max(in_bps, out_bps) / speed * 100, 2)"
+    "query": "| `mdt_if_counters($tk_node$,*$tk_interface$)` | `mdt_physical_ports` | `mdt_if_rates` | join type=left node interface [| `mdt_if_status($tk_node$)` | fields node interface speed] | eval util=round(max(in_bps, out_bps) / speed * 100, 4)"
    }
   },
   "ds_poe": {
