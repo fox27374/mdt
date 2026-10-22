@@ -576,7 +576,7 @@
   },
   "viz_poe_watts": {
    "type": "splunk.singlevalue",
-   "title": "PoE used",
+   "title": "PoE",
    "dataSources": {
     "primary": "ds_poe_watts"
    },
@@ -593,7 +593,7 @@
   },
   "viz_poe": {
    "type": "splunk.fillergauge",
-   "title": "PoE used (% of budget)",
+   "title": "PoE drawn (% of PoE capacity)",
    "dataSources": {
     "primary": "ds_poe_gauge"
    },
@@ -818,7 +818,7 @@
    "name": "poe_watts",
    "options": {
     "extend": "ds_poe",
-    "query": "| eval PoE=used.\" of \".(used + free).\" W\" | fields PoE"
+    "query": "| eval PoE=used.\" W drawn, \".free.\" W free\" | fields PoE"
    }
   },
   "ds_throughput": {
