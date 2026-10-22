@@ -398,9 +398,10 @@ processors:
         - path-base:
             apply-on: "name"
 
+  # Management ports: NX-OS mgmt0, IOS-XE GigabitEthernet0/0.
   drop-if-stats-interfaces:
     event-drop:
-      condition: '.tags.interface_name != null and (.tags.interface_name | test("^(vlan|loopback|tunnel|app|nve|po|bluetooth)"; "i"))'
+      condition: '.tags.interface_name != null and (.tags.interface_name | test("^(vlan|loopback|tunnel|app|nve|po|bluetooth|mgmt|GigabitEthernet0/0$)"; "i"))'
 
   delete-nx-cdp-fields:
     event-delete:
