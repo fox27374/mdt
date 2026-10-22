@@ -1,4 +1,4 @@
-<nav search_view="search">
+<nav search_view="search" color="transparent">
   <view name="network_overview" default="true" />
   <view name="switch_overview" />
   <view name="switch_details" />
