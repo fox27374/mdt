@@ -672,18 +672,31 @@
   },
   "viz_top_util": {
    "type": "splunk.bar",
-   "title": "Top 5 interfaces by peak utilization % (in or out)",
+   "title": "Top 5 interfaces by peak utilization % (in or out); click to filter",
    "dataSources": {
     "primary": "ds_top_util"
    },
    "options": {
     "legendDisplay": "off"
    },
-   "showProgressBar": true
+   "showProgressBar": true,
+   "eventHandlers": [
+    {
+     "type": "drilldown.setToken",
+     "options": {
+      "tokens": [
+       {
+        "token": "tk_interface",
+        "key": "row.interface.value"
+       }
+      ]
+     }
+    }
+   ]
   },
   "viz_top_errors": {
    "type": "splunk.bar",
-   "title": "Top 5 interfaces with errors",
+   "title": "Top 5 interfaces with errors; click to filter",
    "dataSources": {
     "primary": "ds_top_errors"
    },
@@ -691,7 +704,20 @@
     "stackMode": "stacked",
     "legendDisplay": "bottom"
    },
-   "showProgressBar": true
+   "showProgressBar": true,
+   "eventHandlers": [
+    {
+     "type": "drilldown.setToken",
+     "options": {
+      "tokens": [
+       {
+        "token": "tk_interface",
+        "key": "row.interface.value"
+       }
+      ]
+     }
+    }
+   ]
   },
   "viz_ifaces": {
    "type": "splunk.table",
