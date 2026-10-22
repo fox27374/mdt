@@ -27,7 +27,7 @@ COPYFILE_DISABLE=1 tar --no-xattrs -C "$root/splunk" --exclude=.DS_Store -czf - 
   runuser -u splunk -- tar -xzf /tmp/$app.tgz -C /opt/splunk/etc/apps --no-same-owner\"" <<<"$SPLUNKHOST_PASS"
 
 api=https://${host#*@}:8089
-for ep in services/apps/local servicesNS/nobody/$app/data/ui/views servicesNS/nobody/$app/data/ui/nav; do
+for ep in services/apps/local servicesNS/nobody/$app/data/ui/views servicesNS/nobody/$app/data/ui/nav servicesNS/nobody/$app/admin/macros; do
   curl -fsk -u "$SPLUNK_AUTH" -o /dev/null -X POST "$api/$ep/_reload"
 done
 echo "deployed $app"
