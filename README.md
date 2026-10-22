@@ -291,9 +291,10 @@ Do not enable `podman.socket` as well; both bind the same path. Check with `curl
 ## Splunk app
 
 [splunk/mdt_infra_monitoring/](splunk/mdt_infra_monitoring/) is the Splunk app **MDT Infrastructure
-Monitoring** on the Splunk host (`ibk-free-splunk`, 172.24.89.194). It holds the dashboards Switch
-Overview, Switch Details, Wireless Overview and Wireless Client Details
-(Dashboard Studio, one XML file per dashboard in `default/data/ui/views/`).
+Monitoring** on the Splunk host (`ibk-free-splunk`, 172.24.89.194). It holds the dashboards Network
+Overview (the start page), Switch Overview, Switch Details, Wireless Overview and Wireless Client
+Details, one XML file per dashboard in `default/data/ui/views/`. Network Overview is a classic
+Simple XML dashboard and needs the `network-diagram-viz` app; the others are Dashboard Studio.
 
 Deploy it with:
 
