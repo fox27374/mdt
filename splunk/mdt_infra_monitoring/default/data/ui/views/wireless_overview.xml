@@ -1,0 +1,733 @@
+<dashboard version="2" theme="dark">
+    <label>Wireless Overview</label>
+    <description></description>
+    <definition><![CDATA[
+{
+	"dataSources": {
+		"ds_4oNQJMHD": {
+			"type": "ds.search",
+			"options": {
+				"query": "| mcatalog values(vap_ssid) as ssid WHERE index=\"cisco_metrics\" extracted_source=$extracted_source$ AND metric_name=\"mdt_wl_info_vap_ssid\"\n| mvexpand ssid",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"name": "SSIDs with clients search"
+		},
+		"ds_hKZkXDZM": {
+			"type": "ds.search",
+			"options": {
+				"query": "| mstats latest(\"mdt_xe_cpu_stats_one_minute\") prestats=true WHERE \"index\"=\"cisco_metrics\" extracted_source=$extracted_source$ span=60s BY extracted_source\n| timechart latest(\"mdt_xe_cpu_stats_one_minute\") AS Usage span=60s\n| fields - _span*",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"name": "CPU Utilization search"
+		},
+		"ds_0TgrzM3h": {
+			"name": "Connected APs search",
+			"options": {
+				"query": "| mstats latest(\"mdt_wl_info_ap_ip_addr\") as assoc_aps prestats=false WHERE \"index\"=\"cisco_metrics\" extracted_source=$extracted_source$ BY oper_data_wtp_mac\n| stats count",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_5CDPQxiM": {
+			"name": "TX Util by band search",
+			"options": {
+				"query": "| mstats sum(\"mdt_wl_ap_stats_tx_util_percentage\") prestats=true WHERE \"index\"=\"cisco_metrics\" extracted_source=$extracted_source$ span=1m BY rrm_measurement_radio_slot_id\n| eval band=case(\n    rrm_measurement_radio_slot_id=0, \"2.4 GHz\",\n    rrm_measurement_radio_slot_id=1, \"5 GHz\",\n    rrm_measurement_radio_slot_id=2, \"6 GHz\"\n)\n| timechart sum(\"mdt_wl_ap_stats_tx_util_percentage\") AS tx_util span=1m useother=false BY band",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_5fscA8dt": {
+			"name": "RX Util by Band search",
+			"options": {
+				"query": "| mstats sum(\"mdt_wl_ap_stats_rx_util_percentage\") prestats=true WHERE \"index\"=\"cisco_metrics\" extracted_source=$extracted_source$ span=1m BY rrm_measurement_radio_slot_id\n| eval band=case(\n    rrm_measurement_radio_slot_id=0, \"2.4 GHz\",\n    rrm_measurement_radio_slot_id=1, \"5 GHz\",\n    rrm_measurement_radio_slot_id=2, \"6 GHz\"\n)\n| timechart sum(\"mdt_wl_ap_stats_rx_util_percentage\") AS rx_util span=1m useother=false BY band",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_8RPUR6QH": {
+			"name": "Bar chart search",
+			"options": {
+				"query": "| mstats sum(\"mdt_wl_ap_stats_num_assoc_clients\") as assoc_clients prestats=false WHERE \"index\"=\"cisco_metrics\" extracted_source=$extracted_source$ span=60s BY ssid_counters_slot_id\n| eval band=case(\n    ssid_counters_slot_id=0, \"2.4 GHz\",\n    ssid_counters_slot_id=1, \"5 GHz\",\n    ssid_counters_slot_id=2, \"6 GHz\"\n)\n| stats latest(assoc_clients) by band",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_AtHv0KRb": {
+			"name": "Non-Wifi Interferers by Band search",
+			"options": {
+				"query": "| mstats latest(\"mdt_wl_ap_stats_non_wifi_inter\") prestats=true WHERE \"index\"=\"cisco_metrics\" extracted_source=$extracted_source$ span=1m BY rrm_measurement_radio_slot_id\n| eval band=case(\n    rrm_measurement_radio_slot_id=0, \"2.4 GHz\",\n    rrm_measurement_radio_slot_id=1, \"5 GHz\",\n    rrm_measurement_radio_slot_id=2, \"6 GHz\"\n)\n| timechart latest(\"mdt_wl_ap_stats_non_wifi_inter\") span=1m useother=false BY band\n| fields - _span*",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_HRW0qhzn": {
+			"name": "WLC Memory Usage search",
+			"options": {
+				"query": "| mstats sum(\"mdt_xe_mem_stats_total_memory\") AS total_memory sum(\"mdt_xe_mem_stats_used_memory\") AS used_memory WHERE index=\"cisco_metrics\" span=5m BY extracted_source\n| stats sum(total_memory) as total_memory, sum(used_memory) as used_memory by extracted_source, _time\n| search extracted_source=$extracted_source$\n| eval pct_used=round((used_memory/total_memory)*100, 2)\n| timechart span=5m avg(pct_used) BY extracted_source",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_L46xIyeN": {
+			"name": "Number of Clients by band - Pie chart search",
+			"options": {
+				"query": "| mstats latest(\"mdt_wl_ap_stats_num_assoc_clients\") prestats=true WHERE \"index\"=\"cisco_metrics\" span=60s BY ssid_counters_slot_id\n| eval band=case(\n    ssid_counters_slot_id=0, \"2.4 GHz\",\n    ssid_counters_slot_id=1, \"5 GHz\",\n    ssid_counters_slot_id=2, \"6 GHz\"\n)\n| stats latest(mdt_wl_ap_stats_num_assoc_clients) as clients by band",
+				"queryParameters": {
+					"earliest": "-15m",
+					"latest": "now",
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_VNFcx863": {
+			"name": "wlc_search",
+			"options": {
+				"query": "| mcatalog values(extracted_source) as wlc WHERE index=\"cisco_metrics\" AND metric_name=\"mdt_wl_info_ap_ip_addr\"\n| mvexpand wlc",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_jZoM81tH": {
+			"name": "Connected Clients search",
+			"options": {
+				"query": "| mstats sum(\"mdt_wl_ap_stats_num_assoc_clients\") as assoc_clients prestats=false WHERE \"index\"=\"cisco_metrics\" extracted_source=$extracted_source$ span=60s BY extracted_source\n| stats latest(assoc_clients)",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_ousGuGxE": {
+			"name": "Noise Util by Band search",
+			"options": {
+				"query": "| mstats latest(\"mdt_wl_ap_stats_rx_noise_channel_utilization\") prestats=true WHERE \"index\"=\"cisco_metrics\" extracted_source=$extracted_source$ span=1m BY rrm_measurement_radio_slot_id\n| eval band=case(\n    rrm_measurement_radio_slot_id=0, \"2.4 GHz\",\n    rrm_measurement_radio_slot_id=1, \"5 GHz\",\n    rrm_measurement_radio_slot_id=2, \"6 GHz\"\n)\n| timechart latest(\"mdt_wl_ap_stats_rx_noise_channel_utilization\") span=1m useother=false BY band\n| fields - _span*",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_zleSzNCn": {
+			"name": "Number of Clients by Band search",
+			"options": {
+				"query": "| mstats sum(\"mdt_wl_ap_stats_num_assoc_clients\") prestats=true WHERE \"index\"=\"cisco_metrics\" extracted_source=$extracted_source$ span=60s BY ssid_counters_slot_id\n| eval band=case(\n    ssid_counters_slot_id=0, \"2.4 GHz\",\n    ssid_counters_slot_id=1, \"5 GHz\",\n    ssid_counters_slot_id=2, \"6 GHz\"\n)\n| timechart sum(\"mdt_wl_ap_stats_num_assoc_clients\") span=60s BY band",
+				"queryParameters": {
+					"sampleRatio": 1
+				}
+			},
+			"type": "ds.search"
+		}
+	},
+	"visualizations": {
+		"viz_XyYtmGHJ": {
+			"type": "splunk.table",
+			"options": {
+				"count": 20,
+				"dataOverlayMode": "none",
+				"drilldown": "none",
+				"showRowNumbers": false,
+				"showInternalFields": false,
+				"headerVisibility": "none"
+			},
+			"dataSources": {
+				"primary": "ds_4oNQJMHD"
+			},
+			"title": "SSIDs with clients"
+		},
+		"viz_XhJlEoOA": {
+			"type": "splunk.area",
+			"options": {
+				"seriesColors": [
+					"#009CEB",
+					"#7B56DB",
+					"#00CDAF",
+					"#DD9900",
+					"#FF677B",
+					"#CB2196",
+					"#813193",
+					"#0051B5",
+					"#008C80",
+					"#99B100",
+					"#FFA476",
+					"#FF6ACE",
+					"#AE8CFF",
+					"#00689D",
+					"#00490A",
+					"#465D00",
+					"#9D6300",
+					"#F6540B",
+					"#FF969E",
+					"#E47BFE"
+				]
+			},
+			"dataSources": {
+				"primary": "ds_hKZkXDZM"
+			},
+			"title": "CPU Utilization",
+			"containerOptions": {},
+			"showProgressBar": true,
+			"showLastUpdated": false
+		},
+		"viz_3LgtKLZY": {
+			"context": {
+				"convertedColorRange": [
+					{
+						"from": 100,
+						"value": "#dc4e41"
+					},
+					{
+						"from": 70,
+						"to": 100,
+						"value": "#f1813f"
+					},
+					{
+						"from": 30,
+						"to": 70,
+						"value": "#f8be34"
+					},
+					{
+						"from": 0,
+						"to": 30,
+						"value": "#0877a6"
+					},
+					{
+						"to": 0,
+						"value": "#53a051"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_jZoM81tH"
+			},
+			"options": {
+				"majorColor": "#ffffff",
+				"numberPrecision": 0,
+				"shouldUseThousandSeparators": true,
+				"sparklineDisplay": "below",
+				"trendDisplay": "absolute",
+				"unitPosition": "after"
+			},
+			"title": "Connected Clients",
+			"type": "splunk.singlevalue"
+		},
+		"viz_8il9VuQS": {
+			"dataSources": {
+				"primary": "ds_5CDPQxiM"
+			},
+			"options": {
+				"dataValuesDisplay": "off",
+				"legendDisplay": "right",
+				"legendMode": "seriesCompare",
+				"legendTruncation": "ellipsisMiddle",
+				"lineDashStylesByField": {
+					"0": "Solid",
+					"1": "Solid",
+					"2": "Solid",
+					"14:16:9d:2f:f8:00": "Solid",
+					"38:91:b7:26:d5:a0": "Solid",
+					"8c:1e:80:a7:50:c0": "Solid",
+					"Avg": "Solid",
+					"f0:d8:05:ed:03:60": "Solid",
+					"f4:db:e6:ce:91:80": "Solid"
+				},
+				"lineWidth": 2,
+				"nullValueDisplay": "connect",
+				"seriesColorsByField": {
+					"0": "#1e93c6",
+					"1": "#f2b827",
+					"2": "#d6563c",
+					"14:16:9d:2f:f8:00": "#1e93c6",
+					"38:91:b7:26:d5:a0": "#f2b827",
+					"8c:1e:80:a7:50:c0": "#d6563c",
+					"Avg": "#1e93c6",
+					"f0:d8:05:ed:03:60": "#6a5c9e",
+					"f4:db:e6:ce:91:80": "#31a35f"
+				},
+				"showIndependentYRanges": false,
+				"showOverlayY2Axis": false,
+				"showRoundedY2AxisLabels": false,
+				"showSplitSeries": false,
+				"showXMajorGridLines": true,
+				"showY2MajorGridLines": true,
+				"showYAxisWithZero": true,
+				"xAxisLabelRotation": 0,
+				"xAxisTitleVisibility": "show",
+				"y2AxisAbbreviation": "auto",
+				"y2AxisScale": "linear",
+				"y2AxisTitleVisibility": "show",
+				"yAxisAbbreviation": "auto",
+				"yAxisScale": "linear",
+				"yAxisTitleVisibility": "show"
+			},
+			"title": "TX Util by Band",
+			"type": "splunk.line"
+		},
+		"viz_EZOHlzRy": {
+			"dataSources": {
+				"primary": "ds_zleSzNCn"
+			},
+			"options": {
+				"legendDisplay": "right",
+				"legendMode": "seriesCompare",
+				"legendTruncation": "ellipsisMiddle",
+				"lineDashStylesByField": {
+					"0": "Solid",
+					"1": "Solid",
+					"Avg": "Solid"
+				},
+				"lineWidth": 2,
+				"seriesColorsByField": {
+					"0": "#1e93c6",
+					"1": "#f2b827",
+					"Avg": "#1e93c6"
+				},
+				"showIndependentYRanges": false,
+				"showOverlayY2Axis": false,
+				"showRoundedY2AxisLabels": false,
+				"showSplitSeries": false,
+				"showXMajorGridLines": true,
+				"showY2MajorGridLines": true,
+				"showYAxisWithZero": true,
+				"xAxisLabelRotation": 0,
+				"xAxisTitleVisibility": "show",
+				"y2AxisAbbreviation": "auto",
+				"y2AxisScale": "linear",
+				"y2AxisTitleVisibility": "show",
+				"yAxisAbbreviation": "auto",
+				"yAxisScale": "linear",
+				"yAxisTitleVisibility": "show",
+				"nullValueDisplay": "connect"
+			},
+			"title": "Number of Clients over time",
+			"type": "splunk.line"
+		},
+		"viz_K2WwKsgB": {
+			"dataSources": {
+				"primary": "ds_AtHv0KRb"
+			},
+			"options": {
+				"dataValuesDisplay": "off",
+				"legendDisplay": "right",
+				"legendMode": "seriesCompare",
+				"legendTruncation": "ellipsisMiddle",
+				"lineDashStylesByField": {
+					"0": "Solid",
+					"1": "Solid",
+					"2": "Solid",
+					"Avg": "Solid"
+				},
+				"lineWidth": 2,
+				"nullValueDisplay": "connect",
+				"seriesColorsByField": {
+					"0": "#1e93c6",
+					"1": "#f2b827",
+					"2": "#d6563c",
+					"Avg": "#1e93c6"
+				},
+				"showIndependentYRanges": false,
+				"showOverlayY2Axis": false,
+				"showRoundedY2AxisLabels": false,
+				"showSplitSeries": false,
+				"showXMajorGridLines": true,
+				"showY2MajorGridLines": true,
+				"showYAxisWithZero": true,
+				"xAxisLabelRotation": 0,
+				"xAxisTitleVisibility": "show",
+				"y2AxisAbbreviation": "auto",
+				"y2AxisScale": "linear",
+				"y2AxisTitleVisibility": "show",
+				"yAxisAbbreviation": "auto",
+				"yAxisScale": "linear",
+				"yAxisTitleVisibility": "show"
+			},
+			"title": "Non-Wifi Interferers by Band",
+			"type": "splunk.line"
+		},
+		"viz_ZZ2lNnET": {
+			"dataSources": {
+				"primary": "ds_5fscA8dt"
+			},
+			"options": {
+				"dataValuesDisplay": "off",
+				"legendDisplay": "right",
+				"legendMode": "seriesCompare",
+				"legendTruncation": "ellipsisMiddle",
+				"lineDashStylesByField": {
+					"0": "Solid",
+					"1": "Solid",
+					"2": "Solid",
+					"Avg": "Solid"
+				},
+				"lineWidth": 2,
+				"nullValueDisplay": "connect",
+				"seriesColorsByField": {
+					"0": "#1e93c6",
+					"1": "#f2b827",
+					"2": "#d6563c",
+					"Avg": "#1e93c6"
+				},
+				"showIndependentYRanges": false,
+				"showOverlayY2Axis": false,
+				"showRoundedY2AxisLabels": false,
+				"showSplitSeries": false,
+				"showXMajorGridLines": true,
+				"showY2MajorGridLines": true,
+				"showYAxisWithZero": true,
+				"xAxisLabelRotation": 0,
+				"xAxisTitleVisibility": "show",
+				"y2AxisAbbreviation": "auto",
+				"y2AxisScale": "linear",
+				"y2AxisTitleVisibility": "show",
+				"yAxisAbbreviation": "auto",
+				"yAxisScale": "linear",
+				"yAxisTitleVisibility": "show"
+			},
+			"title": "RX Util by Band",
+			"type": "splunk.line"
+		},
+		"viz_iIrK54tW": {
+			"dataSources": {
+				"primary": "ds_HRW0qhzn"
+			},
+			"options": {
+				"seriesColors": [
+					"#DD9900",
+					"#7B56DB",
+					"#009CEB",
+					"#00CDAF",
+					"#FF677B",
+					"#CB2196",
+					"#813193",
+					"#0051B5",
+					"#008C80",
+					"#99B100",
+					"#FFA476",
+					"#FF6ACE",
+					"#AE8CFF",
+					"#00689D",
+					"#00490A",
+					"#465D00",
+					"#9D6300",
+					"#F6540B",
+					"#FF969E",
+					"#E47BFE"
+				]
+			},
+			"title": "WLC Memory Usage",
+			"type": "splunk.area",
+			"containerOptions": {},
+			"showProgressBar": true,
+			"showLastUpdated": false
+		},
+		"viz_lWTntGlf": {
+			"dataSources": {
+				"primary": "ds_8RPUR6QH"
+			},
+			"options": {
+				"dataValuesDisplay": "all",
+				"legendDisplay": "right",
+				"legendTruncation": "ellipsisMiddle",
+				"showIndependentYRanges": false,
+				"showRoundedY2AxisLabels": false,
+				"showSplitSeries": false,
+				"showY2MajorGridLines": true,
+				"stackMode": "auto",
+				"xAxisTitleVisibility": "show",
+				"y2AxisAbbreviation": "auto",
+				"y2AxisTitleVisibility": "show",
+				"yAxisAbbreviation": "auto",
+				"yAxisScale": "linear",
+				"yAxisTitleVisibility": "show"
+			},
+			"title": "Client distribution by band",
+			"type": "splunk.bar"
+		},
+		"viz_mEF50o1i": {
+			"context": {
+				"convertedColorRange": [
+					{
+						"from": 100,
+						"value": "#dc4e41"
+					},
+					{
+						"from": 70,
+						"to": 100,
+						"value": "#f1813f"
+					},
+					{
+						"from": 30,
+						"to": 70,
+						"value": "#f8be34"
+					},
+					{
+						"from": 0,
+						"to": 30,
+						"value": "#0877a6"
+					},
+					{
+						"to": 0,
+						"value": "#53a051"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_0TgrzM3h"
+			},
+			"options": {
+				"majorColor": "#ffffff",
+				"numberPrecision": 0,
+				"shouldUseThousandSeparators": true,
+				"sparklineDisplay": "below",
+				"trendDisplay": "absolute",
+				"unitPosition": "after"
+			},
+			"title": "Connected APs",
+			"type": "splunk.singlevalue"
+		},
+		"viz_qdynZLUi": {
+			"dataSources": {
+				"primary": "ds_ousGuGxE"
+			},
+			"options": {
+				"dataValuesDisplay": "off",
+				"legendDisplay": "right",
+				"legendMode": "seriesCompare",
+				"legendTruncation": "ellipsisMiddle",
+				"lineDashStylesByField": {
+					"0": "Solid",
+					"1": "Solid",
+					"2": "Solid",
+					"Avg": "Solid"
+				},
+				"lineWidth": 2,
+				"nullValueDisplay": "connect",
+				"seriesColorsByField": {
+					"0": "#1e93c6",
+					"1": "#f2b827",
+					"2": "#d6563c",
+					"Avg": "#1e93c6"
+				},
+				"showIndependentYRanges": false,
+				"showOverlayY2Axis": false,
+				"showRoundedY2AxisLabels": false,
+				"showSplitSeries": false,
+				"showXMajorGridLines": true,
+				"showY2MajorGridLines": true,
+				"showYAxisWithZero": true,
+				"xAxisLabelRotation": 0,
+				"xAxisTitleVisibility": "show",
+				"y2AxisAbbreviation": "auto",
+				"y2AxisScale": "linear",
+				"y2AxisTitleVisibility": "show",
+				"yAxisAbbreviation": "auto",
+				"yAxisScale": "linear",
+				"yAxisTitleVisibility": "show"
+			},
+			"title": "Noise Util by Band",
+			"type": "splunk.line"
+		}
+	},
+	"applicationProperties": {
+		"hideEdit": false,
+		"hideExport": false
+	},
+	"inputs": {
+		"input_global_trp": {
+			"options": {
+				"defaultValue": "-4h@m,now",
+				"token": "global_time"
+			},
+			"title": "Global Time Range",
+			"type": "input.timerange"
+		},
+		"input_wPdNi3Dx": {
+			"dataSources": {
+				"primary": "ds_VNFcx863"
+			},
+			"options": {
+				"items": [],
+				"selectFirstSearchResult": true,
+				"token": "extracted_source"
+			},
+			"title": "WLC",
+			"type": "input.dropdown"
+		}
+	},
+	"layout": {
+		"options": {},
+		"globalInputs": [
+			"input_global_trp",
+			"input_wPdNi3Dx"
+		],
+		"tabs": {
+			"items": [
+				{
+					"label": "WLC",
+					"layoutId": "layout_1"
+				}
+			]
+		},
+		"layoutDefinitions": {
+			"layout_1": {
+				"options": {
+					"height": 960,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_3LgtKLZY",
+						"position": {
+							"h": 250,
+							"w": 172,
+							"x": 0,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_EZOHlzRy",
+						"position": {
+							"h": 309,
+							"w": 964,
+							"x": 0,
+							"y": 250
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_qdynZLUi",
+						"position": {
+							"h": 300,
+							"w": 720,
+							"x": 0,
+							"y": 559
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ZZ2lNnET",
+						"type": "block",
+						"position": {
+							"x": 0,
+							"y": 859,
+							"w": 720,
+							"h": 400
+						}
+					},
+					{
+						"item": "viz_mEF50o1i",
+						"position": {
+							"h": 250,
+							"w": 174,
+							"x": 172,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_XyYtmGHJ",
+						"type": "block",
+						"position": {
+							"h": 250,
+							"w": 178,
+							"x": 346,
+							"y": 0
+						}
+					},
+					{
+						"item": "viz_XhJlEoOA",
+						"type": "block",
+						"position": {
+							"h": 250,
+							"w": 440,
+							"x": 524,
+							"y": 0
+						}
+					},
+					{
+						"item": "viz_8il9VuQS",
+						"type": "block",
+						"position": {
+							"x": 720,
+							"y": 859,
+							"w": 720,
+							"h": 400
+						}
+					},
+					{
+						"item": "viz_K2WwKsgB",
+						"position": {
+							"h": 300,
+							"w": 720,
+							"x": 720,
+							"y": 559
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_iIrK54tW",
+						"position": {
+							"h": 250,
+							"w": 476,
+							"x": 964,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_lWTntGlf",
+						"position": {
+							"h": 309,
+							"w": 476,
+							"x": 964,
+							"y": 250
+						},
+						"type": "block"
+					}
+				],
+				"type": "grid"
+			}
+		}
+	},
+	"title": "Wireless Overview",
+	"description": "",
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			}
+		},
+		"visualizations": {
+			"global": {
+				"showProgressBar": true
+			}
+		}
+	}
+}
+    ]]></definition>
+</dashboard>

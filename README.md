@@ -288,6 +288,25 @@ Do not enable `podman.socket` as well; both bind the same path. Check with `curl
 
 `node_exporter` listens unauthenticated on port 9100 on all interfaces of the host. On production networks, restrict access to port 9100 to the monitor's address using the host firewall. `prometheus-podman-exporter` listens the same way on port 9882 and exposes container names and resource use; restrict it too.
 
+## Splunk app
+
+[splunk/mdt_infra_monitoring/](splunk/mdt_infra_monitoring/) is the Splunk app **MDT Infrastructure
+Monitoring** on the Splunk host (`ibk-free-splunk`, 172.24.89.194). It holds the dashboards Network
+Overview (the start page), Switch Overview, Switch Details, Wireless Overview and Wireless Client
+Details, one XML file per dashboard in `default/data/ui/views/`. Network Overview is a classic
+Simple XML dashboard and needs the `network-diagram-viz` app; the others are Dashboard Studio.
+
+Deploy it with:
+
+```bash
+SPLUNK_AUTH=admin:<password> SPLUNKHOST_PASS=<sudo password> SPLUNKHOST_KEY=~/.ssh/<key> scripts/splunk-deploy
+```
+
+The script replaces the app's `default/` on the host and reloads the app, views and navigation
+without restarting Splunk. Edits made in Splunk Web land in the app's `local/` folder and would
+override the repo version, so the script refuses to deploy while `local/` holds any view: copy
+the edited view into the repo, delete it on the host, then deploy.
+
 ## Ports
 
 | Port | Service | Purpose |
