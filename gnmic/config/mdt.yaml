@@ -444,7 +444,8 @@ processors:
           rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(.devId != null)
           | entry({interface_name: .id}; {devId: .devId})
         elif ($ev.tags["subscription-name"] == "nx_mac_info") then
-          rows("MacAddressEntry-list\\.(?P<idx>[0-9]+)/")[]
+          # supeth1 is the supervisor (CPU): its own MACs, not learned ones
+          rows("MacAddressEntry-list\\.(?P<idx>[0-9]+)/")[] | select((.port // "") | test("^sup"; "i") | not)
           | entry({port: .port, vlan: .vlan, mac: .macAddress, type: .type}; {age: .age})
         elif ($ev.tags["subscription-name"] == "nx_if_stats" or $ev.tags["subscription-name"] == "nx_if_info") then
           ( $ev.values | to_entries

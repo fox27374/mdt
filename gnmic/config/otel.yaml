@@ -38,6 +38,9 @@ processors:
     metrics:
       metric:
         - 'not IsMatch(name, "^(cisco\\.)?(in-octets|out-octets|in-errors|out-errors|speed|one-minute|used-memory|total-memory|power-allocated|power-budget|consumed-poe-power|available-power|device-name_info|port_info)$")'
+      # The switch's own MACs (port CPU) are not learned addresses.
+      datapoint:
+        - 'metric.name == "cisco.port_info" and attributes["port"] == "CPU"'
 
   # Same label names as the gnmic data (source, interface_name), and only labels that identify a series:
   # values that change all the time (timestamps, counters as text) would start a new series on every change.
