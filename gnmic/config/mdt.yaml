@@ -163,6 +163,8 @@ subscriptions:
     paths:
       - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-switch/power-budget"
       - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-switch/power-allocated"
+      - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-switch/consumed-poe-power"
+      - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-switch/available-power"
     mode: stream
     stream-mode: sample
     sample-interval: 300s

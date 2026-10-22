@@ -37,7 +37,7 @@ processors:
     error_mode: ignore
     metrics:
       metric:
-        - 'not IsMatch(name, "^(cisco\\.)?(in-octets|out-octets|in-errors|out-errors|speed|one-minute|used-memory|total-memory|power-allocated|power-budget|device-name_info|port_info)$")'
+        - 'not IsMatch(name, "^(cisco\\.)?(in-octets|out-octets|in-errors|out-errors|speed|one-minute|used-memory|total-memory|power-allocated|power-budget|consumed-poe-power|available-power|device-name_info|port_info)$")'
 
   # Same label names as the gnmic data (source, interface_name), and only labels that identify a series:
   # values that change all the time (timestamps, counters as text) would start a new series on every change.
@@ -61,7 +61,7 @@ processors:
           - keep_keys(datapoint.attributes, ["source", "interface_name", "oper-status", "admin-status"]) where metric.name == "cisco.speed"
           - keep_keys(datapoint.attributes, ["source", "pool"]) where IsMatch(metric.name, "memory$")
           - keep_keys(datapoint.attributes, ["source"]) where metric.name == "cisco.one-minute"
-          - keep_keys(datapoint.attributes, ["source", "power-stack-name"]) where IsMatch(metric.name, "^cisco\\.power-")
+          - keep_keys(datapoint.attributes, ["source", "power-stack-name", "switch-num"]) where IsMatch(metric.name, "^cisco\\.(power-|consumed-poe-power|available-power)")
           - keep_keys(datapoint.attributes, ["source", "interface_name", "device-name", "port-id", "platform-name", "ip-address"]) where metric.name == "cisco.device-name_info"
           - keep_keys(datapoint.attributes, ["source", "mac", "port"]) where metric.name == "cisco.port_info"
 
