@@ -7,6 +7,9 @@ OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data",
 # The leading * lets a port view click ("1/0/5") match the full interface name.
 N, I = "$tk_node$", "*$tk_interface$"
 phys = "| `mdt_physical_ports`"
+# Catalyst uplink slots show up twice (GigabitEthernet1/1/4 and TenGigabitEthernet1/1/4); keep one per slot, the up one, else the faster.
+slots = (f"{phys} | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" "
+         "| sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path")
 
 # Base searches run once; chains post-process their results.
 bases = {
@@ -35,12 +38,12 @@ portview = open(sys.path[0] + "/portview.spl").read().strip().replace("\n", " ")
 # Time charts leave out the current 5-minute bucket: not every port has reported in it yet, so its sum is too low.
 chains = {  # name: (base, post-process)
     "ds_ports": ("ds_status", f"{phys} {portview}"),
-    "ds_ifaces": ("ds_status", f"{phys} | fields interface | sort interface"),
+    "ds_ifaces": ("ds_status", f"{slots} | fields interface"),
     "ds_nodata": ("ds_status", f"| stats count | where count=0 "
                   f"| eval Note=\"No telemetry for {N}. Switch Details covers switches that stream interface data.\" | fields Note"),
-    "ds_ports_up": ("ds_status", f"{phys} | stats count as total sum(oper_up) as up "
+    "ds_ports_up": ("ds_status", f"{slots} | stats count as total sum(oper_up) as up "
                     "| eval pct=round(up / total * 100, 0) | fields pct"),
-    "ds_ifaces_table": ("ds_status", f"{phys} | search interface=\"{I}\" "
+    "ds_ifaces_table": ("ds_status", f"{slots} | search interface=\"{I}\" "
                         f"| eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
                         f"| eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") "
                         f"| eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") "
