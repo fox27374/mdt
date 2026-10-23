@@ -563,18 +563,16 @@
    }
   },
   "viz_cpu": {
-   "type": "splunk.fillergauge",
+   "type": "splunk.markergauge",
    "title": "CPU %",
    "dataSources": {
     "primary": "ds_cpu"
    },
    "options": {
     "orientation": "horizontal",
-    "gaugeColor": "> value | rangeValue(levels)"
-   },
-   "context": {
-    "levels": [
+    "gaugeRanges": [
      {
+      "from": 0,
       "to": 70,
       "value": "#53a051"
      },
@@ -585,24 +583,23 @@
      },
      {
       "from": 90,
+      "to": 100,
       "value": "#dc4e41"
      }
     ]
    }
   },
   "viz_mem": {
-   "type": "splunk.fillergauge",
+   "type": "splunk.markergauge",
    "title": "Memory %",
    "dataSources": {
     "primary": "ds_mem"
    },
    "options": {
     "orientation": "horizontal",
-    "gaugeColor": "> value | rangeValue(levels)"
-   },
-   "context": {
-    "levels": [
+    "gaugeRanges": [
      {
+      "from": 0,
       "to": 70,
       "value": "#53a051"
      },
@@ -613,24 +610,23 @@
      },
      {
       "from": 90,
+      "to": 100,
       "value": "#dc4e41"
      }
     ]
    }
   },
   "viz_poe": {
-   "type": "splunk.fillergauge",
+   "type": "splunk.markergauge",
    "title": "PoE drawn (% of PoE capacity)",
    "dataSources": {
     "primary": "ds_poe_gauge"
    },
    "options": {
     "orientation": "horizontal",
-    "gaugeColor": "> value | rangeValue(levels)"
-   },
-   "context": {
-    "levels": [
+    "gaugeRanges": [
      {
+      "from": 0,
       "to": 70,
       "value": "#53a051"
      },
@@ -641,6 +637,7 @@
      },
      {
       "from": 90,
+      "to": 100,
       "value": "#dc4e41"
      }
     ]
@@ -652,14 +649,20 @@
    }
   },
   "viz_ports_up": {
-   "type": "splunk.fillergauge",
+   "type": "splunk.markergauge",
    "title": "Ports up %",
    "dataSources": {
     "primary": "ds_ports_up"
    },
    "options": {
     "orientation": "horizontal",
-    "gaugeColor": "#708794"
+    "gaugeRanges": [
+     {
+      "from": 0,
+      "to": 100,
+      "value": "#708794"
+     }
+    ]
    }
   },
   "viz_throughput": {

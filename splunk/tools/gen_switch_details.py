@@ -46,7 +46,7 @@ chains = {  # name: (base, post-process)
                         f"| eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) "
                         f"| rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" "
                         f"| table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""),
-    # The filler gauge has a fixed 0-100 scale, so it shows percent of PoE capacity (drawn + free).
+    # The gauge has a fixed 0-100 scale, so it shows percent of PoE capacity (drawn + free).
     "ds_poe_gauge": ("ds_poe", "| eval pct=round(used / (used + free) * 100, 0) | fields pct"),
     "ds_throughput": ("ds_rates", "| bin _time span=5m | where _time + 300 <= now() | stats avg(in_bps) as in avg(out_bps) as out by _time interface "
                       "| stats sum(in) as in sum(out) as out by _time "
@@ -64,13 +64,12 @@ bases = {k: re.sub(r"(^|\[)`(" + GEN + ")", r"\1| `\2", q) for k, q in bases.ite
 dataSources = {k: {"type": "ds.search", "name": k[3:], "options": {"query": q}} for k, q in bases.items()}
 dataSources.update({k: {"type": "ds.chain", "name": k[3:], "options": {"extend": b, "query": q}} for k, (b, q) in chains.items()})
 
-# Filler gauge on a 0-100 scale; green / yellow / red from 70 and 90 % unless a fixed colour is given.
+# Marker gauge on a 0-100 scale; green / yellow / red bands from 70 and 90 % unless a fixed colour is given.
 def gauge(title, d, color=None):
-    v = {"type": "splunk.fillergauge", "title": title, "dataSources": {"primary": d},
-         "options": {"orientation": "horizontal", "gaugeColor": color or "> value | rangeValue(levels)"}}
-    if not color:
-        v["context"] = {"levels": [{"to": 70, "value": "#53a051"}, {"from": 70, "to": 90, "value": "#f8be34"}, {"from": 90, "value": "#dc4e41"}]}
-    return v
+    ranges = ([{"from": 0, "to": 100, "value": color}] if color else
+              [{"from": 0, "to": 70, "value": "#53a051"}, {"from": 70, "to": 90, "value": "#f8be34"}, {"from": 90, "to": 100, "value": "#dc4e41"}])
+    return {"type": "splunk.markergauge", "title": title, "dataSources": {"primary": d},
+            "options": {"orientation": "horizontal", "gaugeRanges": ranges}}
 
 def chart(kind, title, d, **opts):
     return {"type": kind, "title": title, "dataSources": {"primary": d}, "options": opts, "showProgressBar": True}
