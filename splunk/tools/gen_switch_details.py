@@ -48,7 +48,7 @@ chains = {  # name: (base, post-process)
                         f"| eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) "
                         f"| eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) "
                         # Uplinks learn hundreds of MACs; list up to 5, count beyond that.
-                        f"| eval MACs=case(macs > 5, macs.\" MACs\", macs > 0, mac_list) "
+                        f"| eval MACs=case(macs > 5, macs.\" MACs\", macs > 0, mac_list) | fillnull value=\"\" \"Down for\" \"CDP neighbour\" MACs "
                         f"| rename interface as Interface, neighbour as \"CDP neighbour\" "
                         f"| table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"),
     # The gauge has a fixed 0-100 scale, so it shows percent of PoE capacity (drawn + free).
