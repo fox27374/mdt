@@ -11,9 +11,11 @@ phys = "| `mdt_physical_ports`"
 # Base searches run once; chains post-process their results.
 bases = {
     "ds_nodes": "`mdt_nodes`",
-    # Every interface with state and CDP neighbour; chains filter to front-panel ports.
+    # Every interface with state, CDP neighbour and learned MACs; chains filter to front-panel ports.
     "ds_status": f"`mdt_if_status({N})` | join type=left node interface [`mdt_cdp({N})` "
-                 f"| stats values(neighbour) as neighbour values(remote_interface) as remote_interface by node interface]",
+                 f"| stats values(neighbour) as neighbour by node interface] "
+                 f"| join type=left node interface [`mdt_mac({N},*)` | eval entry=mac.if(vlan==\"-\", \"\", \" (VLAN \".vlan.\")\") "
+                 f"| stats dc(mac) as macs values(entry) as mac_list by node interface]",
     # Per-minute rates of front-panel ports (no double counting via port-channels or VLANs), with link speed.
     "ds_rates": f"`mdt_if_counters({N},{I})` {phys} | `mdt_if_rates` "
                 f"| join type=left node interface [`mdt_if_status({N})` | fields node interface speed] "
@@ -21,7 +23,8 @@ bases = {
     "ds_poe": f"`mdt_poe({N})`",
     "ds_cpu": f"`mdt_cpu({N})` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)",
     "ds_mem": f"`mdt_mem({N})` | stats latest(mem) as mem | eval mem=round(mem, 0)",
-    "ds_mac": f"`mdt_mac({N},{I})` | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node",
+    # MACs on port-channels and VLANs; the Interfaces table shows those on front-panel ports.
+    "ds_mac": f"`mdt_mac({N},{I})` | where NOT (`mdt_is_physical`) | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node",
     "ds_logs": f"index=cisco_syslog host=\"{N}\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) "
                f"| table _time severity message | sort - _time | head 200",
 }
@@ -44,8 +47,10 @@ chains = {  # name: (base, post-process)
                         # "2d 15h 25m": zero parts left out, minutes shown when nothing else is
                         f"| eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) "
                         f"| eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) "
-                        f"| rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" "
-                        f"| table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""),
+                        # Uplinks learn hundreds of MACs; list up to 5, count beyond that.
+                        f"| eval MACs=case(macs > 5, macs.\" MACs\", macs > 0, mac_list) "
+                        f"| rename interface as Interface, neighbour as \"CDP neighbour\" "
+                        f"| table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"),
     # The gauge has a fixed 0-100 scale, so it shows percent of PoE capacity (drawn + free).
     "ds_poe_gauge": ("ds_poe", "| eval pct=round(used / (used + free) * 100, 0) | fields pct"),
     "ds_throughput": ("ds_rates", "| bin _time span=5m | where _time + 300 <= now() | stats avg(in_bps) as in avg(out_bps) as out by _time interface "
@@ -102,7 +107,7 @@ viz = {
     "viz_top_errors": {**chart("splunk.bar", "Top 5 interfaces with errors; click to filter", "ds_top_errors", stackMode="stacked", legendDisplay="bottom"),
                        "eventHandlers": filter_on_click},
     "viz_ifaces": chart("splunk.table", "Interfaces", "ds_ifaces_table", count=100),
-    "viz_mac": chart("splunk.table", "MAC addresses", "ds_mac", count=50),
+    "viz_mac": chart("splunk.table", "MAC addresses on port-channels and VLANs", "ds_mac", count=50),
     "viz_logs": chart("splunk.table", "Syslog", "ds_logs", count=50),
 }
 

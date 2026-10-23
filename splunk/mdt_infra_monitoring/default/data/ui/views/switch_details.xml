@@ -747,7 +747,7 @@
   },
   "viz_mac": {
    "type": "splunk.table",
-   "title": "MAC addresses",
+   "title": "MAC addresses on port-channels and VLANs",
    "dataSources": {
     "primary": "ds_mac"
    },
@@ -780,7 +780,7 @@
    "type": "ds.search",
    "name": "status",
    "options": {
-    "query": "| `mdt_if_status($tk_node$)` | join type=left node interface [| `mdt_cdp($tk_node$)` | stats values(neighbour) as neighbour values(remote_interface) as remote_interface by node interface]"
+    "query": "| `mdt_if_status($tk_node$)` | join type=left node interface [| `mdt_cdp($tk_node$)` | stats values(neighbour) as neighbour by node interface] | join type=left node interface [| `mdt_mac($tk_node$,*)` | eval entry=mac.if(vlan==\"-\", \"\", \" (VLAN \".vlan.\")\") | stats dc(mac) as macs values(entry) as mac_list by node interface]"
    }
   },
   "ds_rates": {
@@ -815,7 +815,7 @@
    "type": "ds.search",
    "name": "mac",
    "options": {
-    "query": "| `mdt_mac($tk_node$,*$tk_interface$)` | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node"
+    "query": "| `mdt_mac($tk_node$,*$tk_interface$)` | where NOT (`mdt_is_physical`) | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node"
    }
   },
   "ds_logs": {
@@ -862,7 +862,7 @@
    "name": "ifaces_table",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | search interface=\"*$tk_interface$\" | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) | rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""
+    "query": "| `mdt_physical_ports` | search interface=\"*$tk_interface$\" | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) | eval MACs=case(macs > 5, macs.\" MACs\", macs > 0, mac_list) | rename interface as Interface, neighbour as \"CDP neighbour\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"
    }
   },
   "ds_poe_gauge": {
