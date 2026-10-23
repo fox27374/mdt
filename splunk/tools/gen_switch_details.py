@@ -41,7 +41,9 @@ chains = {  # name: (base, post-process)
                         f"| eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
                         f"| eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") "
                         f"| eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") "
-                        f"| eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), tostring(round(now() - last_change), \"duration\"), null()) "
+                        # "2d 15h 25m": zero parts left out, minutes shown when nothing else is
+                        f"| eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) "
+                        f"| eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) "
                         f"| rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" "
                         f"| table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""),
     # The filler gauge has a fixed 0-100 scale, so it shows percent of PoE capacity (drawn + free) and the watts go in a text tile.
