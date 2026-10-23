@@ -196,7 +196,9 @@ subscriptions:
 
   xe_mac_info:
     paths:
-      - "rfc7951:/Cisco-IOS-XE-matm-oper:matm-oper-data/matm-table/matm-mac-entry"
+      # The port leaf, not the whole entry: as an event per MAC its keys (mac, vlan) become labels
+      # and the port a string value, which the Prometheus output keeps (strings-as-labels).
+      - "rfc7951:/Cisco-IOS-XE-matm-oper:matm-oper-data/matm-table/matm-mac-entry/port"
     mode: stream
     stream-mode: sample
     sample-interval: 300s
@@ -406,6 +408,11 @@ processors:
     event-drop:
       condition: '.tags.interface_name != null and (.tags.interface_name | test("^(vlan|loopback|tunnel|app|nve|po|bluetooth|mgmt|GigabitEthernet0/0$)"; "i"))'
 
+  # The switch's own MACs (port CPU) are not learned addresses.
+  drop-xe-mac-cpu:
+    event-drop:
+      condition: '.tags["subscription-name"] == "xe_mac_info" and (.values | to_entries | any(.value == "CPU"))'
+
   delete-nx-cdp-fields:
     event-delete:
       value-names:
@@ -483,5 +490,6 @@ outputs:
     event-processors:
       - nx-normalize-interfaces
       - drop-if-stats-interfaces
+      - drop-xe-mac-cpu
       - rename-metrics
 
