@@ -19,8 +19,8 @@ bases = {
                 f"| join type=left node interface [`mdt_if_status({N})` | fields node interface speed] "
                 f"| eval util=round(max(in_bps, out_bps) / speed * 100, 4)",
     "ds_poe": f"`mdt_poe({N})`",
-    "ds_cpu": f"`mdt_cpu({N})` | timechart span=1m avg(cpu) as \"CPU %\" avg(load) as \"Load average (1 min, NX-OS)\"",
-    "ds_mem": f"`mdt_mem({N})` | timechart span=1m avg(mem) as \"Memory %\"",
+    "ds_cpu": f"`mdt_cpu({N})` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)",
+    "ds_mem": f"`mdt_mem({N})` | stats latest(mem) as mem | eval mem=round(mem, 0)",
     "ds_mac": f"`mdt_mac({N},{I})` | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node",
     "ds_logs": f"index=cisco_syslog host=\"{N}\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) "
                f"| table _time severity message | sort - _time | head 200",
@@ -36,7 +36,7 @@ chains = {  # name: (base, post-process)
     "ds_nodata": ("ds_status", f"| stats count | where count=0 "
                   f"| eval Note=\"No telemetry for {N}. Switch Details covers switches that stream interface data.\" | fields Note"),
     "ds_ports_up": ("ds_status", f"{phys} | stats count as total sum(oper_up) as up "
-                    "| eval Ports=up.\" of \".total.\" (\".round(up / total * 100, 0).\"%)\" | fields Ports"),
+                    "| eval pct=round(up / total * 100, 0) | fields pct"),
     "ds_ifaces_table": ("ds_status", f"{phys} | search interface=\"{I}\" "
                         f"| eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
                         f"| eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") "
@@ -46,9 +46,8 @@ chains = {  # name: (base, post-process)
                         f"| eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) "
                         f"| rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" "
                         f"| table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""),
-    # The filler gauge has a fixed 0-100 scale, so it shows percent of PoE capacity (drawn + free) and the watts go in a text tile.
+    # The filler gauge has a fixed 0-100 scale, so it shows percent of PoE capacity (drawn + free).
     "ds_poe_gauge": ("ds_poe", "| eval pct=round(used / (used + free) * 100, 0) | fields pct"),
-    "ds_poe_watts": ("ds_poe", "| eval PoE=used.\" W drawn, \".free.\" W free\" | fields PoE"),
     "ds_throughput": ("ds_rates", "| bin _time span=5m | where _time + 300 <= now() | stats avg(in_bps) as in avg(out_bps) as out by _time interface "
                       "| stats sum(in) as in sum(out) as out by _time "
                       "| eval \"In (Mb/s)\"=round(in / 1000000, 2), \"Out (Mb/s)\"=round(out / 1000000, 2) | fields - in out"),
@@ -65,11 +64,13 @@ bases = {k: re.sub(r"(^|\[)`(" + GEN + ")", r"\1| `\2", q) for k, q in bases.ite
 dataSources = {k: {"type": "ds.search", "name": k[3:], "options": {"query": q}} for k, q in bases.items()}
 dataSources.update({k: {"type": "ds.chain", "name": k[3:], "options": {"extend": b, "query": q}} for k, (b, q) in chains.items()})
 
-def single(title, d, unit=""):
-    o = {"majorColor": "#708794", "sparklineDisplay": "off", "trendDisplay": "off"}
-    if unit:
-        o.update(unit=unit, unitPosition="after")
-    return {"type": "splunk.singlevalue", "title": title, "dataSources": {"primary": d}, "options": o}
+# Filler gauge on a 0-100 scale; green / yellow / red from 70 and 90 % unless a fixed colour is given.
+def gauge(title, d, color=None):
+    v = {"type": "splunk.fillergauge", "title": title, "dataSources": {"primary": d},
+         "options": {"orientation": "horizontal", "gaugeColor": color or "> value | rangeValue(levels)"}}
+    if not color:
+        v["context"] = {"levels": [{"to": 70, "value": "#53a051"}, {"from": 70, "to": 90, "value": "#f8be34"}, {"from": 90, "value": "#dc4e41"}]}
+    return v
 
 def chart(kind, title, d, **opts):
     return {"type": kind, "title": title, "dataSources": {"primary": d}, "options": opts, "showProgressBar": True}
@@ -91,15 +92,10 @@ viz = {
                   "eventHandlers": [{"type": "drilldown.setToken", "options": {"tokens": [{"token": "tk_interface", "key": "value"}]}}]},
     "viz_nodata": {"type": "splunk.table", "dataSources": {"primary": "ds_nodata"}, "options": {},
                    "containerOptions": {"visibility": {"hideWhenNoData": True}}},
-    "viz_ports_up": single("Ports up", "ds_ports_up"),
-    "viz_poe_watts": {**single("PoE", "ds_poe_watts"), "containerOptions": {"visibility": {"hideWhenNoData": True}}},
-    "viz_poe": {"type": "splunk.fillergauge", "title": "PoE drawn (% of PoE capacity)", "dataSources": {"primary": "ds_poe_gauge"},
-                "options": {"orientation": "horizontal", "gaugeColor": "> value | rangeValue(poeColors)"},
-                "context": {"poeColors": [{"to": 70, "value": "#53a051"}, {"from": 70, "to": 90, "value": "#f8be34"}, {"from": 90, "value": "#dc4e41"}]},
-                "containerOptions": {"visibility": {"hideWhenNoData": True}}},
-    # Points arrive every few minutes; connect them so the 1-minute buckets in between don't break the line.
-    "viz_cpu": chart("splunk.line", "CPU", "ds_cpu", nullValueDisplay="connect", legendDisplay="off"),
-    "viz_mem": chart("splunk.line", "Memory", "ds_mem", yAxisMax=100, yAxisMin=0, nullValueDisplay="connect", legendDisplay="off"),
+    "viz_cpu": gauge("CPU %", "ds_cpu"),
+    "viz_mem": gauge("Memory %", "ds_mem"),
+    "viz_poe": {**gauge("PoE drawn (% of PoE capacity)", "ds_poe_gauge"), "containerOptions": {"visibility": {"hideWhenNoData": True}}},
+    "viz_ports_up": gauge("Ports up %", "ds_ports_up", "#708794"),
     "viz_throughput": chart("splunk.line", "Throughput, sum of selected ports (5 min average)", "ds_throughput"),
     "viz_errors": chart("splunk.column", "Errors per 5 min (selected interfaces)", "ds_errors", stackMode="stacked"),
     "viz_top_util": {**chart("splunk.bar", "Top 5 interfaces by peak utilization % (in or out); click to filter", "ds_top_util", legendDisplay="off"),
@@ -129,8 +125,7 @@ inputs = {
 
 rows = [  # (item, x, y, w, h)
     ("viz_nodata", 0, 0, 1440, 80),
-    ("viz_ports_up", 0, 80, 280, 200), ("viz_poe_watts", 280, 80, 260, 200), ("viz_poe", 540, 80, 300, 200),
-    ("viz_cpu", 840, 80, 300, 200), ("viz_mem", 1140, 80, 300, 200),
+    ("viz_cpu", 0, 80, 360, 200), ("viz_mem", 360, 80, 360, 200), ("viz_poe", 720, 80, 360, 200), ("viz_ports_up", 1080, 80, 360, 200),
     ("viz_top_util", 0, 280, 720, 260), ("viz_top_errors", 720, 280, 720, 260),
     ("viz_ports", 0, 540, 1440, 170),
     ("viz_throughput", 0, 710, 720, 320), ("viz_errors", 720, 710, 720, 320),
