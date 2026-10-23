@@ -299,6 +299,10 @@ Overview (the start page), Switch Overview, Switch Details, Wireless Overview an
 Details, one XML file per dashboard in `default/data/ui/views/`. Network Overview is a classic
 Simple XML dashboard and needs the `network-diagram-viz` app; the others are Dashboard Studio.
 
+Switch Details is generated: edit [splunk/tools/gen_switch_details.py](splunk/tools/gen_switch_details.py)
+(and `portview.spl`, the port view search) and run `python3 splunk/tools/gen_switch_details.py`,
+which rewrites `switch_details.xml`. Its searches use the macros in `default/macros.conf`.
+
 Deploy it with:
 
 ```bash

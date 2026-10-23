@@ -1,846 +1,1072 @@
 <dashboard version="2" theme="dark">
     <label>Switch Details</label>
-    <description>Cisco Catalyst Switch Details</description>
+    <description>One switch: ports, CPU, memory, PoE, traffic, errors, CDP, MAC and syslog</description>
     <definition><![CDATA[
 {
-	"title": "Switch Details",
-	"description": "Cisco Catalyst Switch Details",
-	"inputs": {
-		"input_NEbf0hSH": {
-			"context": {
-				"formattedConfig": {
-					"number": {
-						"prefix": ""
-					}
-				},
-				"formattedStatics": ">statics | formatByType(formattedConfig)",
-				"label": ">primary | seriesByName(\"node\") | renameSeries(\"label\") | formatByType(formattedConfig)",
-				"statics": [
-					[
-						"All"
-					],
-					[
-						"*"
-					]
-				],
-				"value": ">primary | seriesByName(\"values(node)\") | renameSeries(\"value\") | formatByType(formattedConfig)"
-			},
-			"dataSources": {
-				"primary": "ds_eyCMvc7e"
-			},
-			"options": {
-				"defaultValue": "*",
-				"items": ">frame(label, value) | prepend(formattedStatics) | objects()",
-				"token": "tk_node"
-			},
-			"title": "Node",
-			"type": "input.dropdown"
-		},
-		"input_global_trp": {
-			"options": {
-				"defaultValue": "-60m@m,now",
-				"token": "global_time"
-			},
-			"title": "Global Time Range",
-			"type": "input.timerange"
-		},
-		"input_rtCQQP1Y": {
-			"context": {
-				"formattedConfig": {
-					"number": {
-						"prefix": ""
-					}
-				},
-				"formattedStatics": ">statics | formatByType(formattedConfig)",
-				"label": ">primary | seriesByName(\"interface\") | renameSeries(\"label\") | formatByType(formattedConfig)",
-				"statics": [
-					[
-						"All"
-					],
-					[
-						"*"
-					]
-				],
-				"value": ">primary | seriesByName(\"interface\") | renameSeries(\"value\") | formatByType(formattedConfig)"
-			},
-			"dataSources": {
-				"primary": "ds_WOrcLwTK"
-			},
-			"options": {
-				"items": ">frame(label, value) | prepend(formattedStatics) | objects()",
-				"token": "tk_interface"
-			},
-			"title": "Interface",
-			"type": "input.dropdown"
-		}
-	},
-	"defaults": {
-		"dataSources": {
-			"ds.search": {
-				"options": {
-					"queryParameters": {
-						"earliest": "$global_time.earliest$",
-						"latest": "$global_time.latest$"
-					}
-				}
-			}
-		},
-		"visualizations": {
-			"global": {
-				"showProgressBar": true
-			}
-		}
-	},
-	"visualizations": {
-		"viz_8hHYnYfH": {
-			"containerOptions": {},
-			"dataSources": {
-				"primary": "ds_suvdxEwm"
-			},
-			"eventHandlers": [
-				{
-					"options": {
-						"newTab": false,
-						"type": "auto"
-					},
-					"type": "drilldown.linkToSearch"
-				}
-			],
-			"options": {
-				"columnFormat": {
-					"_time": {
-						"width": 30
-					},
-					"host": {
-						"width": 30
-					}
-				},
-				"tableFormat": {
-					"align": "> table | type() | matchValue(tableAlignByType)"
-				}
-			},
-			"showLastUpdated": false,
-			"showProgressBar": true,
-			"title": "Logs",
-			"type": "splunk.table"
-		},
-		"viz_OwL6aVbb": {
-			"dataSources": {
-				"primary": "ds_OpFYmSKr"
-			},
-			"options": {
-				"count": 100,
-				"dataOverlayMode": "none",
-				"drilldown": "none",
-				"showInternalFields": false,
-				"showRowNumbers": false,
-				"headerVisibility": "none"
-			},
-			"title": "Inactive Ports",
-			"type": "splunk.table"
-		},
-		"viz_SkkwkLpV": {
-			"containerOptions": {},
-			"dataSources": {
-				"primary": "ds_TXiJSqLT"
-			},
-			"eventHandlers": [
-				{
-					"type": "drilldown.linkToDashboard",
-					"options": {
-						"app": "search",
-						"dashboard": "port_details",
-						"newTab": true,
-						"tokens": [
-							{
-								"token": "tk_interface",
-								"value": "trellis.value"
-							},
-							{
-								"token": "tk_node",
-								"value": "$tk_node$"
-							}
-						]
-					}
-				}
-			],
-			"options": {
-				"splitByLayout": "trellis",
-				"trellisColumns": 4,
-				"trellisPageCount": 60
-			},
-			"showLastUpdated": false,
-			"showProgressBar": true,
-			"title": "Interface Utilization",
-			"type": "splunk.area"
-		},
-		"viz_WctDbGCE": {
-			"containerOptions": {},
-			"dataSources": {
-				"primary": "ds_8GAC6F3G"
-			},
-			"options": {
-				"nullValueDisplay": "connect"
-			},
-			"showLastUpdated": false,
-			"showProgressBar": true,
-			"title": "CPU Usage [%]",
-			"type": "splunk.line"
-		},
-		"viz_k0D28f6E": {
-			"dataSources": {
-				"primary": "ds_sXhZGdAg"
-			},
-			"options": {
-				"count": 20,
-				"dataOverlayMode": "none",
-				"drilldown": "none",
-				"showInternalFields": false,
-				"showRowNumbers": false
-			},
-			"title": "CDP",
-			"type": "splunk.table"
-		},
-		"viz_oDwrvkVT": {
-			"containerOptions": {
-				"visibility": {
-					"hideWhenNoData": true
-				}
-			},
-			"dataSources": {
-				"primary": "ds_lc7JT0KR"
-			},
-			"options": {
-				"collapseThreshold": 0.01,
-				"seriesColors": [
-					"#DD9900",
-					"#00CDAF",
-					"#7B56DB",
-					"#009CEB",
-					"#FF677B",
-					"#CB2196",
-					"#813193",
-					"#0051B5",
-					"#008C80",
-					"#99B100",
-					"#FFA476",
-					"#FF6ACE",
-					"#AE8CFF",
-					"#00689D",
-					"#00490A",
-					"#465D00",
-					"#9D6300",
-					"#F6540B",
-					"#FF969E",
-					"#E47BFE"
-				],
-				"seriesColorsByField": {
-					"Avg": "#1e93c6",
-					"ibk-lab-sw05": "#1e93c6",
-					"ibk-lab-sw11": "#f2b827",
-					"ibk-lab-sw12": "#d6563c",
-					"ibk-lab-sw13": "#6a5c9e"
-				},
-				"showDonutHole": true,
-				"labelDisplay": "off"
-			},
-			"title": "PoE",
-			"type": "splunk.pie"
-		},
-		"viz_s75NIQMk": {
-			"containerOptions": {},
-			"dataSources": {
-				"primary": "ds_OlLuCBPe"
-			},
-			"options": {
-				"nullValueDisplay": "connect",
-				"seriesColors": [
-					"#DD9900",
-					"#7B56DB",
-					"#009CEB",
-					"#00CDAF",
-					"#FF677B",
-					"#CB2196",
-					"#813193",
-					"#0051B5",
-					"#008C80",
-					"#99B100",
-					"#FFA476",
-					"#FF6ACE",
-					"#AE8CFF",
-					"#00689D",
-					"#00490A",
-					"#465D00",
-					"#9D6300",
-					"#F6540B",
-					"#FF969E",
-					"#E47BFE"
-				]
-			},
-			"showLastUpdated": false,
-			"showProgressBar": true,
-			"title": "Memory Usage [%]",
-			"type": "splunk.line"
-		},
-		"viz_wWBlYuIO": {
-			"context": {
-				"convertedColorRange": [
-					{
-						"from": 100,
-						"value": "#dc4e41"
-					},
-					{
-						"from": 70,
-						"to": 100,
-						"value": "#f1813f"
-					},
-					{
-						"from": 30,
-						"to": 70,
-						"value": "#f8be34"
-					},
-					{
-						"from": 0,
-						"to": 30,
-						"value": "#0877a6"
-					},
-					{
-						"to": 0,
-						"value": "#53a051"
-					}
-				]
-			},
-			"dataSources": {
-				"primary": "ds_1uZj8cxl"
-			},
-			"options": {
-				"majorColor": "#708794",
-				"numberPrecision": 0,
-				"shouldUseThousandSeparators": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
-				"unitPosition": "after"
-			},
-			"title": "Used Ports",
-			"type": "splunk.singlevalue"
-		},
-		"viz_xk020SNL": {
-			"context": {
-				"convertedColorRange": [
-					{
-						"from": 100,
-						"value": "#dc4e41"
-					},
-					{
-						"from": 70,
-						"to": 100,
-						"value": "#f1813f"
-					},
-					{
-						"from": 30,
-						"to": 70,
-						"value": "#f8be34"
-					},
-					{
-						"from": 0,
-						"to": 30,
-						"value": "#0877a6"
-					},
-					{
-						"to": 0,
-						"value": "#53a051"
-					}
-				]
-			},
-			"dataSources": {
-				"primary": "ds_ARMGxku5"
-			},
-			"options": {
-				"majorColor": "#708794",
-				"shouldUseThousandSeparators": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
-				"unit": "%",
-				"unitPosition": "after"
-			},
-			"title": "Used Ports %",
-			"type": "splunk.singlevalue"
-		}
-	},
-	"dataSources": {
-		"ds_1uZj8cxl": {
-			"name": "Single value search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status \n    WHERE index=\"cisco_metrics\" node=$tk_node$ interface=* \n    BY interface node\n| stats \n    count AS total,\n    count(eval(oper_status=1)) AS total_up\n    BY node\n| eval port_util = round(total_up/total*100, 0)\n| fields - node - port_util - total",
-				"queryParameters": {
-					"earliest": "-60m@m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_3AOd70aN": {
-			"name": "OUT Error Rate search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.out_errors\") as out_errors WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(out_errors) as prev_out_errors by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_out_errors = out_errors - prev_out_errors\n| where delta_time_sec > 0\n| timechart span=5m latest(delta_out_errors) as \"Outbound Error rate\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_49oa7jGq": {
-			"name": "Table search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ interface=* BY interface node\n| join node\n    [| mstats latest(\"if-stats.oper_status\") AS oper_status WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ interface=* BY interface node\n    | where oper_status = 0 \n    | stats count(oper_status) as total_down by node\n    ]\n| stats count as total by total_down, node\n| eval perc_down=round(total_down/total*100, 0)\n| fields node total total_down perc_down",
-				"queryParameters": {
-					"earliest": "-24h@h",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_5PRbvZYc": {
-			"name": "Memory Usage ___ search",
-			"options": {
-				"query": "| mstats avg(\"mem-stats.usage\") prestats=true WHERE \"index\"=\"cisco_metrics\" span=10s BY node\n| timechart avg(\"mem-stats.usage\") span=10s useother=false BY node WHERE max in top5\n| fields - _span*",
-				"queryParameters": {
-					"earliest": "-1h",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_6DX8nvsd": {
-			"name": "Inbount Error Rate search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.in_errors\") as in_errors WHERE index=\"cisco_metrics\" node=ibk-lab-sw05 interface=TenGigabitEthernet1/1/4 span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(in_errors) as prev_in_errors by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_in_errors = in_errors - prev_in_errors\n| stats latest(delta_in_errors)",
-				"queryParameters": {
-					"earliest": "-60m@m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_8GAC6F3G": {
-			"name": "CPU Usage search",
-			"options": {
-				"query": "| mstats avg(\"cpu-util.usage\") prestats=true WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ span=10s BY node\n| timechart avg(\"cpu-util.usage\") span=10s useother=false BY node WHERE max in top10\n| fields - _span*",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_8cyS0c8z": {
-			"name": "Logs 2 search",
-			"options": {
-				"extend": "ds_suvdxEwm",
-				"query": "| fieldsummary maxvals=10"
-			},
-			"type": "ds.chain"
-		},
-		"ds_9GVn3Mpt": {
-			"name": "node_interface_top10",
-			"options": {
-				"query": "| mstats avg(\"if-stats.rx_kbps\") prestats=true WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=10s BY node interface \n| eval node_interface = node.\":\".interface\n| timechart avg(\"if-stats.rx_kbps\") span=10s useother=f by node_interface where max in top10\n| fields - _span*",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_ARMGxku5": {
-			"name": "Ports Used search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status \n    WHERE index=\"cisco_metrics\" node=$tk_node$ interface=* \n    BY interface node\n| stats \n    count AS total,\n    count(eval(oper_status=1)) AS total_up\n    BY node\n| eval port_util = round(total_up/total*100, 0)\n| fields - node - total_up - total",
-				"queryParameters": {
-					"earliest": "-60m@m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_BvOlTRz9": {
-			"name": "Inbound Utilisation",
-			"options": {
-				"query": "| mstats latest(\"if-stats.in_octets\") as in_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(in_octets) as prev_in_octets by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_in_octets = in_octets - prev_in_octets\n| where delta_time_sec > 0\n| eval in_bps = round((delta_in_octets*8)/delta_time_sec)\n| eval in_util_perc = round((in_bps/speed)*100, 2)\n| where in_util_perc < 50\n| timechart span=5m latest(in_util_perc) as \"Inbound Utilization (%)\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_FGDngMqx": {
-			"name": "Outbound Utilization",
-			"options": {
-				"query": "| mstats latest(\"if-stats.out_octets\") as out_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(out_octets) as prev_out_octets by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_out_octets = out_octets - prev_out_octets\n| where delta_time_sec > 0\n| eval out_bps = round((delta_out_octets*8)/delta_time_sec)\n| eval out_util_perc = round((out_bps/speed)*100, 2)\n| where out_util_perc < 50\n| timechart span=5m latest(out_util_perc) as \"Outbound Utilization (%)\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_GB7QFbed": {
-			"name": "Inbound Utilization _ search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.in_octets\") as in_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(in_octets) as prev_in_octets by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_in_octets = in_octets - prev_in_octets\n| where delta_time_sec > 0\n| eval in_bps = round((delta_in_octets*8)/delta_time_sec)\n| eval in_util_perc = round((in_bps/speed)*100, 2)\n| stats latest(in_util_perc)",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_OlLuCBPe": {
-			"name": "Memory Usage search",
-			"options": {
-				"query": "| mstats avg(\"mem-stats.usage\") prestats=true WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ span=10s BY node\n| timechart avg(\"mem-stats.usage\") span=10s useother=false BY node WHERE max in top10\n| fields - _span*",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_OpFYmSKr": {
-			"name": "Inactive Ports search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status, latest(\"if-stats.last_change\") AS last_change WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ interface=* BY interface node\n| where oper_status = 0\n| eval time_difference = now() - last_change\n| eval days = floor(time_difference / 86400)\n| eval hours = floor((time_difference % 86400) / 3600)\n| eval disconnected = days.\"d \".hours.\"h\"\n| table interface, disconnected",
-				"queryParameters": {
-					"earliest": "-10m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_TXiJSqLT": {
-			"name": "Interface Utilization search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.in_octets\") as in_octets latest(\"if-stats.out_octets\") as out_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=$tk_node$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(in_octets) as prev_in_octets by node interface\n| streamstats current=f latest(out_octets) as prev_out_octets by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_in_octets = in_octets - prev_in_octets\n| eval delta_out_octets = out_octets - prev_out_octets\n| where delta_time_sec > 0\n| eval in_bps = round((delta_in_octets*8)/delta_time_sec)\n| eval in_util_perc = (round((in_bps/speed)*100, 2))\n| eval out_bps = round((delta_out_octets*8)/delta_time_sec)\n| eval out_util_perc = (round((out_bps/speed)*100, 2)) * -1\n| timechart span=5m useother=false limit=0 latest(in_util_perc) as \"Inbound Utilization (%)\" latest(out_util_perc) as \"Outbound Utilization (%)\" by interface",
-				"queryParameters": {
-					"earliest": "-60m@m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_WOrcLwTK": {
-			"name": "interface_names",
-			"options": {
-				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status WHERE \"index\"=\"cisco_metrics\" node=$tk_node$ interface=* BY interface node\n| where oper_status = 1 | sort interface",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_XR3YtZbo": {
-			"name": "OUT Single value search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.out_octets\") as out_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(out_octets) as prev_out_octets by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_out_octets = out_octets - prev_out_octets\n| where delta_time_sec > 0\n| eval out_bps = round((delta_out_octets*8)/delta_time_sec)\n| eval out_util_perc = round((out_bps/speed)*100, 2)\n| stats latest(out_util_perc)",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_aT0d2Bvk": {
-			"name": "Total Ports search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.oper_status\") AS oper_status\n  WHERE index=\"cisco_metrics\" node=$tk_node$\n  BY interface node\n| stats count AS total",
-				"queryParameters": {
-					"earliest": "-60m@m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_amK7UHGs": {
-			"name": "IN Error Rate search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.in_errors\") as in_errors WHERE index=\"cisco_metrics\" node=$tk_node$ interface=$tk_interface$ span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(in_errors) as prev_in_errors by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_in_errors = in_errors - prev_in_errors\n| where delta_time_sec > 0\n| timechart span=5m latest(delta_in_errors) as \"Inbound Error rate\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_eyCMvc7e": {
-			"name": "node_names",
-			"options": {
-				"query": "| mcatalog values(node) WHERE metric_name=cpu-util.usage AND index=cisco_metrics GROUPBY node",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_gnfQ3bvG": {
-			"name": "VLANs search",
-			"options": {
-				"query": "index=\"cisco_events\" event_group=mac node=ibk-lab-sw05 interface=Gi1/0/5\n| stats values(vlan) as vlan",
-				"queryParameters": {
-					"earliest": "-15m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_iBX6iE4S": {
-			"name": "DEV kbps calc search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.in_octets\") as in_octets latest(\"if-stats.out_octets\") as out_octets latest(\"if-stats.speed\") as speed WHERE \"index\"=\"cisco_metrics\" node=ibk-lab-sw03 interface=\"GigabitEthernet1/1/4\" span=1s \n| sort - _time \n| head 2 \n| sort _time \n| delta in_octets as in_delta_octets\n| delta out_octets as out_delta_octets \n| delta _time as delta_time_sec \n| eval in_bps = (in_delta_octets*8)/delta_time_sec, out_bps = (out_delta_octets*8)/delta_time_sec\n| eval in_kbps = in_bps/1000, out_kbps = out_bps/1000\n| eval in_mbps = in_bps/1000000, out_mbps = out_bps/1000000\n| eval in_util = (in_bps/speed)*100, out_util = (out_bps/speed)*100",
-				"queryParameters": {
-					"earliest": "-1h",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_j8W1wF68": {
-			"name": "Top RX Interfaces search",
-			"options": {
-				"query": "| mstats avg(\"if-stats.tx_kbps\") prestats=true WHERE \"index\"=\"cisco_metrics\" span=5s BY node, interface\n| timechart avg(\"if-stats.tx_kbps\") span=5s useother=false BY node WHERE max in top5\n| fields - _span*",
-				"queryParameters": {
-					"earliest": "-15m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_k616WeeH": {
-			"name": "Outbound Error Rate search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.out_errors\") as out_errors WHERE index=\"cisco_metrics\" node=ibk-lab-sw05 interface=TenGigabitEthernet1/1/4 span=60s by node interface\n| streamstats current=f latest(_time) as prev_time_ms by node interface\n| streamstats current=f latest(out_errors) as prev_out_errors by node interface\n| eval delta_time_sec = (_time - prev_time_ms)\n| eval delta_out_errors = out_errors - prev_out_errors\n| stats latest(delta_out_errors)",
-				"queryParameters": {
-					"earliest": "-60m@m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_lc7JT0KR": {
-			"name": "PoE search",
-			"options": {
-				"query": "| mstats latest(\"poe-stats.allocated\") AS allocated latest(\"poe-stats.available\") AS available WHERE \"index\"=\"cisco_metrics\" node=$tk_node$\n| transpose 0\n| rename column as category \"row 1\" as value",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_sXhZGdAg": {
-			"name": "CDP search",
-			"options": {
-				"query": "index=\"cisco_events\" event_group=cdp node=ibk-lab-sw05 interface=*\n| stats values(neighbour) as neighbour",
-				"queryParameters": {
-					"earliest": "-24h@h",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_suvdxEwm": {
-			"name": "Logs 1 search",
-			"options": {
-				"query": "index=cisco_syslog host=$tk_node$\n| mvexpand severity\n| mvexpand message\n| dedup severity message\n| table _time host message",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_tnaaEfUS": {
-			"name": "Interface Utilisation search",
-			"options": {
-				"query": "| mstats latest(\"if-stats.in_octets\") as in_octets latest(\"if-stats.out_octets\") as out_octets latest(\"if-stats.speed\") as speed WHERE index=\"cisco_metrics\" node=ibk-lab-sw03 interface=\"GigabitEthernet1/0/11\" span=60s\n| streamstats current=f last(_time) as prev_time_ms\n| eval delta_time_sec = (_time - prev_time_ms) / 1000\n| delta in_octets as in_delta_octets\n| delta out_octets as out_delta_octets\n| where delta_time_sec > 0\n| eval in_bps = (in_delta_octets*8)/delta_time_sec, out_bps = (out_delta_octets*8)/delta_time_sec\n| eval in_kbps = in_bps/1000, out_kbps = out_bps/1000\n| eval in_mbps = in_bps/1000000, out_mbps = out_bps/1000000\n| eval in_util = (in_bps/speed)*100, out_util = (out_bps/speed)*100\n| timechart span=5m avg(in_util) as \"Inbound Utilization (%)\" avg(out_util) as \"Outbound Utilization (%)\"",
-				"queryParameters": {
-					"earliest": "-4h@m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_wMDTIRJn": {
-			"name": "CPU Usage ___ search",
-			"options": {
-				"query": "| mcatalog values(node) WHERE metric_name=cpu-util.usage AND index=cisco_metrics",
-				"queryParameters": {
-					"earliest": "-1h",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_y7JsEcfy": {
-			"name": "MAC Addresses search",
-			"options": {
-				"query": "index=\"cisco_events\" event_group=mac node=ibk-lab-sw05 interface=Gi1/0/5\n| stats values(mac) as mac",
-				"queryParameters": {
-					"earliest": "-15m",
-					"latest": "now",
-					"sampleRatio": 1
-				}
-			},
-			"type": "ds.search"
-		}
-	},
-	"layout": {
-		"globalInputs": [
-			"input_global_trp",
-			"input_NEbf0hSH",
-			"input_rtCQQP1Y"
-		],
-		"layoutDefinitions": {
-			"layout_1": {
-				"options": {
-					"height": 960,
-					"width": 1440
-				},
-				"structure": [
-					{
-						"item": "viz_WctDbGCE",
-						"position": {
-							"h": 428,
-							"w": 511,
-							"x": 0,
-							"y": 0
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_wWBlYuIO",
-						"position": {
-							"h": 168,
-							"w": 390,
-							"x": 0,
-							"y": 428
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_8hHYnYfH",
-						"position": {
-							"h": 300,
-							"w": 1440,
-							"x": 0,
-							"y": 596
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_k0D28f6E",
-						"position": {
-							"h": 300,
-							"w": 1440,
-							"x": 0,
-							"y": 896
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_SkkwkLpV",
-						"position": {
-							"h": 704,
-							"w": 1440,
-							"x": 0,
-							"y": 1196
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_xk020SNL",
-						"position": {
-							"h": 168,
-							"w": 504,
-							"x": 390,
-							"y": 428
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_s75NIQMk",
-						"position": {
-							"h": 428,
-							"w": 500,
-							"x": 511,
-							"y": 0
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_OwL6aVbb",
-						"position": {
-							"h": 168,
-							"w": 546,
-							"x": 894,
-							"y": 428
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_oDwrvkVT",
-						"position": {
-							"h": 428,
-							"w": 429,
-							"x": 1011,
-							"y": 0
-						},
-						"type": "block"
-					}
-				],
-				"type": "grid"
-			}
-		},
-		"options": {},
-		"tabs": {
-			"items": [
-				{
-					"label": "New tab",
-					"layoutId": "layout_1"
-				}
-			]
-		}
-	},
-	"applicationProperties": {}
+ "title": "Switch Details",
+ "description": "One switch: ports, CPU, memory, PoE, traffic, errors, CDP neighbours, MAC table and syslog. Covers Cribl (sw11-13) and gnmic (IOS-XE, NX-OS) telemetry.",
+ "inputs": {
+  "input_time": {
+   "type": "input.timerange",
+   "title": "Time range",
+   "options": {
+    "token": "global_time",
+    "defaultValue": "-4h@m,now"
+   }
+  },
+  "input_node": {
+   "type": "input.dropdown",
+   "title": "Device",
+   "dataSources": {
+    "primary": "ds_nodes"
+   },
+   "options": {
+    "token": "tk_node",
+    "selectFirstSearchResult": true,
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"node\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"node\") | renameSeries(\"value\")"
+   }
+  },
+  "input_interface": {
+   "type": "input.dropdown",
+   "title": "Interface",
+   "dataSources": {
+    "primary": "ds_ifaces"
+   },
+   "options": {
+    "token": "tk_interface",
+    "defaultValue": "*",
+    "items": ">frame(label, value) | prepend(statics) | objects()"
+   },
+   "context": {
+    "statics": [
+     [
+      "All"
+     ],
+     [
+      "*"
+     ]
+    ],
+    "label": ">primary | seriesByName(\"interface\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"interface\") | renameSeries(\"value\")"
+   }
+  }
+ },
+ "defaults": {
+  "dataSources": {
+   "ds.search": {
+    "options": {
+     "queryParameters": {
+      "earliest": "$global_time.earliest$",
+      "latest": "$global_time.latest$"
+     },
+     "refresh": "1m",
+     "refreshType": "delay"
+    }
+   }
+  }
+ },
+ "visualizations": {
+  "viz_ports": {
+   "type": "splunk.table",
+   "title": "Ports: green up, dark down, light grey admin down. Click a port to filter.",
+   "dataSources": {
+    "primary": "ds_ports"
+   },
+   "options": {
+    "count": 20,
+    "fontSize": "extraSmall",
+    "headerVisibility": "none",
+    "table": "> primary | frameWithoutSeriesNames(\"_s01\", \"_s03\", \"_s05\", \"_s07\", \"_s09\", \"_s11\", \"_s13\", \"_s15\", \"_s17\", \"_s19\", \"_s21\", \"_s23\", \"_s25\", \"_s27\", \"_s29\", \"_s31\", \"_s33\", \"_s35\", \"_s37\", \"_s39\", \"_s41\", \"_s43\", \"_s45\", \"_s47\", \"_s49\", \"_s51\", \"_s53\", \"_s55\", \"_s57\", \"_s59\", \"_s61\", \"_s63\", \"_s65\", \"_s67\", \"_s69\", \"_s71\", \"_s73\", \"_s75\", \"_s77\", \"_s79\", \"_s81\", \"_s83\", \"_s85\", \"_s87\", \"_s89\", \"_s91\", \"_s93\", \"_s95\", \"_sU1\", \"_sU3\", \"_sU5\", \"_sU7\")",
+    "tableFormat": {
+     "rowBackgroundColors": "> table | seriesByIndex(0) | pick(black)"
+    },
+    "columnFormat": {
+     "01_": {
+      "width": 4
+     },
+     "03_": {
+      "width": 4
+     },
+     "05_": {
+      "width": 4
+     },
+     "07_": {
+      "width": 4
+     },
+     "09_": {
+      "width": 4
+     },
+     "11_": {
+      "width": 4
+     },
+     "13_": {
+      "width": 4
+     },
+     "15_": {
+      "width": 4
+     },
+     "17_": {
+      "width": 4
+     },
+     "19_": {
+      "width": 4
+     },
+     "21_": {
+      "width": 4
+     },
+     "23_": {
+      "width": 4
+     },
+     "25_": {
+      "width": 4
+     },
+     "27_": {
+      "width": 4
+     },
+     "29_": {
+      "width": 4
+     },
+     "31_": {
+      "width": 4
+     },
+     "33_": {
+      "width": 4
+     },
+     "35_": {
+      "width": 4
+     },
+     "37_": {
+      "width": 4
+     },
+     "39_": {
+      "width": 4
+     },
+     "41_": {
+      "width": 4
+     },
+     "43_": {
+      "width": 4
+     },
+     "45_": {
+      "width": 4
+     },
+     "47_": {
+      "width": 4
+     },
+     "49_": {
+      "width": 4
+     },
+     "51_": {
+      "width": 4
+     },
+     "53_": {
+      "width": 4
+     },
+     "55_": {
+      "width": 4
+     },
+     "57_": {
+      "width": 4
+     },
+     "59_": {
+      "width": 4
+     },
+     "61_": {
+      "width": 4
+     },
+     "63_": {
+      "width": 4
+     },
+     "65_": {
+      "width": 4
+     },
+     "67_": {
+      "width": 4
+     },
+     "69_": {
+      "width": 4
+     },
+     "71_": {
+      "width": 4
+     },
+     "73_": {
+      "width": 4
+     },
+     "75_": {
+      "width": 4
+     },
+     "77_": {
+      "width": 4
+     },
+     "79_": {
+      "width": 4
+     },
+     "81_": {
+      "width": 4
+     },
+     "83_": {
+      "width": 4
+     },
+     "85_": {
+      "width": 4
+     },
+     "87_": {
+      "width": 4
+     },
+     "89_": {
+      "width": 4
+     },
+     "91_": {
+      "width": 4
+     },
+     "93_": {
+      "width": 4
+     },
+     "95_": {
+      "width": 4
+     },
+     "U1_": {
+      "width": 4
+     },
+     "U3_": {
+      "width": 4
+     },
+     "U5_": {
+      "width": 4
+     },
+     "U7_": {
+      "width": 4
+     },
+     "01": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s01\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s01\") | matchValue(textColors)"
+     },
+     "03": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s03\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s03\") | matchValue(textColors)"
+     },
+     "05": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s05\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s05\") | matchValue(textColors)"
+     },
+     "07": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s07\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s07\") | matchValue(textColors)"
+     },
+     "09": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s09\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s09\") | matchValue(textColors)"
+     },
+     "11": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s11\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s11\") | matchValue(textColors)"
+     },
+     "13": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s13\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s13\") | matchValue(textColors)"
+     },
+     "15": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s15\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s15\") | matchValue(textColors)"
+     },
+     "17": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s17\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s17\") | matchValue(textColors)"
+     },
+     "19": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s19\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s19\") | matchValue(textColors)"
+     },
+     "21": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s21\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s21\") | matchValue(textColors)"
+     },
+     "23": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s23\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s23\") | matchValue(textColors)"
+     },
+     "25": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s25\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s25\") | matchValue(textColors)"
+     },
+     "27": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s27\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s27\") | matchValue(textColors)"
+     },
+     "29": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s29\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s29\") | matchValue(textColors)"
+     },
+     "31": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s31\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s31\") | matchValue(textColors)"
+     },
+     "33": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s33\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s33\") | matchValue(textColors)"
+     },
+     "35": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s35\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s35\") | matchValue(textColors)"
+     },
+     "37": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s37\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s37\") | matchValue(textColors)"
+     },
+     "39": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s39\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s39\") | matchValue(textColors)"
+     },
+     "41": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s41\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s41\") | matchValue(textColors)"
+     },
+     "43": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s43\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s43\") | matchValue(textColors)"
+     },
+     "45": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s45\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s45\") | matchValue(textColors)"
+     },
+     "47": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s47\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s47\") | matchValue(textColors)"
+     },
+     "49": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s49\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s49\") | matchValue(textColors)"
+     },
+     "51": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s51\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s51\") | matchValue(textColors)"
+     },
+     "53": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s53\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s53\") | matchValue(textColors)"
+     },
+     "55": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s55\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s55\") | matchValue(textColors)"
+     },
+     "57": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s57\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s57\") | matchValue(textColors)"
+     },
+     "59": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s59\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s59\") | matchValue(textColors)"
+     },
+     "61": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s61\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s61\") | matchValue(textColors)"
+     },
+     "63": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s63\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s63\") | matchValue(textColors)"
+     },
+     "65": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s65\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s65\") | matchValue(textColors)"
+     },
+     "67": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s67\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s67\") | matchValue(textColors)"
+     },
+     "69": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s69\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s69\") | matchValue(textColors)"
+     },
+     "71": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s71\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s71\") | matchValue(textColors)"
+     },
+     "73": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s73\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s73\") | matchValue(textColors)"
+     },
+     "75": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s75\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s75\") | matchValue(textColors)"
+     },
+     "77": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s77\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s77\") | matchValue(textColors)"
+     },
+     "79": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s79\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s79\") | matchValue(textColors)"
+     },
+     "81": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s81\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s81\") | matchValue(textColors)"
+     },
+     "83": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s83\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s83\") | matchValue(textColors)"
+     },
+     "85": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s85\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s85\") | matchValue(textColors)"
+     },
+     "87": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s87\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s87\") | matchValue(textColors)"
+     },
+     "89": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s89\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s89\") | matchValue(textColors)"
+     },
+     "91": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s91\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s91\") | matchValue(textColors)"
+     },
+     "93": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s93\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s93\") | matchValue(textColors)"
+     },
+     "95": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_s95\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_s95\") | matchValue(textColors)"
+     },
+     "U1": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_sU1\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_sU1\") | matchValue(textColors)"
+     },
+     "U3": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_sU3\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_sU3\") | matchValue(textColors)"
+     },
+     "U5": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_sU5\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_sU5\") | matchValue(textColors)"
+     },
+     "U7": {
+      "width": 52,
+      "rowBackgroundColors": "> primary | seriesByName(\"_sU7\") | matchValue(stateColors)",
+      "rowColors": "> primary | seriesByName(\"_sU7\") | matchValue(textColors)"
+     }
+    }
+   },
+   "context": {
+    "stateColors": [
+     {
+      "match": "up",
+      "value": "#53a051"
+     },
+     {
+      "match": "down",
+      "value": "#30363d"
+     },
+     {
+      "match": "admin down",
+      "value": "#8a929b"
+     }
+    ],
+    "black": [
+     "#000000"
+    ],
+    "textColors": [
+     {
+      "match": "up",
+      "value": "#ffffff"
+     },
+     {
+      "match": "down",
+      "value": "#ffffff"
+     },
+     {
+      "match": "admin down",
+      "value": "#ffffff"
+     }
+    ]
+   },
+   "eventHandlers": [
+    {
+     "type": "drilldown.setToken",
+     "options": {
+      "tokens": [
+       {
+        "token": "tk_interface",
+        "key": "value"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "viz_nodata": {
+   "type": "splunk.table",
+   "dataSources": {
+    "primary": "ds_nodata"
+   },
+   "options": {},
+   "containerOptions": {
+    "visibility": {
+     "hideWhenNoData": true
+    }
+   }
+  },
+  "viz_ports_up": {
+   "type": "splunk.singlevalue",
+   "title": "Ports up",
+   "dataSources": {
+    "primary": "ds_ports_up"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "sparklineDisplay": "off",
+    "trendDisplay": "off"
+   }
+  },
+  "viz_poe_watts": {
+   "type": "splunk.singlevalue",
+   "title": "PoE",
+   "dataSources": {
+    "primary": "ds_poe_watts"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "sparklineDisplay": "off",
+    "trendDisplay": "off"
+   },
+   "containerOptions": {
+    "visibility": {
+     "hideWhenNoData": true
+    }
+   }
+  },
+  "viz_poe": {
+   "type": "splunk.fillergauge",
+   "title": "PoE drawn (% of PoE capacity)",
+   "dataSources": {
+    "primary": "ds_poe_gauge"
+   },
+   "options": {
+    "orientation": "horizontal",
+    "gaugeColor": "> value | rangeValue(poeColors)"
+   },
+   "context": {
+    "poeColors": [
+     {
+      "to": 70,
+      "value": "#53a051"
+     },
+     {
+      "from": 70,
+      "to": 90,
+      "value": "#f8be34"
+     },
+     {
+      "from": 90,
+      "value": "#dc4e41"
+     }
+    ]
+   },
+   "containerOptions": {
+    "visibility": {
+     "hideWhenNoData": true
+    }
+   }
+  },
+  "viz_cpu": {
+   "type": "splunk.line",
+   "title": "CPU",
+   "dataSources": {
+    "primary": "ds_cpu"
+   },
+   "options": {
+    "nullValueDisplay": "connect",
+    "legendDisplay": "off"
+   },
+   "showProgressBar": true
+  },
+  "viz_mem": {
+   "type": "splunk.line",
+   "title": "Memory",
+   "dataSources": {
+    "primary": "ds_mem"
+   },
+   "options": {
+    "yAxisMax": 100,
+    "yAxisMin": 0,
+    "nullValueDisplay": "connect",
+    "legendDisplay": "off"
+   },
+   "showProgressBar": true
+  },
+  "viz_throughput": {
+   "type": "splunk.line",
+   "title": "Throughput, sum of selected ports (5 min average)",
+   "dataSources": {
+    "primary": "ds_throughput"
+   },
+   "options": {},
+   "showProgressBar": true
+  },
+  "viz_errors": {
+   "type": "splunk.column",
+   "title": "Errors per 5 min (selected interfaces)",
+   "dataSources": {
+    "primary": "ds_errors"
+   },
+   "options": {
+    "stackMode": "stacked"
+   },
+   "showProgressBar": true
+  },
+  "viz_top_util": {
+   "type": "splunk.bar",
+   "title": "Top 5 interfaces by peak utilization % (in or out); click to filter",
+   "dataSources": {
+    "primary": "ds_top_util"
+   },
+   "options": {
+    "legendDisplay": "off"
+   },
+   "showProgressBar": true,
+   "eventHandlers": [
+    {
+     "type": "drilldown.setToken",
+     "options": {
+      "tokens": [
+       {
+        "token": "tk_interface",
+        "key": "row.interface.value"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "viz_top_errors": {
+   "type": "splunk.bar",
+   "title": "Top 5 interfaces with errors; click to filter",
+   "dataSources": {
+    "primary": "ds_top_errors"
+   },
+   "options": {
+    "stackMode": "stacked",
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true,
+   "eventHandlers": [
+    {
+     "type": "drilldown.setToken",
+     "options": {
+      "tokens": [
+       {
+        "token": "tk_interface",
+        "key": "row.interface.value"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "viz_ifaces": {
+   "type": "splunk.table",
+   "title": "Interfaces",
+   "dataSources": {
+    "primary": "ds_ifaces_table"
+   },
+   "options": {
+    "count": 100
+   },
+   "showProgressBar": true
+  },
+  "viz_mac": {
+   "type": "splunk.table",
+   "title": "MAC addresses",
+   "dataSources": {
+    "primary": "ds_mac"
+   },
+   "options": {
+    "count": 50
+   },
+   "showProgressBar": true
+  },
+  "viz_logs": {
+   "type": "splunk.table",
+   "title": "Syslog",
+   "dataSources": {
+    "primary": "ds_logs"
+   },
+   "options": {
+    "count": 50
+   },
+   "showProgressBar": true
+  }
+ },
+ "dataSources": {
+  "ds_nodes": {
+   "type": "ds.search",
+   "name": "nodes",
+   "options": {
+    "query": "| `mdt_nodes`"
+   }
+  },
+  "ds_status": {
+   "type": "ds.search",
+   "name": "status",
+   "options": {
+    "query": "| `mdt_if_status($tk_node$)` | join type=left node interface [| `mdt_cdp($tk_node$)` | stats values(neighbour) as neighbour values(remote_interface) as remote_interface by node interface]"
+   }
+  },
+  "ds_rates": {
+   "type": "ds.search",
+   "name": "rates",
+   "options": {
+    "query": "| `mdt_if_counters($tk_node$,*$tk_interface$)` | `mdt_physical_ports` | `mdt_if_rates` | join type=left node interface [| `mdt_if_status($tk_node$)` | fields node interface speed] | eval util=round(max(in_bps, out_bps) / speed * 100, 4)"
+   }
+  },
+  "ds_poe": {
+   "type": "ds.search",
+   "name": "poe",
+   "options": {
+    "query": "| `mdt_poe($tk_node$)`"
+   }
+  },
+  "ds_cpu": {
+   "type": "ds.search",
+   "name": "cpu",
+   "options": {
+    "query": "| `mdt_cpu($tk_node$)` | timechart span=1m avg(cpu) as \"CPU %\" avg(load) as \"Load average (1 min, NX-OS)\""
+   }
+  },
+  "ds_mem": {
+   "type": "ds.search",
+   "name": "mem",
+   "options": {
+    "query": "| `mdt_mem($tk_node$)` | timechart span=1m avg(mem) as \"Memory %\""
+   }
+  },
+  "ds_mac": {
+   "type": "ds.search",
+   "name": "mac",
+   "options": {
+    "query": "| `mdt_mac($tk_node$,*$tk_interface$)` | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node"
+   }
+  },
+  "ds_logs": {
+   "type": "ds.search",
+   "name": "logs",
+   "options": {
+    "query": "index=cisco_syslog host=\"$tk_node$\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) | table _time severity message | sort - _time | head 200"
+   }
+  },
+  "ds_ports": {
+   "type": "ds.chain",
+   "name": "ports",
+   "options": {
+    "extend": "ds_status",
+    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | eval parts=split(path, \"/\"), port=tonumber(mvindex(parts, -1)), unit=mvindex(parts, 0), uplink=if(mvcount(parts)=3 AND mvindex(parts, 1)!=\"0\", \"U\", \"\") | where isnotnull(port) | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval pair=floor((port - 1) / 2) * 2 + 1, col=uplink.if(uplink=\"\" AND pair < 10, \"0\", \"\").pair, row=unit.if(port % 2 == 1, \"a\", \"b\") | eval {col}=path, s_{col}=state | fields row 0* 1* 2* 3* 4* 5* 6* 7* 8* 9* U* s_* | stats values(*) as * by row | foreach s_* [eval \"<<FIELD>>\"=mvindex('<<FIELD>>', -1)] | appendpipe [where like(row, \"%a\") | eval row=row.\"_\" | fields - s_* | foreach 0* 1* 2* 3* 4* 5* 6* 7* 8* 9* U* [eval \"<<FIELD>>\"=\" \"]] | rename s_* as _s* | sort row | fields - row | foreach 0* 1* 2* 3* 4* 5* 6* 7* 8* 9* U* [eval \"<<FIELD>>_\"=\" \"]"
+   }
+  },
+  "ds_ifaces": {
+   "type": "ds.chain",
+   "name": "ifaces",
+   "options": {
+    "extend": "ds_status",
+    "query": "| `mdt_physical_ports` | fields interface | sort interface"
+   }
+  },
+  "ds_nodata": {
+   "type": "ds.chain",
+   "name": "nodata",
+   "options": {
+    "extend": "ds_status",
+    "query": "| stats count | where count=0 | eval Note=\"No telemetry for $tk_node$. Switch Details covers switches that stream interface data.\" | fields Note"
+   }
+  },
+  "ds_ports_up": {
+   "type": "ds.chain",
+   "name": "ports_up",
+   "options": {
+    "extend": "ds_status",
+    "query": "| `mdt_physical_ports` | stats count as total sum(oper_up) as up | eval Ports=up.\" of \".total.\" (\".round(up / total * 100, 0).\"%)\" | fields Ports"
+   }
+  },
+  "ds_ifaces_table": {
+   "type": "ds.chain",
+   "name": "ifaces_table",
+   "options": {
+    "extend": "ds_status",
+    "query": "| `mdt_physical_ports` | search interface=\"*$tk_interface$\" | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), tostring(round(now() - last_change), \"duration\"), null()) | rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""
+   }
+  },
+  "ds_poe_gauge": {
+   "type": "ds.chain",
+   "name": "poe_gauge",
+   "options": {
+    "extend": "ds_poe",
+    "query": "| eval pct=round(used / (used + free) * 100, 0) | fields pct"
+   }
+  },
+  "ds_poe_watts": {
+   "type": "ds.chain",
+   "name": "poe_watts",
+   "options": {
+    "extend": "ds_poe",
+    "query": "| eval PoE=used.\" W drawn, \".free.\" W free\" | fields PoE"
+   }
+  },
+  "ds_throughput": {
+   "type": "ds.chain",
+   "name": "throughput",
+   "options": {
+    "extend": "ds_rates",
+    "query": "| bin _time span=5m | where _time + 300 <= now() | stats avg(in_bps) as in avg(out_bps) as out by _time interface | stats sum(in) as in sum(out) as out by _time | eval \"In (Mb/s)\"=round(in / 1000000, 2), \"Out (Mb/s)\"=round(out / 1000000, 2) | fields - in out"
+   }
+  },
+  "ds_errors": {
+   "type": "ds.chain",
+   "name": "errors",
+   "options": {
+    "extend": "ds_rates",
+    "query": "| bin _time span=5m | where _time + 300 <= now() | timechart span=5m sum(in_errs) as \"In errors\" sum(out_errs) as \"Out errors\""
+   }
+  },
+  "ds_top_util": {
+   "type": "ds.chain",
+   "name": "top_util",
+   "options": {
+    "extend": "ds_rates",
+    "query": "| stats max(util) as \"Peak utilization %\" by interface | sort - \"Peak utilization %\" | head 5"
+   }
+  },
+  "ds_top_errors": {
+   "type": "ds.chain",
+   "name": "top_errors",
+   "options": {
+    "extend": "ds_rates",
+    "query": "| stats sum(in_errs) as \"In errors\" sum(out_errs) as \"Out errors\" by interface | eval total='In errors' + 'Out errors' | where total > 0 | sort - total | head 5 | fields - total"
+   }
+  }
+ },
+ "layout": {
+  "type": "grid",
+  "globalInputs": [
+   "input_time",
+   "input_node",
+   "input_interface"
+  ],
+  "layoutDefinitions": {
+   "layout_1": {
+    "type": "grid",
+    "options": {
+     "width": 1440,
+     "height": 1930
+    },
+    "structure": [
+     {
+      "item": "viz_nodata",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 0,
+       "w": 1440,
+       "h": 80
+      }
+     },
+     {
+      "item": "viz_ports_up",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 80,
+       "w": 280,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_poe_watts",
+      "type": "block",
+      "position": {
+       "x": 280,
+       "y": 80,
+       "w": 260,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_poe",
+      "type": "block",
+      "position": {
+       "x": 540,
+       "y": 80,
+       "w": 300,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_cpu",
+      "type": "block",
+      "position": {
+       "x": 840,
+       "y": 80,
+       "w": 300,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_mem",
+      "type": "block",
+      "position": {
+       "x": 1140,
+       "y": 80,
+       "w": 300,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_top_util",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 280,
+       "w": 720,
+       "h": 260
+      }
+     },
+     {
+      "item": "viz_top_errors",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 280,
+       "w": 720,
+       "h": 260
+      }
+     },
+     {
+      "item": "viz_ports",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 540,
+       "w": 1440,
+       "h": 170
+      }
+     },
+     {
+      "item": "viz_throughput",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 710,
+       "w": 720,
+       "h": 320
+      }
+     },
+     {
+      "item": "viz_errors",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 710,
+       "w": 720,
+       "h": 320
+      }
+     },
+     {
+      "item": "viz_ifaces",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 1030,
+       "w": 940,
+       "h": 480
+      }
+     },
+     {
+      "item": "viz_mac",
+      "type": "block",
+      "position": {
+       "x": 940,
+       "y": 1030,
+       "w": 500,
+       "h": 480
+      }
+     },
+     {
+      "item": "viz_logs",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 1510,
+       "w": 1440,
+       "h": 420
+      }
+     }
+    ]
+   }
+  },
+  "tabs": {
+   "items": [
+    {
+     "label": "Switch",
+     "layoutId": "layout_1"
+    }
+   ]
+  }
+ },
+ "applicationProperties": {}
 }
     ]]></definition>
 </dashboard>
