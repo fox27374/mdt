@@ -20,7 +20,8 @@ outputs:
     type: prometheus
     listen: :9273
     path: /metrics
-    expiration: 120s
+    # Longer than the slowest 5-minute samples, so their series stay on the endpoint between updates.
+    expiration: 330s
     strings-as-labels: true
     metric-prefix: "mdt"
     append-subscription-name: true
