@@ -847,7 +847,7 @@
    "name": "ifaces_table",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | search interface=\"*$tk_interface$\" | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), tostring(round(now() - last_change), \"duration\"), null()) | rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""
+    "query": "| `mdt_physical_ports` | search interface=\"*$tk_interface$\" | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) | rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""
    }
   },
   "ds_poe_gauge": {
