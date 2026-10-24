@@ -349,6 +349,8 @@ subscriptions:
       # AP join state and configured location. APs not joined (e.g. downloading an image) are missing here.
       - "rfc7951:/Cisco-IOS-XE-wireless-access-point-oper:access-point-oper-data/capwap-data/ap-state/ap-operation-state"
       - "rfc7951:/Cisco-IOS-XE-wireless-access-point-oper:access-point-oper-data/capwap-data/ap-location/location"
+      # Switch each AP is connected to (AP's CDP neighbour; list keys device-id and mac-addr become labels)
+      - "rfc7951:/Cisco-IOS-XE-wireless-access-point-oper:access-point-oper-data/cdp-cache-data/ap-name"
       # Client mac-name mapping
       - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/client-wsa-info/device-hostname"
       # Client mac-ip mapping

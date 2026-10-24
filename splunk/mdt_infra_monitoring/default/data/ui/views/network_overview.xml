@@ -2,12 +2,14 @@
   <label>Network Overview</label>
   <row>
     <panel>
-      <title>CDP topology. Switches by health: green OK, yellow warning, red critical, dark grey no data. Click for Switch Details</title>
+      <title>CDP topology. Switches and APs (wifi icon) by health: green OK, yellow warning, red critical, dark grey no data. Click a switch for Switch Details, an AP for Wireless Overview</title>
       <viz type="network-diagram-viz.network-diagram-viz">
         <search>
           <query>| `mdt_cdp(*)`
 | where NOT match(interface, "(?i)^(mgmt|e0m)") AND NOT match(coalesce(remote_interface, ""), "(?i)^(mgmt|e0m)")
 | eval from=node, to=neighbour
+| append [| mstats latest(_value) WHERE index=cisco_metrics metric_name=mdt_wl_info_ap_name BY ap_name cdp_cache_data_cdp_cache_device_id
+  | eval from=ap_name, to=replace(cdp_cache_data_cdp_cache_device_id, "\..*$", ""), interface="uplink" | fields from to interface]
 | where from!=to
 | eval node1=if(from&lt;to, from, to), node2=if(from&lt;to, to, from)
 | stats dc(interface) as reported_links by node1 node2 from
@@ -15,7 +17,8 @@
 | eval from=node1, to=node2, linkwidth=min(2*links, 10)
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
 | append [| `mdt_switch_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d") | rename node as from | fields from color]
-| table from to linkwidth color</query>
+| append [| `mdt_ap_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="wifi" | rename ap as from | fields from color type]
+| table from to linkwidth color type</query>
           <earliest>-15m</earliest>
           <latest>now</latest>
           <refresh>1m</refresh>
@@ -55,7 +58,13 @@
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$</link>
+          <!-- ponytail: APs recognised by name (ends in -apNN); an AP named otherwise opens Switch Details. Upgrade: collect AP names into a token. -->
+          <condition match="match($nd_value_token|s$, &quot;(?i)-ap\d+$&quot;)">
+            <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+          </condition>
+          <condition>
+            <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$</link>
+          </condition>
         </drilldown>
       </viz>
     </panel>
