@@ -210,7 +210,7 @@
    "type": "ds.search",
    "name": "lic_today",
    "options": {
-    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog OR idx=cisco_events) | stats sum(b) as bytes | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes]",
+    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog) | stats sum(b) as bytes | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes]",
     "queryParameters": {
      "earliest": "@d",
      "latest": "now"
@@ -223,7 +223,7 @@
    "type": "ds.search",
    "name": "lic_table",
    "options": {
-    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog OR idx=cisco_events) | eval td=if(_time >= relative_time(now(), \"@d\"), b, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), b, 0) | stats sum(td) as td sum(yd) as yd sum(b) as mo by idx | appendpipe [| stats sum(td) as td sum(yd) as yd sum(mo) as mo | eval idx=\"Total\"] | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes] | filldown pool_bytes | eval Index=idx, \"Today (MB)\"=round(td / 1048576, 1), \"Yesterday (MB)\"=round(yd / 1048576, 1), \"30-day average (MB/day)\"=round(mo / 30 / 1048576, 1), \"% of pool (today)\"=round(td / pool_bytes * 100, 2) | table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\"",
+    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog) | eval td=if(_time >= relative_time(now(), \"@d\"), b, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), b, 0) | stats sum(td) as td sum(yd) as yd sum(b) as mo by idx | appendpipe [| stats sum(td) as td sum(yd) as yd sum(mo) as mo | eval idx=\"Total\"] | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes] | filldown pool_bytes | eval Index=idx, \"Today (MB)\"=round(td / 1048576, 1), \"Yesterday (MB)\"=round(yd / 1048576, 1), \"30-day average (MB/day)\"=round(mo / 30 / 1048576, 1), \"% of pool (today)\"=round(td / pool_bytes * 100, 2) | table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\"",
     "queryParameters": {
      "earliest": "-29d@d",
      "latest": "now"
@@ -236,7 +236,7 @@
    "type": "ds.search",
    "name": "lic_chart",
    "options": {
-    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog OR idx=cisco_events) | bin _time span=1d | stats sum(b) as bytes by _time idx | eval MB=round(bytes / 1048576, 1) | xyseries _time idx MB | fillnull value=0",
+    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog) | bin _time span=1d | stats sum(b) as bytes by _time idx | eval MB=round(bytes / 1048576, 1) | xyseries _time idx MB | fillnull value=0",
     "queryParameters": {
      "earliest": "-29d@d",
      "latest": "now"
@@ -260,7 +260,7 @@
    "type": "ds.search",
    "name": "storage",
    "options": {
-    "query": "| rest /services/data/indexes datatype=all count=0 | search title=cisco_metrics OR title=cisco_syslog OR title=cisco_events | eval Index=title, Type=if(datatype=\"metric\", \"metric\", \"event\"), \"Size on disk (MB)\"=round(currentDBSizeMB, 1), \"Events / data points\"=totalEventCount, \"Retention (days)\"=round(frozenTimePeriodInSecs / 86400, 0) | table Index Type \"Size on disk (MB)\" \"Events / data points\" \"Retention (days)\" | sort Index",
+    "query": "| rest /services/data/indexes datatype=all count=0 | search title=cisco_metrics OR title=cisco_syslog | eval Index=title, Type=if(datatype=\"metric\", \"metric\", \"event\"), \"Size on disk (MB)\"=round(currentDBSizeMB, 1), \"Events / data points\"=totalEventCount, \"Retention (days)\"=round(frozenTimePeriodInSecs / 86400, 0) | table Index Type \"Size on disk (MB)\" \"Events / data points\" \"Retention (days)\" | sort Index",
     "queryParameters": {
      "earliest": "$global_time.earliest$",
      "latest": "$global_time.latest$"

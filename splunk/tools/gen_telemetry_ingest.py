@@ -8,7 +8,7 @@ OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data",
 PIPE = ('case(match(metric_name, "^mdt_xe_"), "gnmic IOS-XE", match(metric_name, "^mdt_nx_"), "gnmic NX-OS", '
         'match(metric_name, "^mdt_wl_"), "gnmic WLC", match(metric_name, "^mdt_panos_"), "gnmic PAN-OS", '
         'match(metric_name, "^cisco[.]"), "OTel dial-out", match(metric_name, "^(system[.]|up$|scrape_)"), "Collector host", true(), "Other")')
-LIC = "(idx=cisco_metrics OR idx=cisco_syslog OR idx=cisco_events)"
+LIC = "(idx=cisco_metrics OR idx=cisco_syslog)"
 POOL = ('| appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise '
         '| eval pool_bytes=tonumber(effective_quota) | fields pool_bytes]')
 # Configured devices (gnmic mdt.yaml targets and the switches that dial out to the OTel collector). Silent when they send nothing.
@@ -30,7 +30,7 @@ DEVICES = (
     "| eval Pipeline=case(match(mvjoin(pipe, \",\"), \"gnmic\"), \"gnmic\", match(mvjoin(pipe, \",\"), \"OTel\"), \"OTel dial-out\", true(), \"Other\")"
 )
 
-# Per-minute license volume of the three indexes, from the license log (type=Usage carries bytes per index).
+# Per-minute license volume of the two indexes, from the license log (type=Usage carries bytes per index).
 USAGE = f"index=_internal source=*license_usage.log type=Usage {LIC}"
 
 bases = {
@@ -53,7 +53,7 @@ bases = {
     "ds_ingest": "| mstats count(_value) as n WHERE index=cisco_metrics metric_name=* BY metric_name span=5m "
                  f"| eval pipe={PIPE} | stats sum(n) as n by _time pipe "
                  "| where _time + 300 <= now() | eval rate=round(n / 300, 1) | xyseries _time pipe rate | fillnull value=0",
-    "ds_storage": "| rest /services/data/indexes datatype=all count=0 | search title=cisco_metrics OR title=cisco_syslog OR title=cisco_events "
+    "ds_storage": "| rest /services/data/indexes datatype=all count=0 | search title=cisco_metrics OR title=cisco_syslog "
                   "| eval Index=title, Type=if(datatype=\"metric\", \"metric\", \"event\"), \"Size on disk (MB)\"=round(currentDBSizeMB, 1), "
                   "\"Events / data points\"=totalEventCount, \"Retention (days)\"=round(frozenTimePeriodInSecs / 86400, 0) "
                   "| table Index Type \"Size on disk (MB)\" \"Events / data points\" \"Retention (days)\" | sort Index",

@@ -95,6 +95,7 @@ counters, up to 1h for slow-changing info like CDP/MAC).
   loopback, tunnel, port-channel, etc.).
 - **`rename-metrics`** — shortens metric names to their leaf (`path-base`).
 - **`delete-nx-cdp-fields`** — strips noisy NX-OS CDP fields.
+- **`delete-nx-if-stats-fields`** — drops the NX-OS pause and MAC control frame counters.
 
 ## Usage
 
@@ -162,10 +163,10 @@ PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod f
 The `otel-collector` service runs the pinned `otel/opentelemetry-collector-contrib:0.154.0` image with `config/otel.yaml`. It:
 
 - receives network device telemetry over gRPC on host port **57000** (`yang_grpc`, the device dial-out target),
-  keeps only the metrics the Splunk dashboards use (`filter/cisco`) and gives them the gnmic label names
+  keeps only the metrics the Splunk dashboards use and the interfaces gnmic keeps (`filter/cisco`) and gives them the gnmic label names
   `source` and `interface_name` with only identifying labels (`transform/cisco`),
 - serves that dial-out data as Prometheus metrics on host port **9464** (`/metrics`), next to the dial-in data on 9273,
-- scrapes gnmic-output (`gnmic-output:9273`) and collects host metrics from the host root mounted at `/hostfs`,
+- scrapes gnmic-output (`gnmic-output:9273`) every 30s and collects host metrics from the host root mounted at `/hostfs`,
 - exports the metrics to Splunk HEC. The token is read from `SPLUNK_HEC_TOKEN` in `gnmic/otel_env` (git-ignored).
 
 Inside the compose network it serves the health check on `:13133` and its own Prometheus self-telemetry on `:8888/metrics`. The monitor reads both (see [Environment variables](#environment-variables)).
