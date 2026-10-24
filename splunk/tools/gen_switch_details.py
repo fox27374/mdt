@@ -4,8 +4,7 @@ import json, os, sys
 
 OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data", "ui", "views", "switch_details.xml")
 
-# The leading * lets a port view click ("1/0/5") match the full interface name.
-N, I = "$tk_node$", "*$tk_interface$"
+N = "$tk_node$"
 phys = "| `mdt_physical_ports`"
 # Catalyst uplink slots show up twice (GigabitEthernet1/1/4 and TenGigabitEthernet1/1/4); keep one per slot, the up one, else the faster.
 slots = (f"{phys} | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" "
@@ -20,14 +19,14 @@ bases = {
                  f"| join type=left node interface [`mdt_mac({N},*)` | eval entry=mac.if(vlan==\"-\", \"\", \" (VLAN \".vlan.\")\") "
                  f"| stats dc(mac) as macs values(entry) as mac_list by node interface]",
     # Per-minute rates of front-panel ports (no double counting via port-channels or VLANs), with link speed.
-    "ds_rates": f"`mdt_if_counters({N},{I})` {phys} | `mdt_if_rates` "
+    "ds_rates": f"`mdt_if_counters({N},*)` {phys} | `mdt_if_rates` "
                 f"| join type=left node interface [`mdt_if_status({N})` | fields node interface speed] "
                 f"| eval util=round(max(in_bps, out_bps) / speed * 100, 4)",
     "ds_poe": f"`mdt_poe({N})`",
     "ds_cpu": f"`mdt_cpu({N})` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)",
     "ds_mem": f"`mdt_mem({N})` | stats latest(mem) as mem | eval mem=round(mem, 0)",
     # MACs on port-channels and VLANs; the Interfaces table shows those on front-panel ports.
-    "ds_mac": f"`mdt_mac({N},{I})` | where NOT (`mdt_is_physical`) | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node",
+    "ds_mac": f"`mdt_mac({N},*)` | where NOT (`mdt_is_physical`) | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node",
     "ds_logs": f"index=cisco_syslog host=\"{N}\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) "
                f"| table _time severity message | sort - _time | head 200",
 }
@@ -38,12 +37,11 @@ portview = open(sys.path[0] + "/portview.spl").read().strip().replace("\n", " ")
 # Time charts leave out the current 5-minute bucket: not every port has reported in it yet, so its sum is too low.
 chains = {  # name: (base, post-process)
     "ds_ports": ("ds_status", f"{phys} {portview}"),
-    "ds_ifaces": ("ds_status", f"{slots} | fields interface"),
     "ds_nodata": ("ds_status", f"| stats count | where count=0 "
                   f"| eval Note=\"No telemetry for {N}. Switch Details covers switches that stream interface data.\" | fields Note"),
     "ds_ports_up": ("ds_status", f"{slots} | stats count as total sum(oper_up) as up "
                     "| eval pct=round(up / total * 100, 0) | fields pct"),
-    "ds_ifaces_table": ("ds_status", f"{slots} | search interface=\"{I}\" "
+    "ds_ifaces_table": ("ds_status", f"{slots} "
                         f"| eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
                         f"| eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") "
                         f"| eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") "
@@ -82,10 +80,13 @@ def gauge(title, d, color=None):
 def chart(kind, title, d, **opts):
     return {"type": kind, "title": title, "dataSources": {"primary": d}, "options": opts, "showProgressBar": True}
 
-# Clicking a bar filters the dashboard to that interface.
-filter_on_click = [{"type": "drilldown.setToken", "options": {"tokens": [{"token": "tk_interface", "key": "row.interface.value"}]}}]
+# Clicking a port opens its Interface Details in a new tab, with the device and time range.
+def open_port(port):
+    return [{"type": "drilldown.customUrl", "options": {"url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=" + N
+             + "&form.tk_interface=" + port + "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+             "newTab": True}}]
 viz = {
-    "viz_ports": {"type": "splunk.table", "title": "Ports: green up, dark down, light grey admin down. Click a port to filter.",
+    "viz_ports": {"type": "splunk.table", "title": "Ports: green up, dark down, light grey admin down. Click a port to open its details.",
                   "dataSources": {"primary": "ds_ports"},
                   "options": {"count": 20, "fontSize": "extraSmall", "headerVisibility": "none",
                               "table": "> primary | frameWithoutSeriesNames(" + ", ".join(f'"_s{c}"' for c in COLS) + ")",
@@ -96,21 +97,21 @@ viz = {
                                               {"match": "admin down", "value": "#8a929b"}],
                               "black": ["#000000"],
                               "textColors": [{"match": s, "value": "#ffffff"} for s in ("up", "down", "admin down")]},
-                  "eventHandlers": [{"type": "drilldown.setToken", "options": {"tokens": [{"token": "tk_interface", "key": "value"}]}}]},
+                  "eventHandlers": open_port("$click.value$")},
     "viz_nodata": {"type": "splunk.table", "dataSources": {"primary": "ds_nodata"}, "options": {},
                    "containerOptions": {"visibility": {"hideWhenNoData": True}}},
     "viz_cpu": gauge("CPU %", "ds_cpu"),
     "viz_mem": gauge("Memory %", "ds_mem"),
     "viz_poe": {**gauge("PoE drawn (% of PoE capacity)", "ds_poe_gauge"), "containerOptions": {"visibility": {"hideWhenNoData": True}}},
     "viz_ports_up": gauge("Ports up %", "ds_ports_up", "#708794"),
-    "viz_throughput": chart("splunk.line", "Throughput, sum of selected ports (5 min average)", "ds_throughput"),
-    "viz_errors": chart("splunk.column", "Errors per 5 min (selected interfaces)", "ds_errors", stackMode="stacked"),
-    "viz_top_util": {**chart("splunk.bar", "Top 5 interfaces by peak utilization % (in or out); click to filter", "ds_top_util", legendDisplay="off"),
-                     "eventHandlers": filter_on_click},
-    "viz_top_errors": {**chart("splunk.bar", "Top 5 interfaces with errors; click to filter", "ds_top_errors", stackMode="stacked", legendDisplay="bottom"),
-                       "eventHandlers": filter_on_click},
-    "viz_ifaces": chart("splunk.table", "Interfaces", "ds_ifaces_table", count=100),
-    # Empty when a front-panel port is selected (its MACs are in the Interfaces table).
+    "viz_throughput": chart("splunk.line", "Throughput, sum of all ports (5 min average)", "ds_throughput"),
+    "viz_errors": chart("splunk.column", "Errors per 5 min (all ports)", "ds_errors", stackMode="stacked"),
+    "viz_top_util": {**chart("splunk.bar", "Top 5 interfaces by peak utilization % (in or out); click to open", "ds_top_util", legendDisplay="off"),
+                     "eventHandlers": open_port("$row.interface.value$")},
+    "viz_top_errors": {**chart("splunk.bar", "Top 5 interfaces with errors; click to open", "ds_top_errors", stackMode="stacked", legendDisplay="bottom"),
+                       "eventHandlers": open_port("$row.interface.value$")},
+    "viz_ifaces": {**chart("splunk.table", "Interfaces; click a row to open", "ds_ifaces_table", count=100),
+                   "eventHandlers": open_port("$row.Interface.value$")},
     "viz_mac": {**chart("splunk.table", "MAC addresses on port-channels and VLANs", "ds_mac", count=50),
                 "containerOptions": {"visibility": {"hideWhenNoData": True}}},
     "viz_logs": chart("splunk.table", "Syslog", "ds_logs", count=50),
@@ -124,12 +125,6 @@ inputs = {
                                "items": ">frame(label, value) | objects()"},
                    "context": {"label": ">primary | seriesByName(\"node\") | renameSeries(\"label\")",
                                "value": ">primary | seriesByName(\"node\") | renameSeries(\"value\")"}},
-    "input_interface": {"type": "input.dropdown", "title": "Interface", "dataSources": {"primary": "ds_ifaces"},
-                        "options": {"token": "tk_interface", "defaultValue": "*",
-                                    "items": ">frame(label, value) | prepend(statics) | objects()"},
-                        "context": {"statics": [["All"], ["*"]],
-                                    "label": ">primary | seriesByName(\"interface\") | renameSeries(\"label\")",
-                                    "value": ">primary | seriesByName(\"interface\") | renameSeries(\"value\")"}},
 }
 
 rows = [  # (item, x, y, w, h)
@@ -143,7 +138,7 @@ rows = [  # (item, x, y, w, h)
 ]
 layout = {
     "type": "grid",
-    "globalInputs": ["input_time", "input_node", "input_interface"],
+    "globalInputs": ["input_time", "input_node"],
     "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1930},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Switch", "layoutId": "layout_1"}]},

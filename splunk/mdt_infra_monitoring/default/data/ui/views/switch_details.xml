@@ -29,30 +29,6 @@
     "label": ">primary | seriesByName(\"node\") | renameSeries(\"label\")",
     "value": ">primary | seriesByName(\"node\") | renameSeries(\"value\")"
    }
-  },
-  "input_interface": {
-   "type": "input.dropdown",
-   "title": "Interface",
-   "dataSources": {
-    "primary": "ds_ifaces"
-   },
-   "options": {
-    "token": "tk_interface",
-    "defaultValue": "*",
-    "items": ">frame(label, value) | prepend(statics) | objects()"
-   },
-   "context": {
-    "statics": [
-     [
-      "All"
-     ],
-     [
-      "*"
-     ]
-    ],
-    "label": ">primary | seriesByName(\"interface\") | renameSeries(\"label\")",
-    "value": ">primary | seriesByName(\"interface\") | renameSeries(\"value\")"
-   }
   }
  },
  "defaults": {
@@ -72,7 +48,7 @@
  "visualizations": {
   "viz_ports": {
    "type": "splunk.table",
-   "title": "Ports: green up, dark down, light grey admin down. Click a port to filter.",
+   "title": "Ports: green up, dark down, light grey admin down. Click a port to open its details.",
    "dataSources": {
     "primary": "ds_ports"
    },
@@ -538,14 +514,10 @@
    },
    "eventHandlers": [
     {
-     "type": "drilldown.setToken",
+     "type": "drilldown.customUrl",
      "options": {
-      "tokens": [
-       {
-        "token": "tk_interface",
-        "key": "value"
-       }
-      ]
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$click.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "newTab": true
      }
     }
    ]
@@ -667,7 +639,7 @@
   },
   "viz_throughput": {
    "type": "splunk.line",
-   "title": "Throughput, sum of selected ports (5 min average)",
+   "title": "Throughput, sum of all ports (5 min average)",
    "dataSources": {
     "primary": "ds_throughput"
    },
@@ -676,7 +648,7 @@
   },
   "viz_errors": {
    "type": "splunk.column",
-   "title": "Errors per 5 min (selected interfaces)",
+   "title": "Errors per 5 min (all ports)",
    "dataSources": {
     "primary": "ds_errors"
    },
@@ -687,7 +659,7 @@
   },
   "viz_top_util": {
    "type": "splunk.bar",
-   "title": "Top 5 interfaces by peak utilization % (in or out); click to filter",
+   "title": "Top 5 interfaces by peak utilization % (in or out); click to open",
    "dataSources": {
     "primary": "ds_top_util"
    },
@@ -697,21 +669,17 @@
    "showProgressBar": true,
    "eventHandlers": [
     {
-     "type": "drilldown.setToken",
+     "type": "drilldown.customUrl",
      "options": {
-      "tokens": [
-       {
-        "token": "tk_interface",
-        "key": "row.interface.value"
-       }
-      ]
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "newTab": true
      }
     }
    ]
   },
   "viz_top_errors": {
    "type": "splunk.bar",
-   "title": "Top 5 interfaces with errors; click to filter",
+   "title": "Top 5 interfaces with errors; click to open",
    "dataSources": {
     "primary": "ds_top_errors"
    },
@@ -722,28 +690,33 @@
    "showProgressBar": true,
    "eventHandlers": [
     {
-     "type": "drilldown.setToken",
+     "type": "drilldown.customUrl",
      "options": {
-      "tokens": [
-       {
-        "token": "tk_interface",
-        "key": "row.interface.value"
-       }
-      ]
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "newTab": true
      }
     }
    ]
   },
   "viz_ifaces": {
    "type": "splunk.table",
-   "title": "Interfaces",
+   "title": "Interfaces; click a row to open",
    "dataSources": {
     "primary": "ds_ifaces_table"
    },
    "options": {
     "count": 100
    },
-   "showProgressBar": true
+   "showProgressBar": true,
+   "eventHandlers": [
+    {
+     "type": "drilldown.customUrl",
+     "options": {
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.Interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "newTab": true
+     }
+    }
+   ]
   },
   "viz_mac": {
    "type": "splunk.table",
@@ -792,7 +765,7 @@
    "type": "ds.search",
    "name": "rates",
    "options": {
-    "query": "| `mdt_if_counters($tk_node$,*$tk_interface$)` | `mdt_physical_ports` | `mdt_if_rates` | join type=left node interface [| `mdt_if_status($tk_node$)` | fields node interface speed] | eval util=round(max(in_bps, out_bps) / speed * 100, 4)"
+    "query": "| `mdt_if_counters($tk_node$,*)` | `mdt_physical_ports` | `mdt_if_rates` | join type=left node interface [| `mdt_if_status($tk_node$)` | fields node interface speed] | eval util=round(max(in_bps, out_bps) / speed * 100, 4)"
    }
   },
   "ds_poe": {
@@ -820,7 +793,7 @@
    "type": "ds.search",
    "name": "mac",
    "options": {
-    "query": "| `mdt_mac($tk_node$,*$tk_interface$)` | where NOT (`mdt_is_physical`) | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node"
+    "query": "| `mdt_mac($tk_node$,*)` | where NOT (`mdt_is_physical`) | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node"
    }
   },
   "ds_logs": {
@@ -836,14 +809,6 @@
    "options": {
     "extend": "ds_status",
     "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | eval parts=split(path, \"/\"), port=tonumber(mvindex(parts, -1)), unit=mvindex(parts, 0), uplink=if(mvcount(parts)=3 AND mvindex(parts, 1)!=\"0\", \"U\", \"\") | where isnotnull(port) | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval pair=floor((port - 1) / 2) * 2 + 1, col=uplink.if(uplink=\"\" AND pair < 10, \"0\", \"\").pair, row=unit.if(port % 2 == 1, \"a\", \"b\") | eval {col}=path, s_{col}=state | fields row 0* 1* 2* 3* 4* 5* 6* 7* 8* 9* U* s_* | stats values(*) as * by row | foreach s_* [eval \"<<FIELD>>\"=mvindex('<<FIELD>>', -1)] | appendpipe [where like(row, \"%a\") | eval row=row.\"_\" | fields - s_* | foreach 0* 1* 2* 3* 4* 5* 6* 7* 8* 9* U* [eval \"<<FIELD>>\"=\" \"]] | rename s_* as _s* | sort row | fields - row | foreach 0* 1* 2* 3* 4* 5* 6* 7* 8* 9* U* [eval \"<<FIELD>>_\"=\" \"]"
-   }
-  },
-  "ds_ifaces": {
-   "type": "ds.chain",
-   "name": "ifaces",
-   "options": {
-    "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | fields interface"
    }
   },
   "ds_nodata": {
@@ -867,7 +832,7 @@
    "name": "ifaces_table",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | search interface=\"*$tk_interface$\" | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) | eval MACs=case(macs > 5, macs.\" MACs\", macs > 0, mac_list) | fillnull value=\"\" \"Down for\" \"CDP neighbour\" MACs | rename interface as Interface, neighbour as \"CDP neighbour\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"
+    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) | eval MACs=case(macs > 5, macs.\" MACs\", macs > 0, mac_list) | fillnull value=\"\" \"Down for\" \"CDP neighbour\" MACs | rename interface as Interface, neighbour as \"CDP neighbour\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"
    }
   },
   "ds_poe_gauge": {
@@ -915,8 +880,7 @@
   "type": "grid",
   "globalInputs": [
    "input_time",
-   "input_node",
-   "input_interface"
+   "input_node"
   ],
   "layoutDefinitions": {
    "layout_1": {
