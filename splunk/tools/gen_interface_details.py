@@ -72,10 +72,11 @@ METRICS = [("Traffic in (GB)", "in_oct", 1e9), ("Traffic out (GB)", "out_oct", 1
            ("Errors out", "out_err", 1), ("CRC received", "crc", 1), ("Oversize received", "ov_rx", 1),
            ("Oversize sent", "ov_tx", 1), ("Undersize received", "un_rx", 1), ("Fragments received", "frag_rx", 1),
            ("Jabber received", "jab_rx", 1), ("Transmit errors", "tx_err", 1)]
-def cell(field, s):  # "-" when the platform does not report the counter; GB with 2 decimals, counts whole
+def cell(field, s):  # "-" when the platform does not report the counter; GB with 2 decimals, counts whole.
+    # No thousands separators: those turn a number into text, which the table aligns left.
     decimals = 0 if s == 1 else 2
     div = "" if s == 1 else f" / {int(s)}"
-    return f"if(isnull({field}), \"-\", tostring(round({field}{div}, {decimals}), \"commas\"))"
+    return f"if(isnull({field}), \"-\", tostring(round({field}{div}, {decimals})))"
 compare_cells_this = ", ".join(
     [f"coalesce(t_node.\" \".t_if, \"-\")"] + [cell(f"t_{c}", s) for _, c, s in METRICS])
 compare_cells_far = ", ".join(
@@ -113,10 +114,13 @@ chains = {  # name: (base, post-process)
     "ds_hdr_macs": ("ds_macs", "| stats dc(MAC) as \"Learned MACs\""),
     "ds_throughput": ("ds_flow", f"{THIS} | eval \"In (Mb/s)\"=round(in_bps / 1000000, 2), \"Out (Mb/s)\"=round(out_bps / 1000000, 2) "
                       "| table _time \"In (Mb/s)\" \"Out (Mb/s)\""),
-    # Other = in + out errors the telemetry has no kind for (Cribl reports only totals); floor 0
-    "ds_errors": ("ds_flow", f"{THIS} | eval CRC=coalesce(crc, 0), Oversize=coalesce(ov_rx, 0), Undersize=coalesce(un_rx, 0), "
-                  "Fragment=coalesce(frag_rx, 0), Jabber=coalesce(jab_rx, 0), Transmit=coalesce(tx_err, 0) "
-                  "| eval Other=max(0, coalesce(in_err, 0) + coalesce(out_err, 0) - CRC - Oversize - Undersize - Fragment - Jabber - Transmit) "
+    # Oversize frames are only errors where the MTU is smaller (a jumbo port receives them fine), so Oversize is capped at the
+    # input errors the always-error kinds leave, and Transmit at the output errors. Other = errors without a kind
+    # (Cribl reports only totals), floor 0.
+    "ds_errors": ("ds_flow", f"{THIS} | eval ie=coalesce(in_err, 0), oe=coalesce(out_err, 0), CRC=coalesce(crc, 0), Undersize=coalesce(un_rx, 0), "
+                  "Fragment=coalesce(frag_rx, 0), Jabber=coalesce(jab_rx, 0) "
+                  "| eval Oversize=min(coalesce(ov_rx, 0), max(0, ie - CRC - Undersize - Fragment - Jabber)), Transmit=min(coalesce(tx_err, 0), oe) "
+                  "| eval Other=max(0, ie + oe - CRC - Oversize - Undersize - Fragment - Jabber - Transmit) "
                   "| table _time CRC Oversize Undersize Fragment Jabber Transmit Other"),
     "ds_peak": ("ds_flow", f"{THIS} | eval util=round(max(coalesce(in_bps, 0), coalesce(out_bps, 0)) / $status:result.speed$ * 100, 1) "
                 "| stats max(util) as \"Peak utilization %\""),
@@ -137,8 +141,8 @@ viz = {
     "viz_speed": tile("Speed", "ds_hdr_speed"),
     "viz_changed": tile("Last change", "ds_hdr_changed"),
     # A link to the neighbour's port when there is one, plain "none" otherwise.
-    "viz_neighbour": {"type": "splunk.markdown", "title": "CDP neighbour",
-                      "options": {"markdown": "$status:result.neighbour_md$", "fontSize": "large"}},
+    "viz_neighbour": {"type": "splunk.markdown",
+                      "options": {"markdown": "**CDP neighbour**\n\n## $status:result.neighbour_md$"}},
     "viz_macs": tile("Learned MACs", "ds_hdr_macs"),
     "viz_peak": tile("Peak utilization %", "ds_peak"),
     "viz_throughput": chart("splunk.line", "Throughput (5 min average)", "ds_throughput"),
