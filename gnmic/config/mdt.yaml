@@ -221,7 +221,8 @@ subscriptions:
 
   nx_cpu_stats:
     paths:
-      - "/Cisco-NX-OS-device:System/procsys-items/sysload-items/loadAverage1m"
+      # Idle % over all cores; CPU % = 100 - idle.
+      - "/Cisco-NX-OS-device:System/procsys-items/syscpusummary-items/idle"
     mode: stream
     encoding: json
     stream-mode: sample
