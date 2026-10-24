@@ -62,7 +62,7 @@
   </row>
   <row>
     <panel>
-      <title>Switch health, last 15 minutes. Warning from 70 % (CPU, memory, busiest port) or 100 errors/min, critical from 90 % or 1000 errors/min. Click for Switch Details</title>
+      <title>Switch health, last 15 minutes. Warning from 70 % (CPU, memory, busiest port) or above 5 errors/min, critical from 90 % or 100 errors/min. Click for Switch Details</title>
       <table>
         <search>
           <query>| `mdt_switch_health`
@@ -95,7 +95,7 @@
         </format>
         <format type="color" field="Errors/min (busiest port)">
           <colorPalette type="list">[#53a051,#f8be34,#dc4e41]</colorPalette>
-          <scale type="threshold">100,1000</scale>
+          <scale type="threshold">6,100</scale>
         </format>
         <drilldown>
           <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$row.Switch|u$</link>
