@@ -219,7 +219,9 @@ subscriptions:
       - "openconfig:/interfaces/interface/state/counters/out-octets"
       - "openconfig:/interfaces/interface/state/counters/in-errors"
       - "openconfig:/interfaces/interface/state/counters/out-errors"
-      - "openconfig:/interfaces/interface/ethernet/state"
+      # The counters container, not all of ethernet/state (19 leaves per port: MACs, duplex, speed, ...).
+      # NX-OS sends nothing for the single counter leaves. delete-nx-if-stats-fields drops the unused ones.
+      - "openconfig:/interfaces/interface/ethernet/state/counters"
     mode: stream
     encoding: json
     stream-mode: sample
@@ -435,6 +437,12 @@ processors:
     event-drop:
       condition: '.tags["subscription-name"] == "xe_mac_info" and (.values | to_entries | any(.value == "CPU"))'
 
+  # Pause and MAC control frames from ethernet/state/counters; no dashboard uses them.
+  delete-nx-if-stats-fields:
+    event-delete:
+      value-names:
+        - "^(.*/)?(in|out)-mac-(control|pause)-frames$"
+
   delete-nx-cdp-fields:
     event-delete:
       value-names:
@@ -514,6 +522,7 @@ outputs:
     subject: mdt
     event-processors:
       - nx-normalize-interfaces
+      - delete-nx-if-stats-fields
       - drop-if-stats-interfaces
       - drop-xe-mac-cpu
       - rename-metrics

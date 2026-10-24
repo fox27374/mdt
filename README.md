@@ -95,6 +95,7 @@ counters, up to 1h for slow-changing info like CDP/MAC).
   loopback, tunnel, port-channel, etc.).
 - **`rename-metrics`** — shortens metric names to their leaf (`path-base`).
 - **`delete-nx-cdp-fields`** — strips noisy NX-OS CDP fields.
+- **`delete-nx-if-stats-fields`** — drops the NX-OS pause and MAC control frame counters.
 
 ## Usage
 
