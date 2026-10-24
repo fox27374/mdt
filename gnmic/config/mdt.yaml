@@ -81,6 +81,7 @@ targets:
     tls-ca: /app/config/ca.pem
     subscriptions:
       - nx_if_stats
+      - nx_if_errors
       - nx_cpu_stats
       - nx_mem_stats
       - nx_if_info
@@ -93,6 +94,7 @@ targets:
     tls-ca: /app/config/ca.pem
     subscriptions:
       - nx_if_stats
+      - nx_if_errors
       - nx_cpu_stats
       - nx_mem_stats
       - nx_if_info
@@ -132,6 +134,12 @@ subscriptions:
       - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics/out-octets"
       - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics/in-errors"
       - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics/out-errors"
+      # Error breakdown: which kind of frame makes up in-errors.
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics/in-crc-errors"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/ether-stats/in-oversize-frames"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/ether-stats/in-undersize-frames"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/ether-stats/in-fragment-frames"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/ether-stats/in-jabber-frames"
       - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/speed"
     mode: stream
     encoding: json_ietf
@@ -216,6 +224,19 @@ subscriptions:
     encoding: json
     stream-mode: sample
     sample-interval: 30s
+    outputs:
+      - nats
+
+  # Transmit side of the error breakdown; the receive side (in-crc-errors, in-oversize-frames, ...)
+  # comes with nx_if_stats (openconfig ethernet/state/counters).
+  nx_if_errors:
+    paths:
+      - "/Cisco-NX-OS-device:System/intf-items/phys-items/PhysIf-list/dbgDot3Stats-items/internalMacTransmitErrors"
+      - "/Cisco-NX-OS-device:System/intf-items/phys-items/PhysIf-list/dbgEtherStats-items/txOversizePkts"
+    mode: stream
+    encoding: json
+    stream-mode: sample
+    sample-interval: 60s
     outputs:
       - nats
 
@@ -451,6 +472,9 @@ processors:
           # ponytail: one neighbour per port; a second adjacency on the same port is dropped
           rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(.devId != null)
           | entry({interface_name: .id}; {devId: .devId})
+        elif ($ev.tags["subscription-name"] == "nx_if_errors") then
+          rows("PhysIf-list\\.(?P<idx>[0-9]+)/")[] | select(.id != null)
+          | entry({interface_name: .id}; del(.id))
         elif ($ev.tags["subscription-name"] == "nx_mac_info") then
           # supeth1 is the supervisor (CPU): its own MACs, not learned ones
           rows("MacAddressEntry-list\\.(?P<idx>[0-9]+)/")[] | select((.port // "") | test("^sup"; "i") | not)
