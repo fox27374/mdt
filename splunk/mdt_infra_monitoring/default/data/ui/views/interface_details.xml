@@ -1,0 +1,417 @@
+<dashboard version="2" theme="dark">
+    <label>Interface Details</label>
+    <description>One port: status, speed, traffic, error kinds, CDP far end, MACs and syslog</description>
+    <definition><![CDATA[
+{
+ "title": "Interface Details",
+ "description": "One port: status, speed, traffic and error kinds, the far end of its CDP link, learned MACs and syslog.",
+ "inputs": {
+  "input_time": {
+   "type": "input.timerange",
+   "title": "Time range",
+   "options": {
+    "token": "global_time",
+    "defaultValue": "-4h@m,now"
+   }
+  },
+  "input_node": {
+   "type": "input.dropdown",
+   "title": "Device",
+   "dataSources": {
+    "primary": "ds_nodes"
+   },
+   "options": {
+    "token": "tk_node",
+    "selectFirstSearchResult": true,
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"node\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"node\") | renameSeries(\"value\")"
+   }
+  },
+  "input_interface": {
+   "type": "input.dropdown",
+   "title": "Interface",
+   "dataSources": {
+    "primary": "ds_ifaces"
+   },
+   "options": {
+    "token": "tk_interface",
+    "selectFirstSearchResult": true,
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"interface\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"interface\") | renameSeries(\"value\")"
+   }
+  }
+ },
+ "defaults": {
+  "dataSources": {
+   "ds.search": {
+    "options": {
+     "queryParameters": {
+      "earliest": "$global_time.earliest$",
+      "latest": "$global_time.latest$"
+     },
+     "refresh": "1m",
+     "refreshType": "delay"
+    }
+   }
+  }
+ },
+ "visualizations": {
+  "viz_status": {
+   "type": "splunk.singlevalue",
+   "title": "Status",
+   "dataSources": {
+    "primary": "ds_hdr_status"
+   },
+   "options": {}
+  },
+  "viz_speed": {
+   "type": "splunk.singlevalue",
+   "title": "Speed",
+   "dataSources": {
+    "primary": "ds_hdr_speed"
+   },
+   "options": {}
+  },
+  "viz_changed": {
+   "type": "splunk.singlevalue",
+   "title": "Last change",
+   "dataSources": {
+    "primary": "ds_hdr_changed"
+   },
+   "options": {}
+  },
+  "viz_neighbour": {
+   "type": "splunk.markdown",
+   "title": "CDP neighbour",
+   "options": {
+    "markdown": "$status:result.neighbour_md$",
+    "fontSize": "large"
+   }
+  },
+  "viz_macs": {
+   "type": "splunk.singlevalue",
+   "title": "Learned MACs",
+   "dataSources": {
+    "primary": "ds_hdr_macs"
+   },
+   "options": {}
+  },
+  "viz_peak": {
+   "type": "splunk.singlevalue",
+   "title": "Peak utilization %",
+   "dataSources": {
+    "primary": "ds_peak"
+   },
+   "options": {}
+  },
+  "viz_throughput": {
+   "type": "splunk.line",
+   "title": "Throughput (5 min average)",
+   "dataSources": {
+    "primary": "ds_throughput"
+   },
+   "options": {},
+   "showProgressBar": true
+  },
+  "viz_errors": {
+   "type": "splunk.column",
+   "title": "Errors per 5 min by kind",
+   "dataSources": {
+    "primary": "ds_errors"
+   },
+   "options": {
+    "stackMode": "stacked",
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true
+  },
+  "viz_compare": {
+   "type": "splunk.table",
+   "title": "Link comparison, whole time range",
+   "dataSources": {
+    "primary": "ds_compare"
+   },
+   "options": {
+    "count": 20
+   },
+   "showProgressBar": true
+  },
+  "viz_macs_table": {
+   "type": "splunk.table",
+   "title": "Learned MAC addresses",
+   "dataSources": {
+    "primary": "ds_macs"
+   },
+   "options": {
+    "count": 50
+   },
+   "showProgressBar": true
+  },
+  "viz_logs": {
+   "type": "splunk.table",
+   "title": "Syslog for this port, newest first",
+   "dataSources": {
+    "primary": "ds_logs"
+   },
+   "options": {
+    "count": 50
+   },
+   "showProgressBar": true
+  }
+ },
+ "dataSources": {
+  "ds_nodes": {
+   "type": "ds.search",
+   "name": "nodes",
+   "options": {
+    "query": "| `mdt_nodes($global_time.earliest$)`"
+   }
+  },
+  "ds_ifaces": {
+   "type": "ds.search",
+   "name": "ifaces",
+   "options": {
+    "query": "| `mdt_if_status($tk_node$)` | `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | fields interface"
+   }
+  },
+  "ds_status": {
+   "type": "ds.search",
+   "name": "status",
+   "options": {
+    "query": "| `mdt_if_status($tk_node$)` | `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | where node=\"$tk_node$\" AND (interface=\"$tk_interface$\" OR path=\"$tk_interface$\") | sort 0 - oper_up - speed | dedup keepempty=true node path | eval inorm=`mdt_ifkey(interface)` | join type=left node inorm [| `mdt_links`] | join type=left far_node far_inorm [| `mdt_if_status(*)` | `mdt_physical_ports` | eval inorm=`mdt_ifkey(interface)` | rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] | eval neighbour_md=if(isnull(far_node), \"none\", \"[\".far_node.\" \".coalesce(far_interface, \"\").\"](/app/mdt_infra_monitoring/interface_details?form.tk_node=\".far_node.\"&form.tk_interface=\".coalesce(far_interface, \"\").\"&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$)\") | eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")",
+    "enableSmartSources": true
+   }
+  },
+  "ds_macs": {
+   "type": "ds.search",
+   "name": "macs",
+   "options": {
+    "query": "| `mdt_mac($status:result.node$,$status:result.interface$)` | rename mac as MAC, vlan as VLAN | fields MAC VLAN | sort MAC"
+   }
+  },
+  "ds_logs": {
+   "type": "ds.search",
+   "name": "logs",
+   "options": {
+    "query": "index=cisco_syslog host=\"$tk_node$\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) | eval tp=if(match(\"$tk_interface$\", \"^\\D\"), replace(\"$tk_interface$\", \"^\\D+\", \"\"), \"$tk_interface$\") | where match(message, \"(?<![\\d/])\" . tp . \"(?![\\d/])\") | table _time severity message | sort - _time | head 200"
+   }
+  },
+  "ds_flow": {
+   "type": "ds.search",
+   "name": "flow",
+   "options": {
+    "query": "| `mdt_if_counters($status:result.node$,$status:result.interface$)` | append [| `mdt_if_detail($status:result.node$,$status:result.interface$)`] | append [| `mdt_if_counters($status:result.far_node$,$status:result.far_interface$)`] | append [| `mdt_if_detail($status:result.far_node$,$status:result.far_interface$)`] | stats max(in_octets) as in_octets max(out_octets) as out_octets max(in_errors) as in_errors max(out_errors) as out_errors max(crc) as crc max(oversize_rx) as oversize_rx max(undersize_rx) as undersize_rx max(fragment_rx) as fragment_rx max(jabber_rx) as jabber_rx max(tx_errors) as tx_errors max(oversize_tx) as oversize_tx by _time node interface | sort 0 node interface _time | streamstats current=f window=1 last(_time) as p_t last(in_octets) as p_in_octets last(out_octets) as p_out_octets last(in_errors) as p_in_errors last(out_errors) as p_out_errors last(crc) as p_crc last(oversize_rx) as p_oversize_rx last(undersize_rx) as p_undersize_rx last(fragment_rx) as p_fragment_rx last(jabber_rx) as p_jabber_rx last(tx_errors) as p_tx_errors last(oversize_tx) as p_oversize_tx by node interface | eval dt=_time - p_t | where dt > 0 | eval in_oct=if(in_octets >= p_in_octets, in_octets - p_in_octets, null()), out_oct=if(out_octets >= p_out_octets, out_octets - p_out_octets, null()), in_err=if(in_errors >= p_in_errors, in_errors - p_in_errors, null()), out_err=if(out_errors >= p_out_errors, out_errors - p_out_errors, null()), crc=if(crc >= p_crc, crc - p_crc, null()), ov_rx=if(oversize_rx >= p_oversize_rx, oversize_rx - p_oversize_rx, null()), un_rx=if(undersize_rx >= p_undersize_rx, undersize_rx - p_undersize_rx, null()), frag_rx=if(fragment_rx >= p_fragment_rx, fragment_rx - p_fragment_rx, null()), jab_rx=if(jabber_rx >= p_jabber_rx, jabber_rx - p_jabber_rx, null()), tx_err=if(tx_errors >= p_tx_errors, tx_errors - p_tx_errors, null()), ov_tx=if(oversize_tx >= p_oversize_tx, oversize_tx - p_oversize_tx, null()) | eval in_bps=in_oct * 8 / dt, out_bps=out_oct * 8 / dt | bin _time span=5m | stats avg(in_bps) as in_bps avg(out_bps) as out_bps sum(in_oct) as in_oct count(in_oct) as in_oct_n sum(out_oct) as out_oct count(out_oct) as out_oct_n sum(in_err) as in_err count(in_err) as in_err_n sum(out_err) as out_err count(out_err) as out_err_n sum(crc) as crc count(crc) as crc_n sum(ov_rx) as ov_rx count(ov_rx) as ov_rx_n sum(un_rx) as un_rx count(un_rx) as un_rx_n sum(frag_rx) as frag_rx count(frag_rx) as frag_rx_n sum(jab_rx) as jab_rx count(jab_rx) as jab_rx_n sum(tx_err) as tx_err count(tx_err) as tx_err_n sum(ov_tx) as ov_tx count(ov_tx) as ov_tx_n by _time node interface | where _time + 300 <= now() | eval side=if(node=\"$status:result.node$\" AND interface=\"$status:result.interface$\", \"this\", \"far\")"
+   }
+  },
+  "ds_hdr_status": {
+   "type": "ds.chain",
+   "name": "hdr_status",
+   "options": {
+    "extend": "ds_status",
+    "query": "| eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | fields Status"
+   }
+  },
+  "ds_hdr_speed": {
+   "type": "ds.chain",
+   "name": "hdr_speed",
+   "options": {
+    "extend": "ds_status",
+    "query": "| eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | fields Speed"
+   }
+  },
+  "ds_hdr_changed": {
+   "type": "ds.chain",
+   "name": "hdr_changed",
+   "options": {
+    "extend": "ds_status",
+    "query": "| eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) | eval \"Last change\"=case(isnull(last_change), \"-\", oper_up==0, \"down for \".trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), true(), strftime(last_change, \"%Y-%m-%d %H:%M\")) | fields \"Last change\""
+   }
+  },
+  "ds_hdr_macs": {
+   "type": "ds.chain",
+   "name": "hdr_macs",
+   "options": {
+    "extend": "ds_macs",
+    "query": "| stats dc(MAC) as \"Learned MACs\""
+   }
+  },
+  "ds_throughput": {
+   "type": "ds.chain",
+   "name": "throughput",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| where side=\"this\" | eval \"In (Mb/s)\"=round(in_bps / 1000000, 2), \"Out (Mb/s)\"=round(out_bps / 1000000, 2) | table _time \"In (Mb/s)\" \"Out (Mb/s)\""
+   }
+  },
+  "ds_errors": {
+   "type": "ds.chain",
+   "name": "errors",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| where side=\"this\" | eval CRC=coalesce(crc, 0), Oversize=coalesce(ov_rx, 0), Undersize=coalesce(un_rx, 0), Fragment=coalesce(frag_rx, 0), Jabber=coalesce(jab_rx, 0), Transmit=coalesce(tx_err, 0) | eval Other=max(0, coalesce(in_err, 0) + coalesce(out_err, 0) - CRC - Oversize - Undersize - Fragment - Jabber - Transmit) | table _time CRC Oversize Undersize Fragment Jabber Transmit Other"
+   }
+  },
+  "ds_peak": {
+   "type": "ds.chain",
+   "name": "peak",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| where side=\"this\" | eval util=round(max(coalesce(in_bps, 0), coalesce(out_bps, 0)) / $status:result.speed$ * 100, 1) | stats max(util) as \"Peak utilization %\""
+   }
+  },
+  "ds_compare": {
+   "type": "ds.chain",
+   "name": "compare",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| stats sum(in_oct) as in_oct count(in_oct) as in_oct_n sum(out_oct) as out_oct count(out_oct) as out_oct_n sum(in_err) as in_err count(in_err) as in_err_n sum(out_err) as out_err count(out_err) as out_err_n sum(crc) as crc count(crc) as crc_n sum(ov_rx) as ov_rx count(ov_rx) as ov_rx_n sum(un_rx) as un_rx count(un_rx) as un_rx_n sum(frag_rx) as frag_rx count(frag_rx) as frag_rx_n sum(jab_rx) as jab_rx count(jab_rx) as jab_rx_n sum(tx_err) as tx_err count(tx_err) as tx_err_n sum(ov_tx) as ov_tx count(ov_tx) as ov_tx_n by side | eval in_oct=if(in_oct_n=0, null(), in_oct), out_oct=if(out_oct_n=0, null(), out_oct), in_err=if(in_err_n=0, null(), in_err), out_err=if(out_err_n=0, null(), out_err), crc=if(crc_n=0, null(), crc), ov_rx=if(ov_rx_n=0, null(), ov_rx), un_rx=if(un_rx_n=0, null(), un_rx), frag_rx=if(frag_rx_n=0, null(), frag_rx), jab_rx=if(jab_rx_n=0, null(), jab_rx), tx_err=if(tx_err_n=0, null(), tx_err), ov_tx=if(ov_tx_n=0, null(), ov_tx) | eval t_in_oct=if(side=\"this\", in_oct, null()), f_in_oct=if(side=\"far\", in_oct, null()), t_out_oct=if(side=\"this\", out_oct, null()), f_out_oct=if(side=\"far\", out_oct, null()), t_in_err=if(side=\"this\", in_err, null()), f_in_err=if(side=\"far\", in_err, null()), t_out_err=if(side=\"this\", out_err, null()), f_out_err=if(side=\"far\", out_err, null()), t_crc=if(side=\"this\", crc, null()), f_crc=if(side=\"far\", crc, null()), t_ov_rx=if(side=\"this\", ov_rx, null()), f_ov_rx=if(side=\"far\", ov_rx, null()), t_un_rx=if(side=\"this\", un_rx, null()), f_un_rx=if(side=\"far\", un_rx, null()), t_frag_rx=if(side=\"this\", frag_rx, null()), f_frag_rx=if(side=\"far\", frag_rx, null()), t_jab_rx=if(side=\"this\", jab_rx, null()), f_jab_rx=if(side=\"far\", jab_rx, null()), t_tx_err=if(side=\"this\", tx_err, null()), f_tx_err=if(side=\"far\", tx_err, null()), t_ov_tx=if(side=\"this\", ov_tx, null()), f_ov_tx=if(side=\"far\", ov_tx, null()) | stats count(eval(side=\"far\")) as far_rows max(t_in_oct) as t_in_oct max(f_in_oct) as f_in_oct max(t_out_oct) as t_out_oct max(f_out_oct) as f_out_oct max(t_in_err) as t_in_err max(f_in_err) as f_in_err max(t_out_err) as t_out_err max(f_out_err) as f_out_err max(t_crc) as t_crc max(f_crc) as f_crc max(t_ov_rx) as t_ov_rx max(f_ov_rx) as f_ov_rx max(t_un_rx) as t_un_rx max(f_un_rx) as f_un_rx max(t_frag_rx) as t_frag_rx max(f_frag_rx) as f_frag_rx max(t_jab_rx) as t_jab_rx max(f_jab_rx) as f_jab_rx max(t_tx_err) as t_tx_err max(f_tx_err) as f_tx_err max(t_ov_tx) as t_ov_tx max(f_ov_tx) as f_ov_tx | eval t_node=\"$status:result.node$\", t_if=\"$status:result.interface$\", f_node=\"$status:result.far_node$\", f_if=\"$status:result.far_interface$\" | eval far_rows=coalesce(far_rows, 0) | eval labels=mvappend(\"Port\", \"Traffic in (GB)\", \"Traffic out (GB)\", \"Errors in\", \"Errors out\", \"CRC received\", \"Oversize received\", \"Oversize sent\", \"Undersize received\", \"Fragments received\", \"Jabber received\", \"Transmit errors\") | eval this_vals=mvappend(coalesce(t_node.\" \".t_if, \"-\"), if(isnull(t_in_oct), \"-\", tostring(round(t_in_oct / 1000000000, 2), \"commas\")), if(isnull(t_out_oct), \"-\", tostring(round(t_out_oct / 1000000000, 2), \"commas\")), if(isnull(t_in_err), \"-\", tostring(round(t_in_err, 0), \"commas\")), if(isnull(t_out_err), \"-\", tostring(round(t_out_err, 0), \"commas\")), if(isnull(t_crc), \"-\", tostring(round(t_crc, 0), \"commas\")), if(isnull(t_ov_rx), \"-\", tostring(round(t_ov_rx, 0), \"commas\")), if(isnull(t_ov_tx), \"-\", tostring(round(t_ov_tx, 0), \"commas\")), if(isnull(t_un_rx), \"-\", tostring(round(t_un_rx, 0), \"commas\")), if(isnull(t_frag_rx), \"-\", tostring(round(t_frag_rx, 0), \"commas\")), if(isnull(t_jab_rx), \"-\", tostring(round(t_jab_rx, 0), \"commas\")), if(isnull(t_tx_err), \"-\", tostring(round(t_tx_err, 0), \"commas\"))) | eval far_vals=mvappend(if(far_rows=0, \"no telemetry\", coalesce(f_node.\" \".f_if, \"-\")), if(far_rows=0, \"no telemetry\", if(isnull(f_in_oct), \"-\", tostring(round(f_in_oct / 1000000000, 2), \"commas\"))), if(far_rows=0, \"no telemetry\", if(isnull(f_out_oct), \"-\", tostring(round(f_out_oct / 1000000000, 2), \"commas\"))), if(far_rows=0, \"no telemetry\", if(isnull(f_in_err), \"-\", tostring(round(f_in_err, 0), \"commas\"))), if(far_rows=0, \"no telemetry\", if(isnull(f_out_err), \"-\", tostring(round(f_out_err, 0), \"commas\"))), if(far_rows=0, \"no telemetry\", if(isnull(f_crc), \"-\", tostring(round(f_crc, 0), \"commas\"))), if(far_rows=0, \"no telemetry\", if(isnull(f_ov_rx), \"-\", tostring(round(f_ov_rx, 0), \"commas\"))), if(far_rows=0, \"no telemetry\", if(isnull(f_ov_tx), \"-\", tostring(round(f_ov_tx, 0), \"commas\"))), if(far_rows=0, \"no telemetry\", if(isnull(f_un_rx), \"-\", tostring(round(f_un_rx, 0), \"commas\"))), if(far_rows=0, \"no telemetry\", if(isnull(f_frag_rx), \"-\", tostring(round(f_frag_rx, 0), \"commas\"))), if(far_rows=0, \"no telemetry\", if(isnull(f_jab_rx), \"-\", tostring(round(f_jab_rx, 0), \"commas\"))), if(far_rows=0, \"no telemetry\", if(isnull(f_tx_err), \"-\", tostring(round(f_tx_err, 0), \"commas\")))) | eval x=mvzip(mvzip(labels, this_vals, \"|\"), far_vals, \"|\") | mvexpand x | rex field=x \"^(?<Counter>[^|]*)\\|(?<This>[^|]*)\\|(?<Neighbour>.*)$\" | table Counter This Neighbour | rename This as \"This port\", Neighbour as \"Neighbour port\""
+   }
+  }
+ },
+ "layout": {
+  "type": "grid",
+  "globalInputs": [
+   "input_time",
+   "input_node",
+   "input_interface"
+  ],
+  "layoutDefinitions": {
+   "layout_1": {
+    "type": "grid",
+    "options": {
+     "width": 1440,
+     "height": 1590
+    },
+    "structure": [
+     {
+      "item": "viz_status",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_speed",
+      "type": "block",
+      "position": {
+       "x": 240,
+       "y": 0,
+       "w": 200,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_changed",
+      "type": "block",
+      "position": {
+       "x": 440,
+       "y": 0,
+       "w": 300,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_neighbour",
+      "type": "block",
+      "position": {
+       "x": 740,
+       "y": 0,
+       "w": 400,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_macs",
+      "type": "block",
+      "position": {
+       "x": 1140,
+       "y": 0,
+       "w": 150,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_peak",
+      "type": "block",
+      "position": {
+       "x": 1290,
+       "y": 0,
+       "w": 150,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_throughput",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 110,
+       "w": 720,
+       "h": 320
+      }
+     },
+     {
+      "item": "viz_errors",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 110,
+       "w": 720,
+       "h": 320
+      }
+     },
+     {
+      "item": "viz_compare",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 430,
+       "w": 1440,
+       "h": 420
+      }
+     },
+     {
+      "item": "viz_macs_table",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 850,
+       "w": 720,
+       "h": 320
+      }
+     },
+     {
+      "item": "viz_logs",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 1170,
+       "w": 1440,
+       "h": 420
+      }
+     }
+    ]
+   }
+  },
+  "tabs": {
+   "items": [
+    {
+     "label": "Interface",
+     "layoutId": "layout_1"
+    }
+   ]
+  }
+ },
+ "applicationProperties": {}
+}
+    ]]></definition>
+</dashboard>
