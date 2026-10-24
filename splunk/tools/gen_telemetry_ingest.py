@@ -37,9 +37,9 @@ bases = {
     "ds_tile_metrics": "| mstats count(_value) as n WHERE index=cisco_metrics metric_name=* earliest=-15m "
                        "| eval rate=round(n / 900, 0) | fields rate",
     "ds_devices": DEVICES,
-    "ds_subs": "| mstats count(_value) WHERE index=cisco_metrics metric_name=mdt_* earliest=-15m BY subscription_name "
+    "ds_subs": "| mstats count(_value) WHERE index=cisco_metrics metric_name=mdt_* earliest=-15m BY extracted_source subscription_name "
                "| stats count as subscriptions",
-    "ds_lic_today": f"{USAGE} | stats sum(b) as bytes {POOL}",
+    "ds_lic_today": f"{USAGE} | stats sum(b) as bytes",
     "ds_lic_table": (f"{USAGE} "
                      "| eval td=if(_time >= relative_time(now(), \"@d\"), b, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), b, 0) "
                      "| stats sum(td) as td sum(yd) as yd sum(b) as mo by idx "
@@ -67,7 +67,6 @@ chains = {  # name: (base, post-process)
                          "| eval ord=if(Status=\"silent\", 0, 1) | sort 0 ord device | fields - ord "
                          "| rename device as Device | table Device Pipeline \"Last data\" \"Metrics/s\" Subscriptions Status"),
     "ds_lic_mb": ("ds_lic_today", "| eval mb=round(bytes / 1048576, 0) | fields mb"),
-    "ds_lic_pct": ("ds_lic_today", "| eval pct=round(bytes / pool_bytes * 100, 1) | fields pct"),
 }
 # Fixed windows per search: tiles and devices use the last 15 minutes, licence views the last 30 days, the rest the picker.
 LAST15 = {"earliest": "-15m", "latest": "now"}
@@ -106,8 +105,7 @@ viz = {
     "viz_metrics": tile("Metrics per second (last 15 min)", "ds_tile_metrics", numberPrecision=0),
     "viz_sending": tile("Sending devices (last 15 min)", "ds_sending"),
     "viz_subs": tile("gnmic subscriptions (last 15 min)", "ds_subs"),
-    "viz_lic_mb": tile("License used today (MB)", "ds_lic_mb", unit="MB", unitPosition="after"),
-    "viz_lic_pct": tile("License used today (% of pool)", "ds_lic_pct", unit="%", unitPosition="after", numberPrecision=1),
+    "viz_lic_mb": tile("Volume ingested today (MB)", "ds_lic_mb", unit="MB", unitPosition="after"),
     "viz_ingest": chart("splunk.area", "Ingest: metrics per second by pipeline (5 min average)", "ds_ingest",
                         stackMode="stacked", legendDisplay="bottom"),
     "viz_devices": devices,
@@ -123,8 +121,8 @@ inputs = {
 }
 
 rows = [  # (item, x, y, w, h)
-    ("viz_metrics", 0, 0, 288, 110), ("viz_sending", 288, 0, 288, 110), ("viz_subs", 576, 0, 288, 110),
-    ("viz_lic_mb", 864, 0, 288, 110), ("viz_lic_pct", 1152, 0, 288, 110),
+    ("viz_metrics", 0, 0, 360, 110), ("viz_sending", 360, 0, 360, 110), ("viz_subs", 720, 0, 360, 110),
+    ("viz_lic_mb", 1080, 0, 360, 110),
     ("viz_ingest", 0, 110, 1440, 340),
     ("viz_devices", 0, 450, 1440, 430),
     ("viz_lic_chart", 0, 880, 720, 340), ("viz_lic_table", 720, 880, 720, 340),
@@ -143,7 +141,7 @@ definition = {
     "description": "Metrics per second by pipeline, sending devices and silent ones, gnmic subscriptions, licence use and index storage.",
     "inputs": inputs,
     "defaults": {"dataSources": {"ds.search": {"options": {"queryParameters": {
-        "earliest": "$global_time.earliest$", "latest": "$global_time.latest$"}, "refresh": "1m", "refreshType": "delay"}}}},
+        "earliest": "$global_time.earliest$", "latest": "$global_time.latest$"}, "refresh": "90s", "refreshType": "delay"}}}},
     "visualizations": viz,
     "dataSources": dataSources,
     "layout": layout,

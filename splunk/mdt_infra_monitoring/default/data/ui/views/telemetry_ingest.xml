@@ -23,7 +23,7 @@
       "earliest": "$global_time.earliest$",
       "latest": "$global_time.latest$"
      },
-     "refresh": "1m",
+     "refresh": "90s",
      "refreshType": "delay"
     }
    }
@@ -63,7 +63,7 @@
   },
   "viz_lic_mb": {
    "type": "splunk.singlevalue",
-   "title": "License used today (MB)",
+   "title": "Volume ingested today (MB)",
    "dataSources": {
     "primary": "ds_lic_mb"
    },
@@ -71,19 +71,6 @@
     "majorColor": "#708794",
     "unit": "MB",
     "unitPosition": "after"
-   }
-  },
-  "viz_lic_pct": {
-   "type": "splunk.singlevalue",
-   "title": "License used today (% of pool)",
-   "dataSources": {
-    "primary": "ds_lic_pct"
-   },
-   "options": {
-    "majorColor": "#708794",
-    "unit": "%",
-    "unitPosition": "after",
-    "numberPrecision": 1
    }
   },
   "viz_ingest": {
@@ -199,7 +186,7 @@
    "type": "ds.search",
    "name": "subs",
    "options": {
-    "query": "| mstats count(_value) WHERE index=cisco_metrics metric_name=mdt_* earliest=-15m BY subscription_name | stats count as subscriptions",
+    "query": "| mstats count(_value) WHERE index=cisco_metrics metric_name=mdt_* earliest=-15m BY extracted_source subscription_name | stats count as subscriptions",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -210,7 +197,7 @@
    "type": "ds.search",
    "name": "lic_today",
    "options": {
-    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog) | stats sum(b) as bytes | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes]",
+    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog) | stats sum(b) as bytes",
     "queryParameters": {
      "earliest": "@d",
      "latest": "now"
@@ -292,14 +279,6 @@
     "extend": "ds_lic_today",
     "query": "| eval mb=round(bytes / 1048576, 0) | fields mb"
    }
-  },
-  "ds_lic_pct": {
-   "type": "ds.chain",
-   "name": "lic_pct",
-   "options": {
-    "extend": "ds_lic_today",
-    "query": "| eval pct=round(bytes / pool_bytes * 100, 1) | fields pct"
-   }
   }
  },
  "layout": {
@@ -321,7 +300,7 @@
       "position": {
        "x": 0,
        "y": 0,
-       "w": 288,
+       "w": 360,
        "h": 110
       }
      },
@@ -329,9 +308,9 @@
       "item": "viz_sending",
       "type": "block",
       "position": {
-       "x": 288,
+       "x": 360,
        "y": 0,
-       "w": 288,
+       "w": 360,
        "h": 110
       }
      },
@@ -339,9 +318,9 @@
       "item": "viz_subs",
       "type": "block",
       "position": {
-       "x": 576,
+       "x": 720,
        "y": 0,
-       "w": 288,
+       "w": 360,
        "h": 110
       }
      },
@@ -349,19 +328,9 @@
       "item": "viz_lic_mb",
       "type": "block",
       "position": {
-       "x": 864,
+       "x": 1080,
        "y": 0,
-       "w": 288,
-       "h": 110
-      }
-     },
-     {
-      "item": "viz_lic_pct",
-      "type": "block",
-      "position": {
-       "x": 1152,
-       "y": 0,
-       "w": 288,
+       "w": 360,
        "h": 110
       }
      },

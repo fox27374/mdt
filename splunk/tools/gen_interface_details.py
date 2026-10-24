@@ -189,7 +189,7 @@ definition = {
     "description": "One port: status, speed, traffic and error kinds, the far end of its CDP link, learned MACs and syslog.",
     "inputs": inputs,
     "defaults": {"dataSources": {"ds.search": {"options": {"queryParameters": {
-        "earliest": "$global_time.earliest$", "latest": "$global_time.latest$"}, "refresh": "1m", "refreshType": "delay"}}}},
+        "earliest": "$global_time.earliest$", "latest": "$global_time.latest$"}, "refresh": "90s", "refreshType": "delay"}}}},
     "visualizations": viz,
     "dataSources": dataSources,
     "layout": layout,
