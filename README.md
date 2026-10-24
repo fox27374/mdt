@@ -166,7 +166,8 @@ The `otel-collector` service runs the pinned `otel/opentelemetry-collector-contr
   keeps only the metrics the Splunk dashboards use and the interfaces gnmic keeps (`filter/cisco`) and gives them the gnmic label names
   `source` and `interface_name` with only identifying labels (`transform/cisco`),
 - serves that dial-out data as Prometheus metrics on host port **9464** (`/metrics`), next to the dial-in data on 9273,
-- scrapes gnmic-output (`gnmic-output:9273`) every 30s and collects host metrics from the host root mounted at `/hostfs`,
+- scrapes gnmic-output (`gnmic-output:9273`) in three jobs (30s, 60s, 300s), each keeping the subscriptions with that
+  sample-interval, so every sample is stored once, and collects host metrics from the host root mounted at `/hostfs`,
 - exports the metrics to Splunk HEC. The token is read from `SPLUNK_HEC_TOKEN` in `gnmic/otel_env` (git-ignored).
 
 Inside the compose network it serves the health check on `:13133` and its own Prometheus self-telemetry on `:8888/metrics`. The monitor reads both (see [Environment variables](#environment-variables)).
