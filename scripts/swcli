@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Run IOS-XE CLI commands on one lab switch, through the test host (the switches are only reachable from there).
+#
+#   printf 'show running-config | include ^hostname\nexit\n' | scripts/swcli 172.24.80.249
+#
+# Commands come from stdin; end with exit. Credentials: SWITCH_USERNAME/SWITCH_PASSWORD from /opt/gnmic/gnmic_env
+# on the test host. Env: MDTHOST (default claude@172.24.89.69), MDTHOST_KEY (default ~/.ssh/mdthost_ed25519).
+set -euo pipefail
+ip=${1:?usage: scripts/swcli <switch ip> < commands}
+[[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not an IP address: $ip" >&2; exit 2; }
+host=${MDTHOST:-claude@172.24.89.69}
+key=${MDTHOST_KEY:-$HOME/.ssh/mdthost_ed25519}
+remote='export LC_ALL=C; set -a; . /opt/gnmic/gnmic_env; set +a
+ap=$(mktemp); printf "#!/bin/sh\necho \"\$SWITCH_PASSWORD\"\n" > $ap; chmod 700 $ap; trap "rm -f $ap" EXIT
+SSH_ASKPASS=$ap SSH_ASKPASS_REQUIRE=force DISPLAY=x setsid -w ssh -T -o StrictHostKeyChecking=accept-new \
+  -o KexAlgorithms=+diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1 -o HostKeyAlgorithms=+ssh-rsa \
+  -o PubkeyAuthentication=no "$SWITCH_USERNAME@'"$ip"'"'
+ssh -i "$key" -o IdentitiesOnly=yes -o ConnectTimeout=10 "$host" "$remote" 2> >(grep -v -E 'setlocale|Warning: Permanently' >&2)
