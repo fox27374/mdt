@@ -78,7 +78,7 @@ Subscriptions are grouped by platform:
 - **Cisco NX-OS switches** (`nx_*`) — interface stats/info, CPU load, memory, CDP, MAC
   (uses `config/ca.pem` for TLS).
 - **Cisco Catalyst WLC** (`wl_*`) — wireless client signal/SNR/retries, AP utilization
-  and noise, client/AP/SSID mappings.
+  and noise, client/AP/SSID mappings, and client roaming history (`wl_client_roam`).
 - **Palo Alto firewalls** (`panos_*`) — interface counters, CPU, session
   stats.
 
@@ -96,6 +96,9 @@ counters, up to 1h for slow-changing info like CDP/MAC).
 - **`rename-metrics`** — shortens metric names to their leaf (`path-base`).
 - **`delete-nx-cdp-fields`** — strips noisy NX-OS CDP fields.
 - **`delete-nx-if-stats-fields`** — drops the NX-OS pause and MAC control frame counters.
+- **`wl-split-roam-history`** — splits the WLC client roaming history into one event per association,
+  with client MAC, AP, BSSID, radio slot, roam type and association time as labels and `run-latency` (ms)
+  as the only metric (`mdt_wl_client_roam_run_latency`). Identity is the association time, not the list index.
 
 ## Usage
 
