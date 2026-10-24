@@ -754,7 +754,12 @@
    "options": {
     "count": 50
    },
-   "showProgressBar": true
+   "showProgressBar": true,
+   "containerOptions": {
+    "visibility": {
+     "hideWhenNoData": true
+    }
+   }
   },
   "viz_logs": {
    "type": "splunk.table",
