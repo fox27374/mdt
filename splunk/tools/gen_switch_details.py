@@ -110,7 +110,9 @@ viz = {
     "viz_top_errors": {**chart("splunk.bar", "Top 5 interfaces with errors; click to filter", "ds_top_errors", stackMode="stacked", legendDisplay="bottom"),
                        "eventHandlers": filter_on_click},
     "viz_ifaces": chart("splunk.table", "Interfaces", "ds_ifaces_table", count=100),
-    "viz_mac": chart("splunk.table", "MAC addresses on port-channels and VLANs", "ds_mac", count=50),
+    # Empty when a front-panel port is selected (its MACs are in the Interfaces table).
+    "viz_mac": {**chart("splunk.table", "MAC addresses on port-channels and VLANs", "ds_mac", count=50),
+                "containerOptions": {"visibility": {"hideWhenNoData": True}}},
     "viz_logs": chart("splunk.table", "Syslog", "ds_logs", count=50),
 }
 
