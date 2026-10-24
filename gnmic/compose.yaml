@@ -77,6 +77,8 @@ services:
     ports:
       - 57000:57000
       - 9464:9464
+      # Syslog. Port 514 needs net.ipv4.ip_unprivileged_port_start=514 on the host (/etc/sysctl.d/90-mdt-syslog-port.conf).
+      - 514:9514/udp
     volumes:
       - ./config/otel.yaml:/etc/otelcol-contrib/config.yaml:ro,z
       - /:/hostfs:ro,rslave
