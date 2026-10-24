@@ -19,6 +19,21 @@ APS = (f"| mstats latest(_value) WHERE {W} metric_name=mdt_wl_info_eth_mac BY et
        "| where location!=\"default location\" | rename capwap_data_wtp_mac as wtp_mac | fields wtp_mac location] "
        "| rename ap_name_mac_map_wtp_name as ap_name | fields eth_mac ap_name ap_ip_addr location")
 
+# Rows for ds_roam_timeline (assoc_time is UTC, "...Z" or "+00:00"; first 19 chars parsed): input has run_latency, slot, roam_type, ap_name, bssid, assoc_time (one per association).
+ROAM_ROWS = ("| addinfo | eval start=strptime(substr(assoc_time, 1, 19).\" +0000\", \"%Y-%m-%dT%H:%M:%S %z\") "
+             "| sort 0 - start | streamstats current=f last(start) as next_start "
+             "| eval stop=coalesce(next_start, min(now(), info_max_time)), bar_start=max(start, info_min_time), ap=coalesce(ap_name, bssid), slot_n=tonumber(slot) "
+             "| eval band=case(slot_n==0, \"2.4 GHz\", slot_n==1, \"5 GHz\", slot_n==2, \"6 GHz\", true(), \"slot \".slot) "
+             "| eval roam=case(match(roam_type, \"11r\"), \"802.11r\", match(roam_type, \"okc\"), \"OKC\", match(roam_type, \"none\"), \"none\", true(), replace(roam_type, \"^dot11-roam-type-\", \"\")) "
+             "| eval category_dot=case(match(roam_type, \"none\"), \"Join\", run_latency < 100, \"Good\", run_latency <= 500, \"Slow\", true(), \"Bad\") "
+             # Dots only for associations that started inside the range; bars for any that reach into it.
+             "| eval kind=if(start >= info_min_time, mvappend(\"bar\", \"dot\"), \"bar\") | mvexpand kind "
+             "| eval _time=if(kind==\"bar\", bar_start, start), duration=if(kind==\"bar\", stop - bar_start, null()), "
+             "category=if(kind==\"bar\", \"Connected\", category_dot) "
+             "| where kind==\"dot\" OR duration > 0 "
+             "| rename roam as \"Roam type\", band as Band, bssid as BSSID, run_latency as \"Roam time (ms)\" "
+             "| fields _time ap duration category \"Roam type\" Band BSSID \"Roam time (ms)\" | sort 0 _time")
+
 bases = {
     "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE index=cisco_metrics metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
     "ds_clients": (f"| mstats latest(_value) WHERE {W} metric_name=mdt_wl_client_stats_most_recent_rssi BY traffic_stats_ms_mac_address "
@@ -53,6 +68,10 @@ bases = {
                 "| eval new=if(isnull(prev) OR prev!=eth_mac OR _time - pt > 300, 1, 0) | streamstats sum(new) as stay "
                 "| stats min(_time) as first max(_time) as last first(eth_mac) as eth_mac by stay "
                 f"| join type=left eth_mac [{APS}] | sort - last"),
+    # One row per association from the WLC history (mm-if-client-history). Each association gives a bar (time on
+    # the AP, duration in seconds up to the next association or the range end) and a dot (roam time category).
+    "ds_roam_timeline": (f"| mstats latest(_value) as run_latency WHERE {W} metric_name=mdt_wl_client_roam_run_latency client_mac=\"{C}\" "
+                         "BY ap_name bssid roam_type slot assoc_time | dedup assoc_time " + ROAM_ROWS),
 }
 chains = {  # name: (base, post-process)
     "ds_rssi": ("ds_metrics", "| rename rssi as \"RSSI (dBm)\" | fields _time \"RSSI (dBm)\""),
@@ -97,6 +116,11 @@ viz = {
     "viz_retries": chart("splunk.line", "Retry %: retries as share of all transmissions (5 min)", "ds_retries", legendDisplay="bottom",
                          lineDashStylesByField={"Problem above": "dash"}, seriesColorsByField={"Retry %": "#1e93c6", "Problem above": "#dc4e41"}),
     "viz_throughput": chart("splunk.line", "Throughput (kb/s)", "ds_throughput", legendDisplay="bottom"),
+    "viz_roam_timeline": chart("splunk.timeline", "Roaming timeline: one lane per AP; bars = time on the AP, dots = associations coloured by roam time (green < 100 ms, yellow 100-500 ms, red > 500 ms, grey first join)",
+                               "ds_roam_timeline", x='> primary | seriesByName("_time")', y='> primary | seriesByName("ap")',
+                               duration='> primary | seriesByName("duration")', durationUnit="seconds",
+                               category='> primary | seriesByName("category")', dataColors='> primary | seriesByName("category") | matchValue(categoryColors)',
+                               additionalTooltipFields=["Roam type", "Band", "BSSID", "Roam time (ms)"], legendDisplay="bottom"),
     "viz_roam": chart("splunk.table", "APs the client was on (a gap over 5 minutes starts a new row)", "ds_roam_table", count=20),
 }
 
@@ -113,18 +137,23 @@ inputs = {
                                  "value": ">primary | seriesByName(\"mac\") | renameSeries(\"value\")"}},
 }
 
+viz["viz_roam_timeline"]["context"] = {"categoryColors": [
+    {"match": "Connected", "value": "#5C6773"}, {"match": "Join", "value": "#C9D1D9"},
+    {"match": "Good", "value": "#118832"}, {"match": "Slow", "value": "#CBA700"}, {"match": "Bad", "value": "#D41F1F"}]}
+
 tiles = ["viz_name", "viz_ip", "viz_ssid", "viz_ap", "viz_radio", "viz_rssi_now", "viz_snr_now", "viz_speed_now"]
 TW = [220, 160, 160, 180, 260, 150, 150, 160]  # widths add up to 1440
 rows = [(t, sum(TW[:i]), 0, w, 110) for i, (t, w) in enumerate(zip(tiles, TW))] + [  # (item, x, y, w, h)
     ("viz_rssi", 0, 110, 720, 280), ("viz_snr", 720, 110, 720, 280),
     ("viz_speed", 0, 390, 720, 280), ("viz_retries", 720, 390, 720, 280),
     ("viz_throughput", 0, 670, 1440, 280),
-    ("viz_roam", 0, 950, 1440, 300),
+    ("viz_roam_timeline", 0, 950, 1440, 320),
+    ("viz_roam", 0, 1270, 1440, 300),
 ]
 layout = {
     "type": "grid",
     "globalInputs": ["input_time", "input_wlc", "input_client"],
-    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1250},
+    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1570},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Client", "layoutId": "layout_1"}]},
 }

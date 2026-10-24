@@ -30,7 +30,7 @@ receivers:
         - targets: ["gnmic-output:9273"]
         metric_relabel_configs:
         - source_labels: [subscription_name]
-          regex: "xe_cpu_stats|xe_cdp_info|nx_if_errors|nx_cpu_stats|nx_cdp_info|wl_client_stats|wl_ap_stats|panos_session_stats"
+          regex: "xe_cpu_stats|xe_cdp_info|nx_if_errors|nx_cpu_stats|nx_cdp_info|wl_client_stats|wl_client_roam|wl_ap_stats|panos_session_stats"
           action: keep
       # 300s and slower (nx_mac_info samples hourly; its series expire after 330s, so it is stored once or twice per hour).
       - job_name: "gnmic-300s"
@@ -39,7 +39,7 @@ receivers:
         - targets: ["gnmic-output:9273"]
         metric_relabel_configs:
         - source_labels: [subscription_name]
-          regex: "(xe|nx|panos)_if_stats|xe_cpu_stats|xe_cdp_info|nx_if_errors|nx_cpu_stats|nx_cdp_info|wl_client_stats|wl_ap_stats|panos_session_stats"
+          regex: "(xe|nx|panos)_if_stats|xe_cpu_stats|xe_cdp_info|nx_if_errors|nx_cpu_stats|nx_cdp_info|wl_client_stats|wl_client_roam|wl_ap_stats|panos_session_stats"
           action: drop
 
   # Switch syslog, UDP 514 on the host (compose maps it to 9514). Formats:

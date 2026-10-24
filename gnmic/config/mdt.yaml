@@ -112,6 +112,7 @@ targets:
       - wl_ap_stats
       - wl_info
       - wl_radio_info
+      - wl_client_roam
 
   # PaloAlto Firewalls
   172.24.88.157:9339:
@@ -381,6 +382,18 @@ subscriptions:
     outputs:
       - nats
 
+  # Association history per client (mm-if-client-history/mobility-history): one entry per association.
+  # The list has no key, so the entries are indexed by position; wl-split-roam-history makes one event per entry.
+  wl_client_roam:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-wireless-client-oper:client-oper-data/mm-if-client-history"
+    mode: stream
+    encoding: json_ietf
+    stream-mode: sample
+    sample-interval: 60s
+    outputs:
+      - nats
+
   panos_if_stats:
     paths:
       - "oc-if:/interfaces/interface/state/counters/in-octets"
@@ -507,6 +520,30 @@ processors:
           $ev
         end
 
+  # WLC roaming history: one event per mobility-history entry (association), so each association is its own
+  # series. Identity is client MAC + assoc time, never the list index (the WLC shifts indices). Only run-latency
+  # (ms, association to RUN state) is a metric; the rest become labels. Strings are tags, so they stay labels.
+  wl-split-roam-history:
+    event-jq:
+      expression: |
+        .[] |
+        . as $ev |
+        if ($ev.tags["subscription-name"] == "wl_client_roam") then
+          # Leaves grouped per entry index, which is only used inside this event and not kept.
+          ([$ev.values | to_entries[] | select(.key | test("/mobility-history/entry\\.[0-9]+/"))
+            | {idx: (.key | capture("/entry\\.(?P<idx>[0-9]+)/") | .idx), f: (.key | split("/") | last), v: .value}]
+           | group_by(.idx) | map(map({(.f): .v}) | add)) as $entries
+          # Subscribe events carry the MAC only as the list-key tag; get events also have it as a value.
+          | ([($ev.tags | to_entries[] | select(.key | endswith("client-mac")) | .value),
+              ($ev.values | to_entries[] | select(.key | endswith("/client-mac")) | .value)][0]) as $mac
+          | $entries[] | select(.["run-latency"] != null)
+          | {name: $ev.name, timestamp: $ev.timestamp,
+             tags: (($ev.tags | with_entries(select(.key | endswith("client-mac") | not)))
+               + ({client_mac: $mac, ap_name: .["ap-name"], bssid: .bssid, slot: .["ms-ap-slot-id"],
+                   roam_type: .["dot11-roam-type"], assoc_time: .["ms-assoc-time"]} | map_values(tostring))),
+             values: {"run-latency": .["run-latency"]}}
+        else $ev end
+
 
 ###################################
 # Outputs
@@ -518,6 +555,7 @@ outputs:
     address: nats:4222
     subject: mdt
     event-processors:
+      - wl-split-roam-history
       - nx-normalize-interfaces
       - delete-nx-if-stats-fields
       - drop-if-stats-interfaces
