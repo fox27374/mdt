@@ -1,0 +1,433 @@
+<dashboard version="2" theme="dark">
+    <label>Telemetry Ingest</label>
+    <description>Metrics per second by pipeline, sending and silent devices, gnmic subscriptions, licence use and index storage</description>
+    <definition><![CDATA[
+{
+ "title": "Telemetry Ingest",
+ "description": "Metrics per second by pipeline, sending devices and silent ones, gnmic subscriptions, licence use and index storage.",
+ "inputs": {
+  "input_time": {
+   "type": "input.timerange",
+   "title": "Time range",
+   "options": {
+    "token": "global_time",
+    "defaultValue": "-24h@h,now"
+   }
+  }
+ },
+ "defaults": {
+  "dataSources": {
+   "ds.search": {
+    "options": {
+     "queryParameters": {
+      "earliest": "$global_time.earliest$",
+      "latest": "$global_time.latest$"
+     },
+     "refresh": "1m",
+     "refreshType": "delay"
+    }
+   }
+  }
+ },
+ "visualizations": {
+  "viz_metrics": {
+   "type": "splunk.singlevalue",
+   "title": "Metrics per second (last 15 min)",
+   "dataSources": {
+    "primary": "ds_tile_metrics"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "numberPrecision": 0
+   }
+  },
+  "viz_sending": {
+   "type": "splunk.singlevalue",
+   "title": "Sending devices (last 15 min)",
+   "dataSources": {
+    "primary": "ds_sending"
+   },
+   "options": {
+    "majorColor": "#708794"
+   }
+  },
+  "viz_subs": {
+   "type": "splunk.singlevalue",
+   "title": "gnmic subscriptions (last 15 min)",
+   "dataSources": {
+    "primary": "ds_subs"
+   },
+   "options": {
+    "majorColor": "#708794"
+   }
+  },
+  "viz_lic_mb": {
+   "type": "splunk.singlevalue",
+   "title": "License used today (MB)",
+   "dataSources": {
+    "primary": "ds_lic_mb"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "unit": "MB",
+    "unitPosition": "after"
+   }
+  },
+  "viz_lic_pct": {
+   "type": "splunk.singlevalue",
+   "title": "License used today (% of pool)",
+   "dataSources": {
+    "primary": "ds_lic_pct"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "unit": "%",
+    "unitPosition": "after",
+    "numberPrecision": 1
+   }
+  },
+  "viz_ingest": {
+   "type": "splunk.area",
+   "title": "Ingest: metrics per second by pipeline (5 min average)",
+   "dataSources": {
+    "primary": "ds_ingest"
+   },
+   "options": {
+    "stackMode": "stacked",
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true
+  },
+  "viz_devices": {
+   "type": "splunk.table",
+   "title": "Devices: configured and sending (last 15 min). Silent = no data in the last 10 min",
+   "dataSources": {
+    "primary": "ds_devices_table"
+   },
+   "options": {
+    "count": 30,
+    "columnFormat": {
+     "Status": {
+      "rowBackgroundColors": "> primary | seriesByName(\"Status\") | matchValue(statusColors)",
+      "rowColors": "> primary | seriesByName(\"Status\") | matchValue(statusTextColors)"
+     }
+    }
+   },
+   "context": {
+    "statusColors": [
+     {
+      "match": "OK",
+      "value": "#53a051"
+     },
+     {
+      "match": "silent",
+      "value": "#dc4e41"
+     }
+    ],
+    "statusTextColors": [
+     {
+      "match": "OK",
+      "value": "#ffffff"
+     },
+     {
+      "match": "silent",
+      "value": "#ffffff"
+     }
+    ]
+   },
+   "showProgressBar": true
+  },
+  "viz_lic_chart": {
+   "type": "splunk.column",
+   "title": "License volume per day by index, last 30 days (MB)",
+   "dataSources": {
+    "primary": "ds_lic_chart"
+   },
+   "options": {
+    "stackMode": "stacked",
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true
+  },
+  "viz_lic_table": {
+   "type": "splunk.table",
+   "title": "License usage by index (MB); 30-day average over 30 calendar days",
+   "dataSources": {
+    "primary": "ds_lic_table"
+   },
+   "options": {
+    "count": 10
+   },
+   "showProgressBar": true
+  },
+  "viz_storage": {
+   "type": "splunk.table",
+   "title": "Index storage",
+   "dataSources": {
+    "primary": "ds_storage"
+   },
+   "options": {
+    "count": 10
+   },
+   "showProgressBar": true
+  }
+ },
+ "dataSources": {
+  "ds_tile_metrics": {
+   "type": "ds.search",
+   "name": "tile_metrics",
+   "options": {
+    "query": "| mstats count(_value) as n WHERE index=cisco_metrics metric_name=* earliest=-15m | eval rate=round(n / 900, 0) | fields rate",
+    "queryParameters": {
+     "earliest": "-15m",
+     "latest": "now"
+    }
+   }
+  },
+  "ds_devices": {
+   "type": "ds.search",
+   "name": "devices",
+   "options": {
+    "query": "| mstats count(_value) as n latest_time(_value) as t WHERE index=cisco_metrics metric_name=* earliest=-15m BY metric_name extracted_source | eval pipe=case(match(metric_name, \"^mdt_xe_\"), \"gnmic IOS-XE\", match(metric_name, \"^mdt_nx_\"), \"gnmic NX-OS\", match(metric_name, \"^mdt_wl_\"), \"gnmic WLC\", match(metric_name, \"^mdt_panos_\"), \"gnmic PAN-OS\", match(metric_name, \"^cisco[.]\"), \"OTel dial-out\", match(metric_name, \"^(system[.]|up$|scrape_)\"), \"Collector host\", true(), \"Other\"), device=extracted_source | where pipe!=\"Collector host\" AND isnotnull(device) | stats sum(n) as n max(t) as seen values(pipe) as pipe by device | append [| mstats count(_value) as n WHERE index=cisco_metrics metric_name=mdt_* earliest=-15m BY extracted_source subscription_name | stats dc(subscription_name) as subs by extracted_source | rename extracted_source as device] | stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device | append [| makeresults | eval device=split(\"ibk-lab-sw98,ibk-lab-sw99,ibk-lab-sw03,ntsnxsw01,ntsnxsw02,ibk-lab-ewlc01,Lab-IBK-PA560-2\", \",\") | mvexpand device | eval pipe=\"gnmic\"] | append [| makeresults | eval device=split(\"ibk-lab-sw05,ibk-lab-sw11,ibk-lab-sw12,ibk-lab-sw13\", \",\") | mvexpand device | eval pipe=\"OTel dial-out\"] | stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device | eval Pipeline=case(match(mvjoin(pipe, \",\"), \"gnmic\"), \"gnmic\", match(mvjoin(pipe, \",\"), \"OTel\"), \"OTel dial-out\", true(), \"Other\")",
+    "queryParameters": {
+     "earliest": "-15m",
+     "latest": "now"
+    }
+   }
+  },
+  "ds_subs": {
+   "type": "ds.search",
+   "name": "subs",
+   "options": {
+    "query": "| mstats count(_value) WHERE index=cisco_metrics metric_name=mdt_* earliest=-15m BY subscription_name | stats count as subscriptions",
+    "queryParameters": {
+     "earliest": "-15m",
+     "latest": "now"
+    }
+   }
+  },
+  "ds_lic_today": {
+   "type": "ds.search",
+   "name": "lic_today",
+   "options": {
+    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog OR idx=cisco_events) | stats sum(b) as bytes | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes]",
+    "queryParameters": {
+     "earliest": "@d",
+     "latest": "now"
+    },
+    "refresh": "5m",
+    "refreshType": "delay"
+   }
+  },
+  "ds_lic_table": {
+   "type": "ds.search",
+   "name": "lic_table",
+   "options": {
+    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog OR idx=cisco_events) | eval td=if(_time >= relative_time(now(), \"@d\"), b, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), b, 0) | stats sum(td) as td sum(yd) as yd sum(b) as mo by idx | appendpipe [| stats sum(td) as td sum(yd) as yd sum(mo) as mo | eval idx=\"Total\"] | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes] | filldown pool_bytes | eval Index=idx, \"Today (MB)\"=round(td / 1048576, 1), \"Yesterday (MB)\"=round(yd / 1048576, 1), \"30-day average (MB/day)\"=round(mo / 30 / 1048576, 1), \"% of pool (today)\"=round(td / pool_bytes * 100, 2) | table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\"",
+    "queryParameters": {
+     "earliest": "-29d@d",
+     "latest": "now"
+    },
+    "refresh": "5m",
+    "refreshType": "delay"
+   }
+  },
+  "ds_lic_chart": {
+   "type": "ds.search",
+   "name": "lic_chart",
+   "options": {
+    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog OR idx=cisco_events) | bin _time span=1d | stats sum(b) as bytes by _time idx | eval MB=round(bytes / 1048576, 1) | xyseries _time idx MB | fillnull value=0",
+    "queryParameters": {
+     "earliest": "-29d@d",
+     "latest": "now"
+    },
+    "refresh": "5m",
+    "refreshType": "delay"
+   }
+  },
+  "ds_ingest": {
+   "type": "ds.search",
+   "name": "ingest",
+   "options": {
+    "query": "| mstats count(_value) as n WHERE index=cisco_metrics metric_name=* BY metric_name span=5m | eval pipe=case(match(metric_name, \"^mdt_xe_\"), \"gnmic IOS-XE\", match(metric_name, \"^mdt_nx_\"), \"gnmic NX-OS\", match(metric_name, \"^mdt_wl_\"), \"gnmic WLC\", match(metric_name, \"^mdt_panos_\"), \"gnmic PAN-OS\", match(metric_name, \"^cisco[.]\"), \"OTel dial-out\", match(metric_name, \"^(system[.]|up$|scrape_)\"), \"Collector host\", true(), \"Other\") | stats sum(n) as n by _time pipe | where _time + 300 <= now() | eval rate=round(n / 300, 1) | xyseries _time pipe rate | fillnull value=0",
+    "queryParameters": {
+     "earliest": "$global_time.earliest$",
+     "latest": "$global_time.latest$"
+    }
+   }
+  },
+  "ds_storage": {
+   "type": "ds.search",
+   "name": "storage",
+   "options": {
+    "query": "| rest /services/data/indexes datatype=all count=0 | search title=cisco_metrics OR title=cisco_syslog OR title=cisco_events | eval Index=title, Type=if(datatype=\"metric\", \"metric\", \"event\"), \"Size on disk (MB)\"=round(currentDBSizeMB, 1), \"Events / data points\"=totalEventCount, \"Retention (days)\"=round(frozenTimePeriodInSecs / 86400, 0) | table Index Type \"Size on disk (MB)\" \"Events / data points\" \"Retention (days)\" | sort Index",
+    "queryParameters": {
+     "earliest": "$global_time.earliest$",
+     "latest": "$global_time.latest$"
+    },
+    "refresh": "5m",
+    "refreshType": "delay"
+   }
+  },
+  "ds_sending": {
+   "type": "ds.chain",
+   "name": "sending",
+   "options": {
+    "extend": "ds_devices",
+    "query": "| where n > 0 | stats count as devices"
+   }
+  },
+  "ds_devices_table": {
+   "type": "ds.chain",
+   "name": "devices_table",
+   "options": {
+    "extend": "ds_devices",
+    "query": "| eval \"Metrics/s\"=round(coalesce(n, 0) / 900, 1), \"Last data\"=if(isnull(seen), \"\", strftime(seen, \"%Y-%m-%d %H:%M:%S\")), Subscriptions=if(Pipeline=\"OTel dial-out\", \"dial-out\", tostring(coalesce(subs, 0))), Status=if(isnotnull(seen) AND seen >= now() - 600, \"OK\", \"silent\") | eval ord=if(Status=\"silent\", 0, 1) | sort 0 ord device | fields - ord | rename device as Device | table Device Pipeline \"Last data\" \"Metrics/s\" Subscriptions Status"
+   }
+  },
+  "ds_lic_mb": {
+   "type": "ds.chain",
+   "name": "lic_mb",
+   "options": {
+    "extend": "ds_lic_today",
+    "query": "| eval mb=round(bytes / 1048576, 0) | fields mb"
+   }
+  },
+  "ds_lic_pct": {
+   "type": "ds.chain",
+   "name": "lic_pct",
+   "options": {
+    "extend": "ds_lic_today",
+    "query": "| eval pct=round(bytes / pool_bytes * 100, 1) | fields pct"
+   }
+  }
+ },
+ "layout": {
+  "type": "grid",
+  "globalInputs": [
+   "input_time"
+  ],
+  "layoutDefinitions": {
+   "layout_1": {
+    "type": "grid",
+    "options": {
+     "width": 1440,
+     "height": 1440
+    },
+    "structure": [
+     {
+      "item": "viz_metrics",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 0,
+       "w": 288,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_sending",
+      "type": "block",
+      "position": {
+       "x": 288,
+       "y": 0,
+       "w": 288,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_subs",
+      "type": "block",
+      "position": {
+       "x": 576,
+       "y": 0,
+       "w": 288,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_lic_mb",
+      "type": "block",
+      "position": {
+       "x": 864,
+       "y": 0,
+       "w": 288,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_lic_pct",
+      "type": "block",
+      "position": {
+       "x": 1152,
+       "y": 0,
+       "w": 288,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_ingest",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 110,
+       "w": 1440,
+       "h": 340
+      }
+     },
+     {
+      "item": "viz_devices",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 450,
+       "w": 1440,
+       "h": 430
+      }
+     },
+     {
+      "item": "viz_lic_chart",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 880,
+       "w": 720,
+       "h": 340
+      }
+     },
+     {
+      "item": "viz_lic_table",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 880,
+       "w": 720,
+       "h": 340
+      }
+     },
+     {
+      "item": "viz_storage",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 1220,
+       "w": 1440,
+       "h": 220
+      }
+     }
+    ]
+   }
+  },
+  "tabs": {
+   "items": [
+    {
+     "label": "Telemetry",
+     "layoutId": "layout_1"
+    }
+   ]
+  }
+ },
+ "applicationProperties": {}
+}
+    ]]></definition>
+</dashboard>
