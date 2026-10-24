@@ -4,7 +4,7 @@
     <definition><![CDATA[
 {
  "title": "Wireless Overview",
- "description": "One WLC: clients and APs, CPU and memory, clients by band, and per-band utilization, noise and interference of the busiest AP.",
+ "description": "One WLC: clients and APs, SSIDs and PHY types, access points with their radios, per-band utilization, noise and interference of the busiest AP, CPU and memory.",
  "inputs": {
   "input_time": {
    "type": "input.timerange",
@@ -58,12 +58,25 @@
   },
   "viz_aps": {
    "type": "splunk.singlevalue",
-   "title": "Connected APs (last 15 min)",
+   "title": "APs joined (last 15 min)",
    "dataSources": {
-    "primary": "ds_aps"
+    "primary": "ds_aps_joined"
    },
    "options": {
-    "majorColor": "#708794"
+    "majorColor": "> primary | seriesByName(\"short\") | lastPoint() | rangeValue(shortColors)",
+    "majorValue": "> primary | seriesByName(\"aps\")"
+   },
+   "context": {
+    "shortColors": [
+     {
+      "to": 1,
+      "value": "#708794"
+     },
+     {
+      "from": 1,
+      "value": "#dc4e41"
+     }
+    ]
    }
   },
   "viz_cpu_now": {
@@ -93,7 +106,7 @@
   },
   "viz_ssids": {
    "type": "splunk.table",
-   "title": "SSIDs with clients (last 15 min)",
+   "title": "SSIDs and their clients (last 15 min)",
    "dataSources": {
     "primary": "ds_ssids"
    },
@@ -101,6 +114,45 @@
     "count": 10
    },
    "showProgressBar": true
+  },
+  "viz_phy": {
+   "type": "splunk.bar",
+   "title": "Clients by PHY (last 15 min)",
+   "dataSources": {
+    "primary": "ds_phy"
+   },
+   "options": {
+    "legendDisplay": "off"
+   },
+   "showProgressBar": true
+  },
+  "viz_ap_table": {
+   "type": "splunk.table",
+   "title": "Access points (last 15 min): radio = channel / width / TX power",
+   "dataSources": {
+    "primary": "ds_ap_table"
+   },
+   "options": {
+    "count": 20,
+    "columnFormat": {
+     "State": {
+      "rowBackgroundColors": "> table | seriesByName(\"State\") | matchValue(stateColors)"
+     }
+    }
+   },
+   "showProgressBar": true,
+   "context": {
+    "stateColors": [
+     {
+      "match": "registered",
+      "value": "#53a051"
+     },
+     {
+      "match": "not joined",
+      "value": "#dc4e41"
+     }
+    ]
+   }
   },
   "viz_clients": {
    "type": "splunk.area",
@@ -223,7 +275,7 @@
    "type": "ds.search",
    "name": "aps",
    "options": {
-    "query": "| mstats latest(mdt_wl_info_ap_ip_addr) WHERE index=cisco_metrics extracted_source=\"$wlc$\" BY oper_data_wtp_mac | stats count as aps",
+    "query": "| mstats latest(_value) WHERE index=cisco_metrics extracted_source=\"$wlc$\" metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name | join type=left eth_mac [| mstats latest(_value) WHERE index=cisco_metrics extracted_source=\"$wlc$\" metric_name=mdt_wl_info_wtp_mac BY ethernet_mac_wtp_mac_map_ethernet_mac wtp_mac | rename ethernet_mac_wtp_mac_map_ethernet_mac as eth_mac | fields eth_mac wtp_mac] | join type=left wtp_mac [| mstats latest(_value) WHERE index=cisco_metrics extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ap_ip_addr BY oper_data_wtp_mac ap_ip_addr | where ap_ip_addr!=\"0.0.0.0\" | rename oper_data_wtp_mac as wtp_mac | fields wtp_mac ap_ip_addr] | join type=left wtp_mac [| mstats latest(_value) WHERE index=cisco_metrics extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ap_operation_state BY capwap_data_wtp_mac ap_operation_state | rename capwap_data_wtp_mac as wtp_mac | fields wtp_mac ap_operation_state] | join type=left wtp_mac [| mstats latest(_value) WHERE index=cisco_metrics extracted_source=\"$wlc$\" metric_name=mdt_wl_info_location BY capwap_data_wtp_mac location | where location!=\"default location\" | rename capwap_data_wtp_mac as wtp_mac | fields wtp_mac location] | join type=left eth_mac [| mstats latest_time(_value) as t WHERE index=cisco_metrics extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address BY dot11_oper_data_ms_mac_address ap_mac_address | sort 0 - t | dedup dot11_oper_data_ms_mac_address | stats count as clients by ap_mac_address | rename ap_mac_address as eth_mac] | join type=left wtp_mac [| mstats latest(mdt_wl_radio_info_curr_freq) as ch latest(mdt_wl_radio_info_chan_width) as w WHERE index=cisco_metrics extracted_source=\"$wlc$\" BY radio_oper_data_wtp_mac radio_oper_data_radio_slot_id | join type=left radio_oper_data_wtp_mac radio_oper_data_radio_slot_id [| mstats latest(mdt_wl_radio_info_curr_tx_power_in_dbm) as p WHERE index=cisco_metrics extracted_source=\"$wlc$\" BY radio_oper_data_wtp_mac radio_oper_data_radio_slot_id radio_band_info_band_id | where radio_band_info_band_id=radio_oper_data_radio_slot_id | fields - radio_band_info_band_id] | join type=left radio_oper_data_wtp_mac radio_oper_data_radio_slot_id [| mstats latest(_value) WHERE index=cisco_metrics extracted_source=\"$wlc$\" metric_name=mdt_wl_radio_info_oper_state BY radio_oper_data_wtp_mac radio_oper_data_radio_slot_id oper_state | fields - latest*] | eval cell=if(isnotnull(oper_state) AND oper_state!=\"radio-up\", \"down\", \"ch \".ch.\" / \".w.\" MHz\".if(isnotnull(p), \" / \".p.\" dBm\", \"\")), col=\"Radio \".radio_oper_data_radio_slot_id | xyseries radio_oper_data_wtp_mac col cell | rename radio_oper_data_wtp_mac as wtp_mac] | eval State=coalesce(ap_operation_state, \"not joined\")",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -245,7 +297,18 @@
    "type": "ds.search",
    "name": "ssids",
    "options": {
-    "query": "| mstats latest(mdt_wl_info_vap_ssid) WHERE index=cisco_metrics extracted_source=\"$wlc$\" BY vap_ssid dot11_oper_data_ms_mac_address | stats dc(dot11_oper_data_ms_mac_address) as Clients by vap_ssid | rename vap_ssid as SSID | sort - Clients",
+    "query": "| mstats latest(_value) WHERE index=cisco_metrics extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ssid BY ssid | eval Clients=0 | append [| mstats latest(_value) WHERE index=cisco_metrics extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid BY vap_ssid dot11_oper_data_ms_mac_address | stats dc(dot11_oper_data_ms_mac_address) as Clients by vap_ssid | rename vap_ssid as ssid] | stats max(Clients) as Clients by ssid | rename ssid as SSID | sort 0 - Clients SSID",
+    "queryParameters": {
+     "earliest": "-15m",
+     "latest": "now"
+    }
+   }
+  },
+  "ds_phy": {
+   "type": "ds.search",
+   "name": "phy",
+   "options": {
+    "query": "| mstats latest_time(_value) as t WHERE index=cisco_metrics extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ewlc_ms_phy_type BY dot11_oper_data_ms_mac_address ewlc_ms_phy_type | sort 0 - t | dedup dot11_oper_data_ms_mac_address | eval PHY=replace(ewlc_ms_phy_type, \"^client-dot11([a-z]+).*\", \"802.11\\1\") | stats count as Clients by PHY | sort PHY",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -287,6 +350,22 @@
    "options": {
     "extend": "ds_sys_now",
     "query": "| stats latest(\"Memory %\") as mem"
+   }
+  },
+  "ds_aps_joined": {
+   "type": "ds.chain",
+   "name": "aps_joined",
+   "options": {
+    "extend": "ds_aps",
+    "query": "| stats count as total count(eval(State==\"registered\")) as joined | eval aps=joined.\" / \".total, short=total - joined"
+   }
+  },
+  "ds_ap_table": {
+   "type": "ds.chain",
+   "name": "ap_table",
+   "options": {
+    "extend": "ds_aps",
+    "query": "| foreach \"Radio *\" [eval <<FIELD>>=if(State==\"registered\", '<<FIELD>>', null())] | fillnull value=0 clients | rename ap_name_mac_map_wtp_name as AP, ap_ip_addr as IP, location as Location, clients as Clients | sort AP | table AP IP State Location Clients \"Radio *\""
    }
   },
   "ds_tx": {
@@ -333,7 +412,7 @@
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 1030
+     "height": 1550
     },
     "structure": [
      {
@@ -342,7 +421,7 @@
       "position": {
        "x": 0,
        "y": 0,
-       "w": 288,
+       "w": 360,
        "h": 130
       }
      },
@@ -350,9 +429,9 @@
       "item": "viz_aps",
       "type": "block",
       "position": {
-       "x": 288,
+       "x": 360,
        "y": 0,
-       "w": 288,
+       "w": 360,
        "h": 130
       }
      },
@@ -360,9 +439,9 @@
       "item": "viz_cpu_now",
       "type": "block",
       "position": {
-       "x": 576,
+       "x": 720,
        "y": 0,
-       "w": 288,
+       "w": 360,
        "h": 130
       }
      },
@@ -370,19 +449,9 @@
       "item": "viz_mem_now",
       "type": "block",
       "position": {
-       "x": 864,
+       "x": 1080,
        "y": 0,
-       "w": 288,
-       "h": 130
-      }
-     },
-     {
-      "item": "viz_ssids",
-      "type": "block",
-      "position": {
-       "x": 1152,
-       "y": 0,
-       "w": 288,
+       "w": 360,
        "h": 130
       }
      },
@@ -392,18 +461,38 @@
       "position": {
        "x": 0,
        "y": 130,
-       "w": 960,
+       "w": 720,
        "h": 300
       }
      },
      {
-      "item": "viz_sys",
+      "item": "viz_ssids",
       "type": "block",
       "position": {
-       "x": 960,
+       "x": 720,
        "y": 130,
-       "w": 480,
+       "w": 360,
        "h": 300
+      }
+     },
+     {
+      "item": "viz_phy",
+      "type": "block",
+      "position": {
+       "x": 1080,
+       "y": 130,
+       "w": 360,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_ap_table",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 430,
+       "w": 1440,
+       "h": 260
       }
      },
      {
@@ -411,7 +500,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 430,
+       "y": 690,
        "w": 720,
        "h": 300
       }
@@ -421,7 +510,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 430,
+       "y": 690,
        "w": 720,
        "h": 300
       }
@@ -431,7 +520,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 730,
+       "y": 990,
        "w": 720,
        "h": 300
       }
@@ -441,9 +530,19 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 730,
+       "y": 990,
        "w": 720,
        "h": 300
+      }
+     },
+     {
+      "item": "viz_sys",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 1290,
+       "w": 1440,
+       "h": 260
       }
      }
     ]
