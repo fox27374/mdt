@@ -4,5 +4,6 @@
   <view name="interface_details" />
   <view name="wireless_overview" />
   <view name="wireless_client_details" />
+  <view name="telemetry_ingest" />
   <view name="search" />
 </nav>
