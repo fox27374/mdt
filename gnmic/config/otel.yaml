@@ -12,12 +12,35 @@ receivers:
 
   prometheus/gnmic:
     config:
+      # gnmic-output serves the latest value of every series, so each scrape stores a copy. One job per
+      # gnmic sample-interval (subscriptions in mdt.yaml) stores each sample once. Keep these lists in step
+      # with mdt.yaml; anything not listed falls into the 300s job, so a new subscription is never lost.
       scrape_configs:
-      - job_name: "gnmic"
-        # Same as the fastest gnmic samples (xe_if_stats, 30s), so none is skipped.
+      - job_name: "gnmic-30s"
         scrape_interval: 30s
         static_configs:
         - targets: ["gnmic-output:9273"]
+        metric_relabel_configs:
+        - source_labels: [subscription_name]
+          regex: "(xe|nx|panos)_if_stats"
+          action: keep
+      - job_name: "gnmic-60s"
+        scrape_interval: 60s
+        static_configs:
+        - targets: ["gnmic-output:9273"]
+        metric_relabel_configs:
+        - source_labels: [subscription_name]
+          regex: "xe_cpu_stats|xe_cdp_info|nx_if_errors|nx_cpu_stats|nx_cdp_info|wl_client_stats|wl_ap_stats|panos_session_stats"
+          action: keep
+      # 300s and slower (nx_mac_info samples hourly; its series expire after 330s, so it is stored once or twice per hour).
+      - job_name: "gnmic-300s"
+        scrape_interval: 300s
+        static_configs:
+        - targets: ["gnmic-output:9273"]
+        metric_relabel_configs:
+        - source_labels: [subscription_name]
+          regex: "(xe|nx|panos)_if_stats|xe_cpu_stats|xe_cdp_info|nx_if_errors|nx_cpu_stats|nx_cdp_info|wl_client_stats|wl_ap_stats|panos_session_stats"
+          action: drop
 
   # Switch syslog, UDP 514 on the host (compose maps it to 9514). Formats:
   #   IOS-XE: <189>6744: ibk-lab-sw98: %SYS-5-CONFIG_I: Configured from console by ...
