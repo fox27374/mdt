@@ -18,6 +18,18 @@ receivers:
         static_configs:
         - targets: ["gnmic-output:9273"]
 
+  # Switch syslog, UDP 514 on the host (compose maps it to 9514). Formats:
+  #   IOS-XE: <189>6744: ibk-lab-sw98: %SYS-5-CONFIG_I: Configured from console by ...
+  #   NX-OS:  <189>NTSNXSW01: 2026 Oct 24 10:31:40 CEST: %ETHPORT-5-IF_UP: Interface loopback999 is up
+  # Severity comes from the priority (<189> = facility 23, severity 5). Lines without a message type
+  # (hwidb noise) keep their text after the host as message.
+  udp_log/syslog:
+    listen_address: 0.0.0.0:9514
+    operators:
+      - type: regex_parser
+        regex: '^<(?P<pri>\d+)>(?:\d+:\s*)?(?P<host>[^:\s]+):\s(?:.*?%(?P<message_type>[A-Za-z0-9_]+-\d-[A-Za-z0-9_]+):\s*)?(?P<message>.*?)\s*$'
+        on_error: send_quiet
+
   hostmetrics:
     collection_interval: 10s
     root_path: /hostfs
@@ -30,6 +42,36 @@ receivers:
 
 processors:
   batch:
+
+  # Same filter as the old Cribl syslog pipeline: certificate and hwidb noise.
+  filter/syslog:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'IsMatch(log.body, "(?i)hwidb|enrollment|crl")'
+
+  # The event Splunk gets, as Cribl sent it: {"message", "severity", "message_type"}, host = switch name (lowercase,
+  # NX-OS sends it in capitals). Receive time, as the switch clocks differ.
+  transform/syslog:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - set(log.attributes["message"], log.body) where log.attributes["message"] == nil
+          - set(resource.attributes["host.name"], ConvertCase(log.attributes["host"], "lower")) where log.attributes["host"] != nil
+          - set(log.attributes["sev"], Int(log.attributes["pri"]) - (Int(log.attributes["pri"]) / 8) * 8) where log.attributes["pri"] != nil
+          - set(log.attributes["severity"], "emergency") where log.attributes["sev"] == 0
+          - set(log.attributes["severity"], "alert") where log.attributes["sev"] == 1
+          - set(log.attributes["severity"], "critical") where log.attributes["sev"] == 2
+          - set(log.attributes["severity"], "error") where log.attributes["sev"] == 3
+          - set(log.attributes["severity"], "warning") where log.attributes["sev"] == 4
+          - set(log.attributes["severity"], "notice") where log.attributes["sev"] == 5
+          - set(log.attributes["severity"], "info") where log.attributes["sev"] == 6
+          - set(log.attributes["severity"], "debug") where log.attributes["sev"] == 7
+          - keep_keys(log.attributes, ["message", "severity", "message_type"])
+          - set(log.body, log.attributes)
+          - delete_matching_keys(log.attributes, ".*")
+          - set(log.time, log.observed_time)
 
   # Device dial-out sends ~170 metric names; keep the ones the Splunk dashboards use.
   # cisco.speed also carries oper-status, admin-status and last-change as labels.
@@ -69,6 +111,16 @@ processors:
           - keep_keys(datapoint.attributes, ["source", "mac", "port"]) where metric.name == "cisco.port_info"
 
 exporters:
+  splunk_hec/syslog:
+    token: "${env:SPLUNK_HEC_TOKEN}"
+    endpoint: "https://172.24.89.194:8088/services/collector"
+    tls:
+      insecure_skip_verify: true
+    source: "otel:syslog"
+    sourcetype: "json"
+    index: "cisco_syslog"
+    profiling_data_enabled: false
+
   # Device dial-out data for any Prometheus scraper (gnmic dial-in data is on gnmic-output :9273).
   prometheus/devices:
     endpoint: 0.0.0.0:9464
@@ -101,4 +153,8 @@ service:
       receivers: [yang_grpc]
       processors: [filter/cisco, transform/cisco, batch]
       exporters: [splunk_hec/splunkfree, prometheus/devices]
+    logs/syslog:
+      receivers: [udp_log/syslog]
+      processors: [filter/syslog, transform/syslog, batch]
+      exporters: [splunk_hec/syslog]
   extensions: [health_check, pprof, zpages]
