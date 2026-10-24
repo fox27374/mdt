@@ -1,6 +1,5 @@
 <nav search_view="search" color="transparent">
   <view name="network_overview" default="true" />
-  <view name="switch_overview" />
   <view name="switch_details" />
   <view name="wireless_overview" />
   <view name="wireless_client_details" />

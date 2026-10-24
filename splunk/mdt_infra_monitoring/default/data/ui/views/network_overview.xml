@@ -2,7 +2,7 @@
   <label>Network Overview</label>
   <row>
     <panel>
-      <title>CDP topology. Green: switches with telemetry, click for Switch Details</title>
+      <title>CDP topology. Switches by health: green OK, yellow warning, red critical, dark grey no data. Click for Switch Details</title>
       <viz type="network-diagram-viz.network-diagram-viz">
         <search>
           <query>| `mdt_cdp(*)`
@@ -14,10 +14,12 @@
 | stats max(reported_links) as links by node1 node2
 | eval from=node1, to=node2, linkwidth=min(2*links, 10)
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
-| append [| `mdt_nodes` | rename node as from | eval color="#53a051"]
+| append [| `mdt_switch_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d") | rename node as from | fields from color]
 | table from to linkwidth color</query>
           <earliest>-15m</earliest>
           <latest>now</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
           <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">all</option>
@@ -56,6 +58,49 @@
           <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$</link>
         </drilldown>
       </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Switch health, last 15 minutes. Warning from 70 % (CPU, memory, busiest port) or above 5 errors/min, critical from 90 % or 100 errors/min. Click for Switch Details</title>
+      <table>
+        <search>
+          <query>| `mdt_switch_health`
+| eval order=case(health=="Critical", 0, health=="Warning", 1, health=="No data", 2, true(), 3)
+| sort order node
+| rename node as Switch, health as Health, cpu as "CPU %", mem as "Memory %", util as "Busiest port %", errors as "Errors/min (busiest port)"
+| table Switch Health "CPU %" "Memory %" "Busiest port %" "Errors/min (busiest port)"</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">50</option>
+        <option name="drilldown">row</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Health">
+          <colorPalette type="map">{"OK":#53a051,"Warning":#f8be34,"Critical":#dc4e41,"No data":#3c444d}</colorPalette>
+        </format>
+        <format type="color" field="CPU %">
+          <colorPalette type="list">[#53a051,#f8be34,#dc4e41]</colorPalette>
+          <scale type="threshold">70,90</scale>
+        </format>
+        <format type="color" field="Memory %">
+          <colorPalette type="list">[#53a051,#f8be34,#dc4e41]</colorPalette>
+          <scale type="threshold">70,90</scale>
+        </format>
+        <format type="color" field="Busiest port %">
+          <colorPalette type="list">[#53a051,#f8be34,#dc4e41]</colorPalette>
+          <scale type="threshold">70,90</scale>
+        </format>
+        <format type="color" field="Errors/min (busiest port)">
+          <colorPalette type="list">[#53a051,#f8be34,#dc4e41]</colorPalette>
+          <scale type="threshold">6,100</scale>
+        </format>
+        <drilldown>
+          <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$row.Switch|u$</link>
+        </drilldown>
+      </table>
     </panel>
   </row>
 </dashboard>

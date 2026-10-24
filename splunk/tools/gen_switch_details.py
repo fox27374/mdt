@@ -13,7 +13,7 @@ slots = (f"{phys} | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" "
 
 # Base searches run once; chains post-process their results.
 bases = {
-    "ds_nodes": "`mdt_nodes`",
+    "ds_nodes": "`mdt_nodes($global_time.earliest$)`",
     # Every interface with state, CDP neighbour and learned MACs; chains filter to front-panel ports.
     "ds_status": f"`mdt_if_status({N})` | join type=left node interface [`mdt_cdp({N})` "
                  f"| stats values(neighbour) as neighbour by node interface] "
