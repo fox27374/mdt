@@ -149,7 +149,12 @@
    "options": {
     "count": 50
    },
-   "showProgressBar": true
+   "showProgressBar": true,
+   "containerOptions": {
+    "visibility": {
+     "hideWhenNoData": true
+    }
+   }
   },
   "viz_logs": {
    "type": "splunk.table",
@@ -160,7 +165,12 @@
    "options": {
     "count": 50
    },
-   "showProgressBar": true
+   "showProgressBar": true,
+   "containerOptions": {
+    "visibility": {
+     "hideWhenNoData": true
+    }
+   }
   }
  },
  "dataSources": {
@@ -284,7 +294,7 @@
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 1590
+     "height": 1250
     },
     "structure": [
      {
@@ -383,18 +393,18 @@
       "position": {
        "x": 0,
        "y": 850,
-       "w": 720,
-       "h": 320
+       "w": 480,
+       "h": 400
       }
      },
      {
       "item": "viz_logs",
       "type": "block",
       "position": {
-       "x": 0,
-       "y": 1170,
-       "w": 1440,
-       "h": 420
+       "x": 480,
+       "y": 850,
+       "w": 960,
+       "h": 400
       }
      }
     ]

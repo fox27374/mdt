@@ -148,8 +148,9 @@ viz = {
     "viz_throughput": chart("splunk.line", "Throughput (5 min average)", "ds_throughput"),
     "viz_errors": chart("splunk.column", "Errors per 5 min by kind", "ds_errors", stackMode="stacked", legendDisplay="bottom"),
     "viz_compare": chart("splunk.table", "Link comparison, whole time range", "ds_compare", count=20),
-    "viz_macs_table": chart("splunk.table", "Learned MAC addresses", "ds_macs", count=50),
-    "viz_logs": chart("splunk.table", "Syslog for this port, newest first", "ds_logs", count=50),
+    # Hidden when empty (most uplinks learn no MACs, most ports have no syslog) instead of a no-results warning.
+    "viz_macs_table": {**chart("splunk.table", "Learned MAC addresses", "ds_macs", count=50), "containerOptions": {"visibility": {"hideWhenNoData": True}}},
+    "viz_logs": {**chart("splunk.table", "Syslog for this port, newest first", "ds_logs", count=50), "containerOptions": {"visibility": {"hideWhenNoData": True}}},
 }
 
 inputs = {
@@ -172,13 +173,13 @@ rows = [  # (item, x, y, w, h)
     ("viz_neighbour", 740, 0, 400, 110), ("viz_macs", 1140, 0, 150, 110), ("viz_peak", 1290, 0, 150, 110),
     ("viz_throughput", 0, 110, 720, 320), ("viz_errors", 720, 110, 720, 320),
     ("viz_compare", 0, 430, 1440, 420),
-    ("viz_macs_table", 0, 850, 720, 320),
-    ("viz_logs", 0, 1170, 1440, 420),
+    # Last row, side by side: both hide when empty and the grid keeps their space, so it is one row at the bottom.
+    ("viz_macs_table", 0, 850, 480, 400), ("viz_logs", 480, 850, 960, 400),
 ]
 layout = {
     "type": "grid",
     "globalInputs": ["input_time", "input_node", "input_interface"],
-    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1590},
+    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1250},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Interface", "layoutId": "layout_1"}]},
 }
