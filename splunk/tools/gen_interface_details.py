@@ -11,10 +11,8 @@ phys = "| `mdt_physical_ports`"
 slots = (f"{phys} | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" "
          "| sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path")
 # Keeps the port the token names: a full name, or a bare path (both slot names match, then the slots rule applies).
-# Rows of one port per time bucket are reduced the same way: the up one, else the faster.
 REX = "| rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\""
 MATCH = f"| where node=\"{N}\" AND (interface=\"{I}\" OR path=\"{I}\")"
-PICK_SERIES = f"{REX} {MATCH} | sort 0 _time - oper_up - speed | dedup _time node path"
 PICK_ONE = f"{REX} {MATCH} | sort 0 - oper_up - speed | dedup keepempty=true node path"
 
 # Counters per 5-minute bucket and port, as sums of per-minute deltas (a reset gives no delta) with the sample count.
@@ -27,35 +25,40 @@ DETAIL_RAW = RAW[4:]
 CNT = [d for d, _ in PAIRS]
 SUMS = " ".join(f"sum({d}) as {d} count({d}) as {d}_n" for d in CNT)
 
-# Fleet-wide per-minute deltas, bucketed to 5 minutes, joined with status, CDP links and the far port's name.
-# Chains filter it to the device and port, so the base runs once for all panels.
-STATUS_FIELDS = "node interface admin_up oper_up speed last_change"
+# The port and its CDP far end, resolved once by the status search and handed to the other searches as tokens
+# ($status:result.<field>$, smart source). far_node / far_interface are "none" without a known far end, which matches nothing.
+T_NODE, T_IF = "$status:result.node$", "$status:result.interface$"
+F_NODE, F_IF = "$status:result.far_node$", "$status:result.far_interface$"
+
+# Per-minute deltas of both ports, bucketed to 5 minutes. side: this or far.
 FLOW = (
-    "| `mdt_if_counters(*,*)` | append [| `mdt_if_detail(*,*)`] "
+    f"| `mdt_if_counters({T_NODE},{T_IF})` | append [| `mdt_if_detail({T_NODE},{T_IF})`] "
+    f"| append [| `mdt_if_counters({F_NODE},{F_IF})`] | append [| `mdt_if_detail({F_NODE},{F_IF})`] "
     "| stats max(in_octets) as in_octets max(out_octets) as out_octets max(in_errors) as in_errors max(out_errors) as out_errors "
     + " ".join(f"max({r}) as {r}" for r in DETAIL_RAW) + " by _time node interface "
-    + f"{phys} | sort 0 node interface _time "
+    "| sort 0 node interface _time "
     "| streamstats current=f window=1 last(_time) as p_t " + " ".join(f"last({r}) as p_{r}" for r in RAW) + " by node interface "
     "| eval dt=_time - p_t | where dt > 0 "
     "| eval " + ", ".join(f"{d}=if({r} >= p_{r}, {r} - p_{r}, null())" for d, r in PAIRS) + " "
     "| eval in_bps=in_oct * 8 / dt, out_bps=out_oct * 8 / dt "
     f"| bin _time span=5m | stats avg(in_bps) as in_bps avg(out_bps) as out_bps {SUMS} by _time node interface "
     "| where _time + 300 <= now() "
-    "| eval inorm=`mdt_ifkey(interface)` "
-    f"| join type=left node interface [| `mdt_if_status(*)` {phys} | fields {STATUS_FIELDS}] "
-    "| join type=left node inorm [| `mdt_links`] "
-    "| join type=left far_node far_inorm [| `mdt_if_status(*)` " + phys + " | eval inorm=`mdt_ifkey(interface)` "
-    "| rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface]"
+    f"| eval side=if(node=\"{T_NODE}\" AND interface=\"{T_IF}\", \"this\", \"far\")"
 )
+THIS = "| where side=\"this\""
 
 # Device status of the port (one row), with its CDP neighbour and far-end port.
 STATUS = (f"| `mdt_if_status({N})` {phys} {PICK_ONE} | eval inorm=`mdt_ifkey(interface)` "
           "| join type=left node inorm [| `mdt_links`] "
           "| join type=left far_node far_inorm [| `mdt_if_status(*)` " + phys + " | eval inorm=`mdt_ifkey(interface)` "
-          "| rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface]")
+          "| rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] "
+          # A neighbour without telemetry has no telemetry port name; CDP still names the neighbour.
+          "| eval neighbour_md=if(isnull(far_node), \"none\", \"[\".far_node.\" \".coalesce(far_interface, \"\").\"](/app/mdt_infra_monitoring/interface_details?form.tk_node=\".far_node.\"&form.tk_interface=\".coalesce(far_interface, \"\")"
+          ".\"&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$)\") "
+          "| eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")")
 
 # Learned MACs on the port (one row per MAC and VLAN). The mac macro names ports in full, the slot rule picks the port.
-MACS = (f"| `mdt_mac({N},*)` | search [| `mdt_if_status({N})` {phys} {PICK_ONE} | fields interface] "
+MACS = (f"| `mdt_mac({T_NODE},{T_IF})` "
         "| rename mac as MAC, vlan as VLAN | fields MAC VLAN | sort MAC")
 
 # Syslog naming the port by its path (Gi1/1/4, TenGigabitEthernet1/1/4, Ethernet1/23, eth1/23 all contain the path).
@@ -80,17 +83,11 @@ compare_cells_far = ", ".join(
     + [f"if(far_rows=0, \"no telemetry\", {cell(f'f_{c}', s)})" for _, c, s in METRICS])
 labels = ", ".join(f"\"{l}\"" for l in ["Port"] + [l for l, _, _ in METRICS])
 COMPARE = (
-    f"| stats {SUMS} max(oper_up) as oper_up max(speed) as speed max(far_node) as far_node max(far_inorm) as far_inorm "
-    "max(far_interface) as far_interface by node interface inorm "
+    f"| stats {SUMS} by side "
     "| eval " + ", ".join(f"{d}=if({d}_n=0, null(), {d})" for d in CNT) + " "
-    f"{REX} | eval cand=if(node=\"{N}\" AND (interface=\"{I}\" OR path=\"{I}\"), 1, 0) "
-    "| sort 0 - cand - oper_up - speed | dedup keepempty=true node path "
-    "| eval fn=if(cand=1, far_node, null()), fi=if(cand=1, far_inorm, null()) | eventstats max(fn) as fn max(fi) as fi "
-    "| where cand=1 OR (node=fn AND inorm=fi) | eval far=if(cand=1, 0, 1) "
-    "| eval " + ", ".join(f"t_{c}=if(cand=1, {c}, null()), f_{c}=if(far=1, {c}, null())" for c in CNT)
-    + ", t_node=if(cand=1, node, null()), t_if=if(cand=1, interface, null()), f_node=if(far=1, node, null()), f_if=if(far=1, interface, null()) "
-    "| stats count(eval(far=1)) as far_rows max(t_node) as t_node max(t_if) as t_if max(f_node) as f_node max(f_if) as f_if "
-    + " ".join(f"max(t_{c}) as t_{c} max(f_{c}) as f_{c}" for c in CNT) + " "
+    "| eval " + ", ".join(f"t_{c}=if(side=\"this\", {c}, null()), f_{c}=if(side=\"far\", {c}, null())" for c in CNT) + " "
+    "| stats count(eval(side=\"far\")) as far_rows " + " ".join(f"max(t_{c}) as t_{c} max(f_{c}) as f_{c}" for c in CNT) + " "
+    f"| eval t_node=\"{T_NODE}\", t_if=\"{T_IF}\", f_node=\"{F_NODE}\", f_if=\"{F_IF}\" "
     f"| eval far_rows=coalesce(far_rows, 0) | eval labels=mvappend({labels}) "
     f"| eval this_vals=mvappend({compare_cells_this}) | eval far_vals=mvappend({compare_cells_far}) "
     "| eval x=mvzip(mvzip(labels, this_vals, \"|\"), far_vals, \"|\") | mvexpand x "
@@ -113,20 +110,20 @@ chains = {  # name: (base, post-process)
     "ds_hdr_changed": ("ds_status", "| eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) "
                        "| eval \"Last change\"=case(isnull(last_change), \"-\", oper_up==0, \"down for \".trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), "
                        "true(), strftime(last_change, \"%Y-%m-%d %H:%M\")) | fields \"Last change\""),
-    "ds_hdr_neighbour": ("ds_status", "| eval neighbour=coalesce(far_node, \"none\"), neighbour_port=coalesce(far_interface, \"-\") | fields neighbour neighbour_port"),
     "ds_hdr_macs": ("ds_macs", "| stats dc(MAC) as \"Learned MACs\""),
-    "ds_throughput": ("ds_flow", f"{PICK_SERIES} | eval \"In (Mb/s)\"=round(in_bps / 1000000, 2), \"Out (Mb/s)\"=round(out_bps / 1000000, 2) "
+    "ds_throughput": ("ds_flow", f"{THIS} | eval \"In (Mb/s)\"=round(in_bps / 1000000, 2), \"Out (Mb/s)\"=round(out_bps / 1000000, 2) "
                       "| table _time \"In (Mb/s)\" \"Out (Mb/s)\""),
     # Other = in + out errors the telemetry has no kind for (Cribl reports only totals); floor 0
-    "ds_errors": ("ds_flow", f"{PICK_SERIES} | eval CRC=coalesce(crc, 0), Oversize=coalesce(ov_rx, 0), Undersize=coalesce(un_rx, 0), "
+    "ds_errors": ("ds_flow", f"{THIS} | eval CRC=coalesce(crc, 0), Oversize=coalesce(ov_rx, 0), Undersize=coalesce(un_rx, 0), "
                   "Fragment=coalesce(frag_rx, 0), Jabber=coalesce(jab_rx, 0), Transmit=coalesce(tx_err, 0) "
                   "| eval Other=max(0, coalesce(in_err, 0) + coalesce(out_err, 0) - CRC - Oversize - Undersize - Fragment - Jabber - Transmit) "
                   "| table _time CRC Oversize Undersize Fragment Jabber Transmit Other"),
-    "ds_peak": ("ds_flow", f"{PICK_SERIES} | eval util=round(max(coalesce(in_bps, 0), coalesce(out_bps, 0)) / speed * 100, 1) "
+    "ds_peak": ("ds_flow", f"{THIS} | eval util=round(max(coalesce(in_bps, 0), coalesce(out_bps, 0)) / $status:result.speed$ * 100, 1) "
                 "| stats max(util) as \"Peak utilization %\""),
     "ds_compare": ("ds_flow", COMPARE),
 }
 dataSources = {k: {"type": "ds.search", "name": k[3:], "options": {"query": q}} for k, q in bases.items()}
+dataSources["ds_status"]["options"]["enableSmartSources"] = True
 dataSources.update({k: {"type": "ds.chain", "name": k[3:], "options": {"extend": b, "query": q}} for k, (b, q) in chains.items()})
 
 def tile(title, d, **opts):
@@ -135,19 +132,13 @@ def tile(title, d, **opts):
 def chart(kind, title, d, **opts):
     return {"type": kind, "title": title, "dataSources": {"primary": d}, "options": opts, "showProgressBar": True}
 
-# Clicking a neighbour opens its Interface Details with the far-end port, in a new tab.
-def details_link(node, port):
-    return [{"type": "drilldown.customUrl", "options": {"url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=" + node
-             + "&form.tk_interface=" + port + "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
-             "newTab": True}}]
-
 viz = {
     "viz_status": tile("Status", "ds_hdr_status"),
     "viz_speed": tile("Speed", "ds_hdr_speed"),
     "viz_changed": tile("Last change", "ds_hdr_changed"),
-    "viz_neighbour": {"type": "splunk.table", "title": "CDP neighbour (click to open its port)", "dataSources": {"primary": "ds_hdr_neighbour"},
-                      "options": {"count": 1, "headerVisibility": "none"},
-                      "eventHandlers": details_link("$row.neighbour.value$", "$row.neighbour_port.value$")},
+    # A link to the neighbour's port when there is one, plain "none" otherwise.
+    "viz_neighbour": {"type": "splunk.markdown", "title": "CDP neighbour",
+                      "options": {"markdown": "$status:result.neighbour_md$", "fontSize": "large"}},
     "viz_macs": tile("Learned MACs", "ds_hdr_macs"),
     "viz_peak": tile("Peak utilization %", "ds_peak"),
     "viz_throughput": chart("splunk.line", "Throughput (5 min average)", "ds_throughput"),
