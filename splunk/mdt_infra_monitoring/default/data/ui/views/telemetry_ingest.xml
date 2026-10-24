@@ -11,7 +11,7 @@
    "title": "Time range",
    "options": {
     "token": "global_time",
-    "defaultValue": "-24h@m,now"
+    "defaultValue": "-24h@h,now"
    }
   }
  },
@@ -111,29 +111,29 @@
       "rowBackgroundColors": "> primary | seriesByName(\"Status\") | matchValue(statusColors)",
       "rowColors": "> primary | seriesByName(\"Status\") | matchValue(statusTextColors)"
      }
-    },
-    "context": {
-     "statusColors": [
-      {
-       "match": "OK",
-       "value": "#53a051"
-      },
-      {
-       "match": "silent",
-       "value": "#dc4e41"
-      }
-     ],
-     "statusTextColors": [
-      {
-       "match": "OK",
-       "value": "#ffffff"
-      },
-      {
-       "match": "silent",
-       "value": "#ffffff"
-      }
-     ]
     }
+   },
+   "context": {
+    "statusColors": [
+     {
+      "match": "OK",
+      "value": "#53a051"
+     },
+     {
+      "match": "silent",
+      "value": "#dc4e41"
+     }
+    ],
+    "statusTextColors": [
+     {
+      "match": "OK",
+      "value": "#ffffff"
+     },
+     {
+      "match": "silent",
+      "value": "#ffffff"
+     }
+    ]
    },
    "showProgressBar": true
   },
@@ -188,7 +188,7 @@
    "type": "ds.search",
    "name": "devices",
    "options": {
-    "query": "| mstats count(_value) as n latest_time(_value) as t WHERE index=cisco_metrics metric_name=* earliest=-15m BY metric_name extracted_source | eval pipe=case(match(metric_name, \"^mdt_xe_\"), \"gnmic IOS-XE\", match(metric_name, \"^mdt_nx_\"), \"gnmic NX-OS\", match(metric_name, \"^mdt_wl_\"), \"gnmic WLC\", match(metric_name, \"^mdt_panos_\"), \"gnmic PAN-OS\", match(metric_name, \"^cisco[.]\"), \"OTel/Cribl\", match(metric_name, \"^(system[.]|up$|scrape_)\"), \"Collector host\", true(), \"Other\"), device=extracted_source | where pipe!=\"Collector host\" AND isnotnull(device) | stats sum(n) as n max(t) as seen values(pipe) as pipe by device | append [| mstats count(_value) as n WHERE index=cisco_metrics metric_name=mdt_* earliest=-15m BY extracted_source subscription_name | stats dc(subscription_name) as subs by extracted_source | rename extracted_source as device] | stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device | append [| makeresults | eval device=split(\"ibk-lab-sw98,ibk-lab-sw99,ibk-lab-sw03,ntsnxsw01,ntsnxsw02,ibk-lab-ewlc01,Lab-IBK-PA560-2\", \",\") | mvexpand device | eval pipe=\"gnmic\"] | append [| makeresults | eval device=split(\"ibk-lab-sw05,ibk-lab-sw11,ibk-lab-sw12,ibk-lab-sw13\", \",\") | mvexpand device | eval pipe=\"OTel/Cribl\"] | stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device | eval Pipeline=case(match(mvjoin(pipe, \",\"), \"gnmic\"), \"gnmic\", match(mvjoin(pipe, \",\"), \"OTel\"), \"OTel dial-out\", true(), \"Other\")",
+    "query": "| mstats count(_value) as n latest_time(_value) as t WHERE index=cisco_metrics metric_name=* earliest=-15m BY metric_name extracted_source | eval pipe=case(match(metric_name, \"^mdt_xe_\"), \"gnmic IOS-XE\", match(metric_name, \"^mdt_nx_\"), \"gnmic NX-OS\", match(metric_name, \"^mdt_wl_\"), \"gnmic WLC\", match(metric_name, \"^mdt_panos_\"), \"gnmic PAN-OS\", match(metric_name, \"^cisco[.]\"), \"OTel dial-out\", match(metric_name, \"^(system[.]|up$|scrape_)\"), \"Collector host\", true(), \"Other\"), device=extracted_source | where pipe!=\"Collector host\" AND isnotnull(device) | stats sum(n) as n max(t) as seen values(pipe) as pipe by device | append [| mstats count(_value) as n WHERE index=cisco_metrics metric_name=mdt_* earliest=-15m BY extracted_source subscription_name | stats dc(subscription_name) as subs by extracted_source | rename extracted_source as device] | stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device | append [| makeresults | eval device=split(\"ibk-lab-sw98,ibk-lab-sw99,ibk-lab-sw03,ntsnxsw01,ntsnxsw02,ibk-lab-ewlc01,Lab-IBK-PA560-2\", \",\") | mvexpand device | eval pipe=\"gnmic\"] | append [| makeresults | eval device=split(\"ibk-lab-sw05,ibk-lab-sw11,ibk-lab-sw12,ibk-lab-sw13\", \",\") | mvexpand device | eval pipe=\"OTel dial-out\"] | stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device | eval Pipeline=case(match(mvjoin(pipe, \",\"), \"gnmic\"), \"gnmic\", match(mvjoin(pipe, \",\"), \"OTel\"), \"OTel dial-out\", true(), \"Other\")",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -223,7 +223,7 @@
    "type": "ds.search",
    "name": "lic_table",
    "options": {
-    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog OR idx=cisco_events) | eval td=if(_time >= relative_time(now(), \"@d\"), b, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), b, 0) | stats sum(td) as td sum(yd) as yd sum(b) as mo by idx | appendpipe [| stats sum(td) as td sum(yd) as yd sum(mo) as mo | eval idx=\"Total\"] | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes] | filldown pool_bytes",
+    "query": "index=_internal source=*license_usage.log type=Usage (idx=cisco_metrics OR idx=cisco_syslog OR idx=cisco_events) | eval td=if(_time >= relative_time(now(), \"@d\"), b, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), b, 0) | stats sum(td) as td sum(yd) as yd sum(b) as mo by idx | appendpipe [| stats sum(td) as td sum(yd) as yd sum(mo) as mo | eval idx=\"Total\"] | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes] | filldown pool_bytes | eval Index=idx, \"Today (MB)\"=round(td / 1048576, 1), \"Yesterday (MB)\"=round(yd / 1048576, 1), \"30-day average (MB/day)\"=round(mo / 30 / 1048576, 1), \"% of pool (today)\"=round(td / pool_bytes * 100, 2) | table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\"",
     "queryParameters": {
      "earliest": "-29d@d",
      "latest": "now"
@@ -249,7 +249,7 @@
    "type": "ds.search",
    "name": "ingest",
    "options": {
-    "query": "| mstats count(_value) as n WHERE index=cisco_metrics metric_name=* BY metric_name span=5m | eval pipe=case(match(metric_name, \"^mdt_xe_\"), \"gnmic IOS-XE\", match(metric_name, \"^mdt_nx_\"), \"gnmic NX-OS\", match(metric_name, \"^mdt_wl_\"), \"gnmic WLC\", match(metric_name, \"^mdt_panos_\"), \"gnmic PAN-OS\", match(metric_name, \"^cisco[.]\"), \"OTel/Cribl\", match(metric_name, \"^(system[.]|up$|scrape_)\"), \"Collector host\", true(), \"Other\") | stats sum(n) as n by _time pipe | where _time + 300 <= now() | eval rate=round(n / 300, 1) | xyseries _time pipe rate | fillnull value=0",
+    "query": "| mstats count(_value) as n WHERE index=cisco_metrics metric_name=* BY metric_name span=5m | eval pipe=case(match(metric_name, \"^mdt_xe_\"), \"gnmic IOS-XE\", match(metric_name, \"^mdt_nx_\"), \"gnmic NX-OS\", match(metric_name, \"^mdt_wl_\"), \"gnmic WLC\", match(metric_name, \"^mdt_panos_\"), \"gnmic PAN-OS\", match(metric_name, \"^cisco[.]\"), \"OTel dial-out\", match(metric_name, \"^(system[.]|up$|scrape_)\"), \"Collector host\", true(), \"Other\") | stats sum(n) as n by _time pipe | where _time + 300 <= now() | eval rate=round(n / 300, 1) | xyseries _time pipe rate | fillnull value=0",
     "queryParameters": {
      "earliest": "$global_time.earliest$",
      "latest": "$global_time.latest$"

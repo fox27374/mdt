@@ -7,11 +7,11 @@ OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data",
 # Pipeline of a metric, by name. Collector host = the collector's own metrics (no device).
 PIPE = ('case(match(metric_name, "^mdt_xe_"), "gnmic IOS-XE", match(metric_name, "^mdt_nx_"), "gnmic NX-OS", '
         'match(metric_name, "^mdt_wl_"), "gnmic WLC", match(metric_name, "^mdt_panos_"), "gnmic PAN-OS", '
-        'match(metric_name, "^cisco[.]"), "OTel/Cribl", match(metric_name, "^(system[.]|up$|scrape_)"), "Collector host", true(), "Other")')
+        'match(metric_name, "^cisco[.]"), "OTel dial-out", match(metric_name, "^(system[.]|up$|scrape_)"), "Collector host", true(), "Other")')
 LIC = "(idx=cisco_metrics OR idx=cisco_syslog OR idx=cisco_events)"
 POOL = ('| appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise '
         '| eval pool_bytes=tonumber(effective_quota) | fields pool_bytes]')
-# Configured devices (gnmic.yaml targets and the Cribl/OTel dial-out list). Silent when they send nothing.
+# Configured devices (gnmic mdt.yaml targets and the switches that dial out to the OTel collector). Silent when they send nothing.
 GNMIC = "ibk-lab-sw98,ibk-lab-sw99,ibk-lab-sw03,ntsnxsw01,ntsnxsw02,ibk-lab-ewlc01,Lab-IBK-PA560-2"
 OTEL = "ibk-lab-sw05,ibk-lab-sw11,ibk-lab-sw12,ibk-lab-sw13"
 
@@ -25,7 +25,7 @@ DEVICES = (
     "| stats dc(subscription_name) as subs by extracted_source | rename extracted_source as device] "
     "| stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device "
     f"| append [| makeresults | eval device=split(\"{GNMIC}\", \",\") | mvexpand device | eval pipe=\"gnmic\"] "
-    f"| append [| makeresults | eval device=split(\"{OTEL}\", \",\") | mvexpand device | eval pipe=\"OTel/Cribl\"] "
+    f"| append [| makeresults | eval device=split(\"{OTEL}\", \",\") | mvexpand device | eval pipe=\"OTel dial-out\"] "
     "| stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device "
     "| eval Pipeline=case(match(mvjoin(pipe, \",\"), \"gnmic\"), \"gnmic\", match(mvjoin(pipe, \",\"), \"OTel\"), \"OTel dial-out\", true(), \"Other\")"
 )
@@ -44,7 +44,10 @@ bases = {
                      "| eval td=if(_time >= relative_time(now(), \"@d\"), b, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), b, 0) "
                      "| stats sum(td) as td sum(yd) as yd sum(b) as mo by idx "
                      "| appendpipe [| stats sum(td) as td sum(yd) as yd sum(mo) as mo | eval idx=\"Total\"] "
-                     f"{POOL} | filldown pool_bytes"),
+                     f"{POOL} | filldown pool_bytes "
+                     "| eval Index=idx, \"Today (MB)\"=round(td / 1048576, 1), \"Yesterday (MB)\"=round(yd / 1048576, 1), "
+                     "\"30-day average (MB/day)\"=round(mo / 30 / 1048576, 1), \"% of pool (today)\"=round(td / pool_bytes * 100, 2) "
+                     "| table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\""),
     "ds_lic_chart": f"{USAGE} | bin _time span=1d | stats sum(b) as bytes by _time idx "
                     "| eval MB=round(bytes / 1048576, 1) | xyseries _time idx MB | fillnull value=0",
     "ds_ingest": "| mstats count(_value) as n WHERE index=cisco_metrics metric_name=* BY metric_name span=5m "
@@ -94,9 +97,9 @@ devices = {"type": "splunk.table", "title": "Devices: configured and sending (la
            "dataSources": {"primary": "ds_devices_table"},
            "options": {"count": 30, "columnFormat": {"Status": {
                "rowBackgroundColors": "> primary | seriesByName(\"Status\") | matchValue(statusColors)",
-               "rowColors": "> primary | seriesByName(\"Status\") | matchValue(statusTextColors)"}},
-               "context": {"statusColors": [{"match": "OK", "value": "#53a051"}, {"match": "silent", "value": "#dc4e41"}],
-                           "statusTextColors": [{"match": "OK", "value": "#ffffff"}, {"match": "silent", "value": "#ffffff"}]}},
+               "rowColors": "> primary | seriesByName(\"Status\") | matchValue(statusTextColors)"}}},
+           "context": {"statusColors": [{"match": "OK", "value": "#53a051"}, {"match": "silent", "value": "#dc4e41"}],
+                       "statusTextColors": [{"match": "OK", "value": "#ffffff"}, {"match": "silent", "value": "#ffffff"}]},
            "showProgressBar": True}
 
 viz = {
@@ -116,7 +119,7 @@ viz = {
 
 inputs = {
     "input_time": {"type": "input.timerange", "title": "Time range",
-                   "options": {"token": "global_time", "defaultValue": "-24h@m,now"}},
+                   "options": {"token": "global_time", "defaultValue": "-24h@h,now"}},
 }
 
 rows = [  # (item, x, y, w, h)
