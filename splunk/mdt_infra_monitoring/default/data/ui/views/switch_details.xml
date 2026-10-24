@@ -562,48 +562,17 @@
     }
    }
   },
-  "viz_ports_up": {
-   "type": "splunk.singlevalue",
-   "title": "Ports up",
+  "viz_cpu": {
+   "type": "splunk.markergauge",
+   "title": "CPU %",
    "dataSources": {
-    "primary": "ds_ports_up"
-   },
-   "options": {
-    "majorColor": "#708794",
-    "sparklineDisplay": "off",
-    "trendDisplay": "off"
-   }
-  },
-  "viz_poe_watts": {
-   "type": "splunk.singlevalue",
-   "title": "PoE",
-   "dataSources": {
-    "primary": "ds_poe_watts"
-   },
-   "options": {
-    "majorColor": "#708794",
-    "sparklineDisplay": "off",
-    "trendDisplay": "off"
-   },
-   "containerOptions": {
-    "visibility": {
-     "hideWhenNoData": true
-    }
-   }
-  },
-  "viz_poe": {
-   "type": "splunk.fillergauge",
-   "title": "PoE drawn (% of PoE capacity)",
-   "dataSources": {
-    "primary": "ds_poe_gauge"
+    "primary": "ds_cpu"
    },
    "options": {
     "orientation": "horizontal",
-    "gaugeColor": "> value | rangeValue(poeColors)"
-   },
-   "context": {
-    "poeColors": [
+    "gaugeRanges": [
      {
+      "from": 0,
       "to": 70,
       "value": "#53a051"
      },
@@ -614,6 +583,61 @@
      },
      {
       "from": 90,
+      "to": 100,
+      "value": "#dc4e41"
+     }
+    ]
+   }
+  },
+  "viz_mem": {
+   "type": "splunk.markergauge",
+   "title": "Memory %",
+   "dataSources": {
+    "primary": "ds_mem"
+   },
+   "options": {
+    "orientation": "horizontal",
+    "gaugeRanges": [
+     {
+      "from": 0,
+      "to": 70,
+      "value": "#53a051"
+     },
+     {
+      "from": 70,
+      "to": 90,
+      "value": "#f8be34"
+     },
+     {
+      "from": 90,
+      "to": 100,
+      "value": "#dc4e41"
+     }
+    ]
+   }
+  },
+  "viz_poe": {
+   "type": "splunk.markergauge",
+   "title": "PoE drawn (% of PoE capacity)",
+   "dataSources": {
+    "primary": "ds_poe_gauge"
+   },
+   "options": {
+    "orientation": "horizontal",
+    "gaugeRanges": [
+     {
+      "from": 0,
+      "to": 70,
+      "value": "#53a051"
+     },
+     {
+      "from": 70,
+      "to": 90,
+      "value": "#f8be34"
+     },
+     {
+      "from": 90,
+      "to": 100,
       "value": "#dc4e41"
      }
     ]
@@ -624,31 +648,22 @@
     }
    }
   },
-  "viz_cpu": {
-   "type": "splunk.line",
-   "title": "CPU",
+  "viz_ports_up": {
+   "type": "splunk.markergauge",
+   "title": "Ports up %",
    "dataSources": {
-    "primary": "ds_cpu"
+    "primary": "ds_ports_up"
    },
    "options": {
-    "nullValueDisplay": "connect",
-    "legendDisplay": "off"
-   },
-   "showProgressBar": true
-  },
-  "viz_mem": {
-   "type": "splunk.line",
-   "title": "Memory",
-   "dataSources": {
-    "primary": "ds_mem"
-   },
-   "options": {
-    "yAxisMax": 100,
-    "yAxisMin": 0,
-    "nullValueDisplay": "connect",
-    "legendDisplay": "off"
-   },
-   "showProgressBar": true
+    "orientation": "horizontal",
+    "gaugeRanges": [
+     {
+      "from": 0,
+      "to": 100,
+      "value": "#708794"
+     }
+    ]
+   }
   },
   "viz_throughput": {
    "type": "splunk.line",
@@ -732,7 +747,7 @@
   },
   "viz_mac": {
    "type": "splunk.table",
-   "title": "MAC addresses",
+   "title": "MAC addresses on port-channels and VLANs",
    "dataSources": {
     "primary": "ds_mac"
    },
@@ -765,7 +780,7 @@
    "type": "ds.search",
    "name": "status",
    "options": {
-    "query": "| `mdt_if_status($tk_node$)` | join type=left node interface [| `mdt_cdp($tk_node$)` | stats values(neighbour) as neighbour values(remote_interface) as remote_interface by node interface]"
+    "query": "| `mdt_if_status($tk_node$)` | join type=left node interface [| `mdt_cdp($tk_node$)` | stats values(neighbour) as neighbour by node interface] | join type=left node interface [| `mdt_mac($tk_node$,*)` | eval entry=mac.if(vlan==\"-\", \"\", \" (VLAN \".vlan.\")\") | stats dc(mac) as macs values(entry) as mac_list by node interface]"
    }
   },
   "ds_rates": {
@@ -786,21 +801,21 @@
    "type": "ds.search",
    "name": "cpu",
    "options": {
-    "query": "| `mdt_cpu($tk_node$)` | timechart span=1m avg(cpu) as \"CPU %\" avg(load) as \"Load average (1 min, NX-OS)\""
+    "query": "| `mdt_cpu($tk_node$)` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)"
    }
   },
   "ds_mem": {
    "type": "ds.search",
    "name": "mem",
    "options": {
-    "query": "| `mdt_mem($tk_node$)` | timechart span=1m avg(mem) as \"Memory %\""
+    "query": "| `mdt_mem($tk_node$)` | stats latest(mem) as mem | eval mem=round(mem, 0)"
    }
   },
   "ds_mac": {
    "type": "ds.search",
    "name": "mac",
    "options": {
-    "query": "| `mdt_mac($tk_node$,*$tk_interface$)` | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node"
+    "query": "| `mdt_mac($tk_node$,*$tk_interface$)` | where NOT (`mdt_is_physical`) | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node"
    }
   },
   "ds_logs": {
@@ -823,7 +838,7 @@
    "name": "ifaces",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | fields interface | sort interface"
+    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | fields interface"
    }
   },
   "ds_nodata": {
@@ -839,7 +854,7 @@
    "name": "ports_up",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | stats count as total sum(oper_up) as up | eval Ports=up.\" of \".total.\" (\".round(up / total * 100, 0).\"%)\" | fields Ports"
+    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | stats count as total sum(oper_up) as up | eval pct=round(up / total * 100, 0) | fields pct"
    }
   },
   "ds_ifaces_table": {
@@ -847,7 +862,7 @@
    "name": "ifaces_table",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | search interface=\"*$tk_interface$\" | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) | rename interface as Interface, neighbour as \"CDP neighbour\", remote_interface as \"Neighbour port\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" \"Neighbour port\""
+    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | search interface=\"*$tk_interface$\" | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) | eval MACs=case(macs > 5, macs.\" MACs\", macs > 0, mac_list) | fillnull value=\"\" \"Down for\" \"CDP neighbour\" MACs | rename interface as Interface, neighbour as \"CDP neighbour\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"
    }
   },
   "ds_poe_gauge": {
@@ -856,14 +871,6 @@
    "options": {
     "extend": "ds_poe",
     "query": "| eval pct=round(used / (used + free) * 100, 0) | fields pct"
-   }
-  },
-  "ds_poe_watts": {
-   "type": "ds.chain",
-   "name": "poe_watts",
-   "options": {
-    "extend": "ds_poe",
-    "query": "| eval PoE=used.\" W drawn, \".free.\" W free\" | fields PoE"
    }
   },
   "ds_throughput": {
@@ -925,42 +932,12 @@
       }
      },
      {
-      "item": "viz_ports_up",
+      "item": "viz_cpu",
       "type": "block",
       "position": {
        "x": 0,
        "y": 80,
-       "w": 280,
-       "h": 200
-      }
-     },
-     {
-      "item": "viz_poe_watts",
-      "type": "block",
-      "position": {
-       "x": 280,
-       "y": 80,
-       "w": 260,
-       "h": 200
-      }
-     },
-     {
-      "item": "viz_poe",
-      "type": "block",
-      "position": {
-       "x": 540,
-       "y": 80,
-       "w": 300,
-       "h": 200
-      }
-     },
-     {
-      "item": "viz_cpu",
-      "type": "block",
-      "position": {
-       "x": 840,
-       "y": 80,
-       "w": 300,
+       "w": 360,
        "h": 200
       }
      },
@@ -968,9 +945,29 @@
       "item": "viz_mem",
       "type": "block",
       "position": {
-       "x": 1140,
+       "x": 360,
        "y": 80,
-       "w": 300,
+       "w": 360,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_poe",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 80,
+       "w": 360,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_ports_up",
+      "type": "block",
+      "position": {
+       "x": 1080,
+       "y": 80,
+       "w": 360,
        "h": 200
       }
      },
