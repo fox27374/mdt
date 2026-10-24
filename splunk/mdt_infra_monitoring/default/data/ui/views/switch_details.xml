@@ -39,7 +39,7 @@
       "earliest": "$global_time.earliest$",
       "latest": "$global_time.latest$"
      },
-     "refresh": "1m",
+     "refresh": "90s",
      "refreshType": "delay"
     }
    }

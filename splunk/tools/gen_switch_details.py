@@ -149,7 +149,7 @@ definition = {
     "description": "One switch: ports, CPU, memory, PoE, traffic, errors, CDP neighbours, MAC table and syslog. Covers Cribl (sw11-13) and gnmic (IOS-XE, NX-OS) telemetry.",
     "inputs": inputs,
     "defaults": {"dataSources": {"ds.search": {"options": {"queryParameters": {
-        "earliest": "$global_time.earliest$", "latest": "$global_time.latest$"}, "refresh": "1m", "refreshType": "delay"}}}},
+        "earliest": "$global_time.earliest$", "latest": "$global_time.latest$"}, "refresh": "90s", "refreshType": "delay"}}}},
     "visualizations": viz,
     "dataSources": dataSources,
     "layout": layout,
