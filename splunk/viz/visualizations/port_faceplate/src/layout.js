@@ -42,6 +42,14 @@ export function portKind(row) {
   return (fibre ? "fibre" : "copper") + (full ? "" : "-slow");
 }
 
+// PoE on a port: 'on' while it draws power, 'deny' when it is refused power, null otherwise. A port
+// that is down but still drawing gets the bolt too (Meraki cabling hint).
+export function poeMark(row) {
+  if (row.poe_state === 'deny') return 'deny';
+  if (row.poe_state === 'ok' && Number(row.poe_w) > 0) return 'on';
+  return null;
+}
+
 const colX = (col) => col * PITCH + Math.floor(col / 6) * GROUP_GAP;
 const slotCol = (port) => Math.floor((port - 1) / 2);
 const slotY = (port) => (port % 2 === 1 ? 0 : ROW);

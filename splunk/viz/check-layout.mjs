@@ -1,6 +1,6 @@
 // Runnable check for the faceplate layout: node check-layout.mjs (exits non-zero on failure).
 import assert from 'node:assert/strict';
-import { layoutFaceplate, parseInterface, portKind } from './visualizations/port_faceplate/src/layout.js';
+import { layoutFaceplate, parseInterface, poeMark, portKind } from './visualizations/port_faceplate/src/layout.js';
 
 const range = (prefix, from, to) => Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
 const rowsOf = (names) => names.map((interface_) => ({ interface: interface_ }));
@@ -95,5 +95,14 @@ assert.equal(kind('eth1/12', 'up', 1e10), 'fibre');
 assert.equal(kind('Ethernet1/3', 'up', 1e9), 'fibre-slow');
 assert.equal(kind('GigabitEthernet1/0/2', 'admin down', 0), 'admin');
 assert.equal(kind('GigabitEthernet1/0/2', 'down', 0), 'down');
+
+// PoE bolt: on while drawing power (state ok, watts above 0), deny when refused, nothing otherwise.
+assert.equal(poeMark({ poe_state: 'ok', poe_w: '6.5' }), 'on');
+assert.equal(poeMark({ state: 'down', poe_state: 'ok', poe_w: '5' }), 'on', 'a down port still drawing shows the bolt');
+assert.equal(poeMark({ poe_state: 'ok', poe_w: '0' }), null);
+assert.equal(poeMark({ poe_state: 'ok', poe_w: '' }), null);
+assert.equal(poeMark({ poe_state: 'off', poe_w: '0' }), null);
+assert.equal(poeMark({ poe_state: 'deny', poe_w: '0' }), 'deny');
+assert.equal(poeMark({ interface: 'GigabitEthernet1/0/1' }), null, 'no PoE data');
 
 console.log('check-layout: all assertions passed');

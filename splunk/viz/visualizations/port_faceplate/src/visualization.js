@@ -1,5 +1,5 @@
 import { VisualizationAPI } from '@splunk/dashboard-studio-extension';
-import { layoutFaceplate, portKind } from './layout.js';
+import { layoutFaceplate, poeMark, portKind } from './layout.js';
 import './visualization.css';
 
 // Port colours after the Meraki switch view (see portKind). Down is black with a grey outline so it
@@ -8,6 +8,10 @@ const PORT = {
     copper: '#7ed321', 'copper-slow': '#0b7a32', fibre: '#7b9cf0', 'fibre-slow': '#3157d5',
     admin: '#a6a6a6', down: '#000000',
 };
+// PoE bolt: yellow when drawing, red when denied; the dark stroke keeps it readable on green, blue and black.
+const BOLT = { on: '#f5d90a', deny: '#dc4e41' };
+// Bolt outline in a unit box (x, y pairs), scaled into the middle of the port square.
+const BOLT_SHAPE = [0.70, 0, 0.16, 0.58, 0.45, 0.58, 0.34, 1, 0.86, 0.40, 0.56, 0.40];
 const COLORS = {
     dark: { outline: '#5b6670', text: '#dfe3e8', muted: '#8a929b' },
     light: { outline: '#3c444d', text: '#1f2933', muted: '#5f6b76' },
@@ -42,11 +46,24 @@ function tooltip(row) {
     const macs = Number(row.macs) || 0;
     if (macs > 5) parts.push(`${macs} MACs`);
     else if (macs > 0) parts.push(`MACs: ${row.mac_list}`);
+    if (row.poe_state === 'deny') parts.push('PoE denied');
+    else if (row.poe_state === 'ok' && row.poe_w !== '' && row.poe_w != null) {
+        const w = Math.round(Number(row.poe_w) * 10) / 10;
+        parts.push(`PoE ${w} W${/^\d+$/.test(row.pd_class ?? '') ? `, class ${row.pd_class}` : ''}`);
+    }
     return parts.filter(Boolean).join(' · ');
 }
 
 function escapeHtml(text) {
     return String(text ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+// Bolt polygon inside a port square of the given size.
+function boltPoints(x, y, size) {
+    const w = size * 0.7, x0 = x + size * 0.15, y0 = y + size * 0.15;
+    const pts = [];
+    for (let i = 0; i < BOLT_SHAPE.length; i += 2) pts.push(`${(x0 + BOLT_SHAPE[i] * w).toFixed(2)},${(y0 + BOLT_SHAPE[i + 1] * w).toFixed(2)}`);
+    return pts.join(' ');
 }
 
 function renderPorts(rows) {
@@ -61,8 +78,12 @@ function renderPorts(rows) {
     const ports = layout.items
         .map((it) => {
             const row = rows[it.index];
+            const mark = poeMark(row);
+            const bolt = mark
+                ? `<polygon points="${boltPoints(it.x, it.y, it.size)}" fill="${BOLT[mark]}" stroke="#1a1a1a" stroke-width="0.8" stroke-linejoin="round"/>`
+                : '';
             return `<g class="viz-port" data-i="${it.index}"><title>${escapeHtml(tooltip(row))}</title>` +
-                `<rect x="${it.x}" y="${it.y}" width="${it.size}" height="${it.size}" rx="3" fill="${PORT[portKind(row)]}" stroke="${colors.outline}"/></g>`;
+                `<rect x="${it.x}" y="${it.y}" width="${it.size}" height="${it.size}" rx="3" fill="${PORT[portKind(row)]}" stroke="${colors.outline}"/>${bolt}</g>`;
         })
         .join('');
     const note = layout.skipped

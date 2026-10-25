@@ -174,6 +174,11 @@ subscriptions:
       - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-switch/power-allocated"
       - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-switch/consumed-poe-power"
       - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-switch/available-power"
+      # Per port (list key intf-name). Each leaf is its own event: power-used is a number, oper-state and
+      # pd-class are strings, which the Prometheus output keeps as labels on a value-1 series (like xe_if_info).
+      - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-port/power-used"
+      - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-port/oper-state"
+      - "rfc7951:/Cisco-IOS-XE-poe-oper:poe-oper-data/poe-port/pd-class"
     mode: stream
     stream-mode: sample
     sample-interval: 300s
@@ -444,6 +449,14 @@ processors:
     event-drop:
       condition: '.tags.interface_name != null and (.tags.interface_name | test("^(vlan|loopback|tunnel|app|nve|po|bluetooth|mgmt|GigabitEthernet0/0$)"; "i"))'
 
+  # PoE port entries are keyed by intf-name; give them the interface_name tag the other XE interface data uses.
+  xe-poe-port-interface:
+    event-jq:
+      expression: |
+        .[] |
+        if (.tags["subscription-name"] == "xe_poe_stats" and .tags["intf-name"] != null) then
+          .tags.interface_name = .tags["intf-name"]
+        else . end
   # The switch's own MACs (port CPU) are not learned addresses.
   drop-xe-mac-cpu:
     event-drop:
@@ -560,6 +573,7 @@ outputs:
       - wl-split-roam-history
       - nx-normalize-interfaces
       - delete-nx-if-stats-fields
+      - xe-poe-port-interface
       - drop-if-stats-interfaces
       - drop-xe-mac-cpu
       - rename-metrics
