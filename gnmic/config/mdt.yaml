@@ -61,6 +61,41 @@ targets:
       - xe_cdp_info
       - xe_mac_info
 
+  # SD-Access fabric switches (Catalyst Center managed). gNMI uses Catalyst Center's device certificate:
+  # gnxi / gnxi secure-password-auth / gnxi secure-port 57400 / gnxi secure-trustpoint sdn-network-infra-iwan / gnxi secure-server
+  # (the HTTP self-signed TP-self-signed-* trustpoint leaves gNMI in state Default: "Device has not been provisioned").
+  # Borders have no PoE ports: no xe_poe_stats. Edges are reached on their Loopback0.
+  172.24.80.231:57400:
+    name: "ibk-lab-border01"
+    subscriptions:
+      - xe_if_stats
+      - xe_cpu_stats
+      - xe_mem_stats
+      - xe_if_info
+      - xe_cdp_info
+      - xe_mac_info
+
+  172.24.80.232:57400:
+    name: "ibk-lab-border02"
+    subscriptions:
+      - xe_if_stats
+      - xe_cpu_stats
+      - xe_mem_stats
+      - xe_if_info
+      - xe_cdp_info
+      - xe_mac_info
+
+  10.20.0.35:57400:
+    name: "ibk-lab-edge02"
+    subscriptions:
+      - xe_if_stats
+      - xe_cpu_stats
+      - xe_mem_stats
+      - xe_poe_stats
+      - xe_if_info
+      - xe_cdp_info
+      - xe_mac_info
+
   # NX-OS Switches
   # crypto ca trustpoint NTSRootCA
   #   enrollment terminal
