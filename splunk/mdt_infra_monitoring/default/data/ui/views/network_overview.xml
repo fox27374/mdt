@@ -2,12 +2,14 @@
   <label>Network Overview</label>
   <row>
     <panel>
-      <title>CDP topology. Switches by health: green OK, yellow warning, red critical, dark grey no data. Click for Switch Details</title>
+      <title>CDP topology. Switches and APs (wifi icon) by health: green OK, yellow warning, red critical, dark grey no data. Click a switch for Switch Details, an AP for Wireless Overview</title>
       <viz type="network-diagram-viz.network-diagram-viz">
         <search>
           <query>| `mdt_cdp(*)`
 | where NOT match(interface, "(?i)^(mgmt|e0m)") AND NOT match(coalesce(remote_interface, ""), "(?i)^(mgmt|e0m)")
 | eval from=node, to=neighbour
+| append [| mstats latest(_value) WHERE index=cisco_metrics metric_name=mdt_wl_info_ap_name BY ap_name cdp_cache_data_cdp_cache_device_id
+  | eval from=ap_name, to=replace(cdp_cache_data_cdp_cache_device_id, "\..*$", ""), interface="uplink" | fields from to interface]
 | where from!=to
 | eval node1=if(from&lt;to, from, to), node2=if(from&lt;to, to, from)
 | stats dc(interface) as reported_links by node1 node2 from
@@ -15,7 +17,8 @@
 | eval from=node1, to=node2, linkwidth=min(2*links, 10)
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
 | append [| `mdt_switch_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d") | rename node as from | fields from color]
-| table from to linkwidth color</query>
+| append [| `mdt_ap_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="wifi" | rename ap as from | fields from color type]
+| table from to linkwidth color type</query>
           <earliest>-15m</earliest>
           <latest>now</latest>
           <refresh>1m</refresh>
@@ -55,7 +58,14 @@
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$</link>
+          <!-- ponytail: APs recognised by name (contains -ap); an AP named otherwise opens Switch Details. Upgrade: collect AP names into a token.
+               Drilldown match is eval over the click fields: name them in single quotes, $tokens$ are not substituted here. -->
+          <condition match="like('row.from', &quot;%-ap%&quot;)">
+            <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+          </condition>
+          <condition>
+            <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$</link>
+          </condition>
         </drilldown>
       </viz>
     </panel>
@@ -99,6 +109,135 @@
         </format>
         <drilldown>
           <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$row.Switch|u$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Wireless clients, last 15 minutes, all WLCs. Click for Wireless Overview</title>
+      <single>
+        <search>
+          <query>| mstats latest(mdt_wl_ap_stats_num_assoc_clients) as c WHERE index=cisco_metrics span=1m BY extracted_source ssid_counters_wtp_mac ssid_counters_slot_id ssid_counters_wlan_id
+| where _time + 60 &lt;= now()
+| stats sum(c) as c by _time
+| stats latest(c) as clients</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <title>APs joined, all WLCs</title>
+      <single>
+        <search>
+          <query>| `mdt_ap_health`
+| stats count as total count(eval(state=="joined")) as joined
+| eval aps=joined." / ".total
+| fields aps</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <title>WLC CPU %, highest WLC. Warning from 70, critical from 90</title>
+      <single>
+        <search>
+          <query>| mstats latest(mdt_xe_cpu_stats_one_minute) as cpu WHERE index=cisco_metrics [| mcatalog values(extracted_source) as extracted_source WHERE index=cisco_metrics metric_name=mdt_wl_info_ap_ip_addr | mvexpand extracted_source] BY extracted_source
+| stats max(cpu) as cpu
+| eval cpu=round(cpu, 0)</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+        <option name="rangeValues">[70,90]</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="unit">%</option>
+        <drilldown>
+          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <title>WLC memory %, highest WLC. Warning from 70, critical from 90</title>
+      <single>
+        <search>
+          <query>| mstats latest(mdt_xe_mem_stats_used_memory) as used latest(mdt_xe_mem_stats_total_memory) as total WHERE index=cisco_metrics [| mcatalog values(extracted_source) as extracted_source WHERE index=cisco_metrics metric_name=mdt_wl_info_ap_ip_addr | mvexpand extracted_source] BY extracted_source memory_statistic_name
+| stats sum(used) as used sum(total) as total by extracted_source
+| eval mem=used / total * 100
+| stats max(mem) as mem
+| eval mem=round(mem, 1)</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+        <option name="rangeValues">[70,90]</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="unit">%</option>
+        <drilldown>
+          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+        </drilldown>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>AP health, last 15 minutes. Channel busy % (rx + tx + noise, worst radio) warns from 50 and is critical from 75; interference warns from 25 and is critical from 50; an AP not joined or an enabled radio down is critical. Click for Wireless Overview</title>
+      <table>
+        <search>
+          <query>| `mdt_ap_health`
+| eval order=case(health=="Critical", 0, health=="Warning", 1, health=="No data", 2, true(), 3)
+| sort order ap
+| eval busy=if(isnotnull(busy), busy." % (".busy_band.")", null())
+| rename wlc as WLC, ap as AP, health as Health, state as State, clients as Clients, busy as "Channel busy (worst radio)", inter as "Interference % (worst radio)", radios_down as "Radios down"
+| table AP Health State Clients "Channel busy (worst radio)" "Interference % (worst radio)" "Radios down" WLC</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">50</option>
+        <option name="drilldown">row</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Health">
+          <colorPalette type="map">{"OK":#53a051,"Warning":#f8be34,"Critical":#dc4e41,"No data":#3c444d}</colorPalette>
+        </format>
+        <format type="color" field="State">
+          <colorPalette type="map">{"joined":#53a051,"not joined":#dc4e41}</colorPalette>
+        </format>
+        <format type="color" field="Interference % (worst radio)">
+          <colorPalette type="list">[#53a051,#f8be34,#dc4e41]</colorPalette>
+          <scale type="threshold">25,50</scale>
+        </format>
+        <format type="color" field="Radios down">
+          <colorPalette type="list">[#53a051,#dc4e41]</colorPalette>
+          <scale type="threshold">1</scale>
+        </format>
+        <drilldown>
+          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.wlc=$row.WLC|u$</link>
         </drilldown>
       </table>
     </panel>
