@@ -7,6 +7,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const viz = 'port_faceplate';
 const dest = resolve(here, '../mdt_infra_monitoring/appserver/static/visualizations', viz);
 mkdirSync(dest, { recursive: true });
-copyFileSync(join(here, 'dist', viz, 'visualization.js'), join(dest, 'visualization.js'));
+// The bundle is faceplate.js; visualization.js is the loader that fetches it past the browser cache.
+copyFileSync(join(here, 'dist', viz, 'visualization.js'), join(dest, 'faceplate.js'));
+copyFileSync(join(here, 'visualizations', viz, 'loader.js'), join(dest, 'visualization.js'));
 copyFileSync(join(here, 'visualizations', viz, 'config.json'), join(dest, 'config.json'));
 console.log(`synced ${viz} to ${dest}`);

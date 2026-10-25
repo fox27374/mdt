@@ -13,7 +13,7 @@ Interface Details when a port is clicked.
 ```bash
 npm install
 npm run check   # layout parser checks
-npm run sync    # production build, copies dist/port_faceplate/visualization.js and config.json into the app
+npm run sync    # production build, copies the bundle as faceplate.js, loader.js as visualization.js and config.json into the app
 ```
 
 The built bundle is committed under `splunk/mdt_infra_monitoring/appserver/static/visualizations/port_faceplate/`.

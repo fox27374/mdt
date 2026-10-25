@@ -328,8 +328,11 @@ cd splunk/viz && npm install && npm run sync && npm run check
 ```
 
 `npm run check` runs the layout parser checks (`check-layout.mjs`). The layout is in
-`src/layout.js`, the drawing in `src/visualization.js`. Splunk Web needs a restart after a new
-bundle is first deployed (`/services/server/control/restart_webui`).
+`src/layout.js`, the drawing in `src/visualization.js`. Studio loads `visualization.js` from a URL that
+browsers cache for a year and that changes only with a Splunk upgrade, so the published
+`visualization.js` is a small loader (`loader.js`) that fetches the bundle, `faceplate.js`, with a fresh
+query string: a deployed change shows on the next page load. Changes to the loader itself need a
+Splunk Web restart (`/services/server/control/restart_webui`) and a cleared browser cache.
 
 Deploy it with:
 
