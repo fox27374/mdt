@@ -1,0 +1,4 @@
+#roles-form { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+#roles-form input, #roles-form select { margin: 0; }
+#roles-pattern { width: 280px; }
+#roles-table { max-width: 640px; }
