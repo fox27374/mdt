@@ -33,7 +33,7 @@
         <ul>
           <li>Patterns are host names. * matches any text. A device takes the role of the longest pattern that matches it. Adding an existing pattern changes its role.</li>
           <li>Roles: core, distribution and access are the rows of the tree, top to bottom. APs (wifi) are always the bottom row and need no entry.</li>
-          <li>wlc, firewall and server are not in the tree: they sit in a side column to the right.</li>
+          <li>wlc, firewall and server sit on the distribution row, right of the distribution switches.</li>
           <li>Devices without a role are placed one row below their highest neighbour by CDP link. Devices not reached from a role device go to the islands block on the far right.</li>
           <li>Changes show on Network Overview after its next refresh (1 minute). Only admin and power users can save.</li>
         </ul>
