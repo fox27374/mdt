@@ -74,9 +74,15 @@ of Podman containers managed with `podman-compose`.
 Subscriptions are grouped by platform:
 
 - **Cisco IOS-XE switches** (`xe_*`) — interface stats, CPU, memory, PoE, interface
-  info, CDP neighbors, MAC table. Per-port PoE (`xe_poe_stats`, power drawn, state and class) is
-  collected from dial-in switches; a switch that sends dial-out needs a `/poe-ios-xe-oper:poe-oper-data/poe-port-detail`
-  subscription (300 s) for it to show in the Switch Details faceplate. `xe_inventory` (1 h) takes the chassis part number, which names the switch model on the faceplate's member strip.
+  info, CDP neighbors, MAC table, per-port PoE (`xe_poe_stats`) and the chassis part number
+  (`xe_inventory`, 1 h), which names the switch model on the Switch Details faceplate.
+
+IOS-XE switches that are not gnmic targets send the same data by gRPC dial-out to the OTel collector
+(port 57000). Their subscriptions are defined in [config/dialout-iosxe.yaml](config/dialout-iosxe.yaml)
+and applied over gNMI with `scripts/mdthost 'scripts/dialout-apply [switch ...]'`, which owns subscription
+IDs 57001-57099 on the switch (running config only). **Dial-in and dial-out carry the same subscriptions:**
+a change to an `xe_*` subscription in `mdt.yaml` gets the same change in `dialout-iosxe.yaml` and, for new
+metric names, in `filter/cisco` and `transform/cisco` in `otel.yaml`.
 - **Cisco NX-OS switches** (`nx_*`) — interface stats/info, CPU load, memory, CDP, MAC
   (uses `config/ca.pem` for TLS).
 - **Cisco Catalyst WLC** (`wl_*`) — wireless client signal/SNR/retries, AP utilization
