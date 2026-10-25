@@ -99,7 +99,9 @@ function renderPorts(rows) {
     const note = layout.skipped
         ? `<div class="viz-note" style="color:${colors.muted}">${layout.skipped} port(s) with no slot in the faceplate are in the Interfaces table.</div>`
         : '';
-    const pad = 4;
+    // Chassis frame around the faceplate, inset by half the padding.
+    const pad = 14, inset = 7;
+    const frame = `<rect x="${-inset}" y="${-inset}" width="${layout.width + 2 * inset}" height="${layout.height + 2 * inset}" rx="6" fill="none" stroke="${colors.outline}" stroke-width="1.5"/>`;
     const swatch = (fill) => `<span class="viz-swatch" style="background:${fill};border-color:${colors.outline}"></span>`;
     const bolt = (fill) => `<svg class="viz-legend-bolt" viewBox="0 0 10 10"><polygon points="${boltPoints(0, 0, 10)}" fill="${fill}" stroke="#1a1a1a" stroke-width="0.5"/></svg>`;
     const legend = `<div class="viz-legend" style="color:${colors.muted}">` +
@@ -108,7 +110,7 @@ function renderPorts(rows) {
         `<span><span class="viz-swatch" style="border:2px solid ${ERROR_FRAME}"></span>Errors</span></div>`;
     container.innerHTML =
         `<svg class="viz-svg" viewBox="${-pad} ${-pad} ${layout.width + 2 * pad} ${layout.height + 2 * pad}" preserveAspectRatio="xMidYMid meet" role="img">` +
-        heads + ports + labels + '</svg>' + legend + note;
+        frame + heads + ports + labels + '</svg>' + legend + note;
     container.classList.remove('viz-container--empty');
 }
 
