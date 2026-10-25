@@ -642,8 +642,9 @@ processors:
           # One object per AdjEp entry: the leaves of an entry share the path before the leaf name.
           ([$ev.values | to_entries[] | {idx: (.key | split("/") | .[:-1] | join("/")), f: (.key | split("/") | last), v: .value}]
            | group_by(.idx) | map(map({(.f): .v}) | add))[]
-          | select(.ip != null and .mac != null)
-          | entry({arp_oper_address: .ip, arp_vrf_vrf: .name, vlan: .ifId}; {hardware: .mac, interface: .physIfId})
+          # INCOMPLETE entries (all-zero MAC, no reply yet) are no client. The table has no VRF leaf on this path.
+          | select(.ip != null and .mac != null and .mac != "00:00:00:00:00:00")
+          | entry({arp_oper_address: .ip, vlan: .ifId}; {hardware: .mac, interface: .physIfId})
         elif ($ev.tags["subscription-name"] == "nx_if_stats" or $ev.tags["subscription-name"] == "nx_if_info") then
           ( $ev.values | to_entries
             | group_by(.key | capture("interface\\.(?P<idx>[0-9]+)/") | .idx)
