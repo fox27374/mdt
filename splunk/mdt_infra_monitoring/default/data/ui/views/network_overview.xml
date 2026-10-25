@@ -19,6 +19,27 @@
       </change>
     </input>
   </fieldset>
+  <!-- Dependency check: the topology diagram needs the Network Diagram Viz app (app id network-diagram-viz). The notice shows only when it is missing. -->
+  <search id="nd_viz_check">
+    <query>| rest /services/apps/local splunk_server=local | search title="network-diagram-viz"</query>
+    <earliest>-1m</earliest>
+    <latest>now</latest>
+    <done>
+      <condition match="$job.resultCount$==0">
+        <set token="show_nd_missing">1</set>
+      </condition>
+      <condition>
+        <unset token="show_nd_missing"></unset>
+      </condition>
+    </done>
+  </search>
+  <row depends="$show_nd_missing$">
+    <panel>
+      <html>
+        <p><b>Network Diagram Viz is not installed.</b> The CDP topology diagram below needs it. Install "Network Diagram Viz" from Splunkbase (see splunk/README.md), then reload this page.</p>
+      </html>
+    </panel>
+  </row>
   <row depends="$show_overview$">
     <panel>
       <title>CDP topology. Switches and APs (wifi icon) by health: green OK, yellow warning, red critical, dark grey no data. Click a switch for Switch Details, an AP for Wireless Overview</title>
@@ -27,7 +48,7 @@
           <query>| `mdt_cdp(*)`
 | where NOT match(interface, "(?i)^(mgmt|e0m)") AND NOT match(coalesce(remote_interface, ""), "(?i)^(mgmt|e0m)")
 | eval from=node, to=neighbour
-| append [| mstats latest(_value) WHERE index=cisco_metrics metric_name=mdt_wl_info_ap_name BY ap_name cdp_cache_data_cdp_cache_device_id
+| append [| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_name BY ap_name cdp_cache_data_cdp_cache_device_id
   | eval from=ap_name, to=replace(cdp_cache_data_cdp_cache_device_id, "\..*$", ""), interface="uplink" | fields from to interface]
 | where from!=to
 | eval node1=if(from&lt;to, from, to), node2=if(from&lt;to, to, from)
@@ -134,7 +155,7 @@
       <title>Wireless clients, last 15 minutes, all WLCs. Click for Wireless Overview</title>
       <single>
         <search>
-          <query>| mstats latest(mdt_wl_ap_stats_num_assoc_clients) as c WHERE index=cisco_metrics span=1m BY extracted_source ssid_counters_wtp_mac ssid_counters_slot_id ssid_counters_wlan_id
+          <query>| mstats latest(mdt_wl_ap_stats_num_assoc_clients) as c WHERE `mdt_metrics_index` span=1m BY extracted_source ssid_counters_wtp_mac ssid_counters_slot_id ssid_counters_wlan_id
 | where _time + 60 &lt;= now()
 | stats sum(c) as c by _time
 | stats latest(c) as clients</query>
@@ -174,7 +195,7 @@
       <title>WLC CPU %, highest WLC. Warning from 70, critical from 90</title>
       <single>
         <search>
-          <query>| mstats latest(mdt_xe_cpu_stats_one_minute) as cpu WHERE index=cisco_metrics [| mcatalog values(extracted_source) as extracted_source WHERE index=cisco_metrics metric_name=mdt_wl_info_ap_ip_addr | mvexpand extracted_source] BY extracted_source
+          <query>| mstats latest(mdt_xe_cpu_stats_one_minute) as cpu WHERE `mdt_metrics_index` [| mcatalog values(extracted_source) as extracted_source WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_ip_addr | mvexpand extracted_source] BY extracted_source
 | stats max(cpu) as cpu
 | eval cpu=round(cpu, 0)</query>
           <earliest>-15m</earliest>
@@ -197,7 +218,7 @@
       <title>WLC memory %, highest WLC. Warning from 70, critical from 90</title>
       <single>
         <search>
-          <query>| mstats latest(mdt_xe_mem_stats_used_memory) as used latest(mdt_xe_mem_stats_total_memory) as total WHERE index=cisco_metrics [| mcatalog values(extracted_source) as extracted_source WHERE index=cisco_metrics metric_name=mdt_wl_info_ap_ip_addr | mvexpand extracted_source] BY extracted_source memory_statistic_name
+          <query>| mstats latest(mdt_xe_mem_stats_used_memory) as used latest(mdt_xe_mem_stats_total_memory) as total WHERE `mdt_metrics_index` [| mcatalog values(extracted_source) as extracted_source WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_ip_addr | mvexpand extracted_source] BY extracted_source memory_statistic_name
 | stats sum(used) as used sum(total) as total by extracted_source
 | eval mem=used / total * 100
 | stats max(mem) as mem

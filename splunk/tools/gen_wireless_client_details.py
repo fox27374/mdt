@@ -4,7 +4,7 @@ import json, os, sys
 
 OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data", "ui", "views", "wireless_client_details.xml")
 
-W = 'index=cisco_metrics extracted_source="$wlc$"'
+W = '`mdt_metrics_index` extracted_source="$wlc$"'
 C = "$tk_client$"
 # Latest hostname per client MAC (a client can rename itself).
 HOSTNAMES = (f"| mstats latest_time(_value) as t WHERE {W} metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname "
@@ -35,7 +35,7 @@ ROAM_ROWS = ("| addinfo | eval start=strptime(substr(assoc_time, 1, 19).\" +0000
              "| fields _time ap duration category \"Roam type\" Band BSSID \"Roam time (ms)\" | sort 0 _time")
 
 bases = {
-    "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE index=cisco_metrics metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
+    "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
     "ds_clients": (f"| mstats latest(_value) WHERE {W} metric_name=mdt_wl_client_stats_most_recent_rssi BY traffic_stats_ms_mac_address "
                    f"| rename traffic_stats_ms_mac_address as mac | join type=left mac [{HOSTNAMES}] "
                    "| eval label=if(isnotnull(device_hostname), device_hostname.\" (\".mac.\")\", mac) | sort label | table label mac"),

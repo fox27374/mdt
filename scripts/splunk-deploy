@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Deploy the Splunk app splunk/mdt_infra_monitoring to the Splunk host (ibk-free-splunk) and reload it.
+# Maintainer lab only (ibk-free-splunk). Anyone else: scripts/splunk-package, or copy the app folder into $SPLUNK_HOME/etc/apps (splunk/README.md).
 #
 #   SPLUNK_AUTH=admin:<password> SPLUNKHOST_PASS=<sudo password> scripts/splunk-deploy
 #
