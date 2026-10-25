@@ -1,11 +1,25 @@
-<dashboard version="1.1" theme="dark">
+<form version="1.1" theme="dark" script="topology_settings.js" stylesheet="topology_settings.css">
   <label>Network Overview</label>
-  <row>
-    <panel>
-      <html>Device roles and the fixed layout are set on <a href="/app/mdt_infra_monitoring/topology_settings">Topology Settings</a>.</html>
-    </panel>
-  </row>
-  <row>
+  <!-- Tabs: a link input shows either the overview rows or the topology settings row -->
+  <fieldset submitButton="false">
+    <input type="link" token="tab">
+      <label></label>
+      <choice value="overview">Overview</choice>
+      <choice value="settings">Topology settings</choice>
+      <default>overview</default>
+      <change>
+        <condition value="settings">
+          <set token="show_settings">1</set>
+          <unset token="show_overview"></unset>
+        </condition>
+        <condition>
+          <set token="show_overview">1</set>
+          <unset token="show_settings"></unset>
+        </condition>
+      </change>
+    </input>
+  </fieldset>
+  <row depends="$show_overview$">
     <panel>
       <title>CDP topology. Switches and APs (wifi icon) by health: green OK, yellow warning, red critical, dark grey no data. Click a switch for Switch Details, an AP for Wireless Overview</title>
       <viz type="network-diagram-viz.network-diagram-viz">
@@ -17,14 +31,15 @@
   | eval from=ap_name, to=replace(cdp_cache_data_cdp_cache_device_id, "\..*$", ""), interface="uplink" | fields from to interface]
 | where from!=to
 | eval node1=if(from&lt;to, from, to), node2=if(from&lt;to, to, from)
-| stats dc(interface) as reported_links by node1 node2 from
-| stats max(reported_links) as links by node1 node2
-| eval from=node1, to=node2, linkwidth=min(2*links, 10)
+| stats count by node1 node2
+| eval from=node1, to=node2, linkwidth=2
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
 | append [| `mdt_switch_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d") | rename node as from | fields from color]
 | append [| `mdt_ap_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="wifi" | rename ap as from | fields from color type]
 | appendpipe [| `mdt_topology_positions`]
 | eventstats max(x) as x max(y) as y max(value) as value by from
+| eventstats values(eval(if(isnull(x), from, null()))) as hidden
+| where isnotnull(x) AND (isnull(hidden) OR isnull(to) OR isnull(mvfind(hidden, "^\Q".to."\E$")))
 | table from to linkwidth color type x y value</query>
           <earliest>-15m</earliest>
           <latest>now</latest>
@@ -71,7 +86,7 @@
       </viz>
     </panel>
   </row>
-  <row>
+  <row depends="$show_overview$">
     <panel>
       <title>Switch health, last 15 minutes. Warning from 70 % (CPU, memory, busiest port) or above 5 errors/min, critical from 90 % or 100 errors/min. Click for Switch Details</title>
       <table>
@@ -114,7 +129,7 @@
       </table>
     </panel>
   </row>
-  <row>
+  <row depends="$show_overview$">
     <panel>
       <title>Wireless clients, last 15 minutes, all WLCs. Click for Wireless Overview</title>
       <single>
@@ -204,7 +219,7 @@
       </single>
     </panel>
   </row>
-  <row>
+  <row depends="$show_overview$">
     <panel>
       <title>AP health, last 15 minutes. Channel busy % (rx + tx + noise, worst radio) warns from 50 and is critical from 75; interference warns from 25 and is critical from 50; an AP not joined or an enabled radio down is critical. Click for Wireless Overview</title>
       <table>
@@ -243,4 +258,45 @@
       </table>
     </panel>
   </row>
-</dashboard>
+  <row depends="$show_settings$">
+    <panel>
+      <title>Topology settings: device roles</title>
+      <html>
+        <!-- Filled by appserver/static/topology_settings.js, which reads and writes the mdt_device_roles KV store collection over REST -->
+        <div id="roles-form">
+          <input id="roles-pattern" type="text" placeholder="pattern, for example ibk-lab-sw*" />
+          <select id="roles-role">
+            <option>core</option>
+            <option>distribution</option>
+            <option>access</option>
+            <option>wlc</option>
+            <option>firewall</option>
+            <option>server</option>
+            <option>hidden</option>
+          </select>
+          <button id="roles-add" class="btn btn-primary">Add</button>
+          <span id="roles-msg"></span>
+        </div>
+        <table id="roles-table" class="table table-striped">
+          <thead><tr><th>Pattern</th><th>Role</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </html>
+    </panel>
+  </row>
+  <row depends="$show_settings$">
+    <panel>
+      <title>How it works</title>
+      <html>
+        <ul>
+          <li>Patterns are host names. * matches any text. A device takes the role of the longest pattern that matches it. Adding an existing pattern changes its role.</li>
+          <li>Roles: core, distribution and access are the rows of the tree, top to bottom. APs (wifi) are always the bottom row and need no entry.</li>
+          <li>wlc, firewall and server sit on the distribution row, right of the distribution switches.</li>
+          <li>hidden: the device and its links are left out of the topology (for example servers).</li>
+          <li>Devices without a role are placed one row below their highest neighbour by CDP link. Devices not reached from a role device go to the islands block on the far right.</li>
+          <li>Changes show on the Overview tab after its next refresh (1 minute). Only admin and power users can save.</li>
+        </ul>
+      </html>
+    </panel>
+  </row>
+</form>

@@ -2,3 +2,6 @@
 #roles-form input, #roles-form select { margin: 0; }
 #roles-pattern { width: 280px; }
 #roles-table { max-width: 640px; }
+/* Tab buttons (link input "tab") side by side instead of one per line */
+.input-link { width: auto !important; }
+.input-link button { width: auto !important; }

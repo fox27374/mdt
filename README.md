@@ -305,8 +305,10 @@ Details, one XML file per dashboard in `default/data/ui/views/`. Network Overvie
 Simple XML dashboard and needs the `network-diagram-viz` app; the others are Dashboard Studio.
 
 Network Overview places the topology by device role. Roles are KV store entries (pattern with `*`
-to role: core, distribution, access, wlc, firewall, server), edited on the **Topology Settings**
-page (`topology_settings.xml`); the collection starts empty. The layout is computed in
+to role: core, distribution, access, wlc, firewall, server, hidden), edited on the **Topology
+settings** tab of Network Overview (script `appserver/static/topology_settings.js`, which writes the
+collection over the KV store REST API); the collection starts empty. Role `hidden` leaves a device
+and its links out of the topology, for example servers. The layout is computed in
 `mdt_topology_positions` in `default/macros.conf`. A new KV store collection needs one Splunk
 restart after its first deploy.
 
