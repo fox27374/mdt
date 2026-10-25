@@ -55,21 +55,22 @@ ARP_IPS = (
 )
 
 # Filter: MAC (any format, compared without separators), IP and name as case-insensitive substrings. A query that looks like
-# an IPv4 address or a partial one is never read as a MAC. Name = WLC hostname only (reverse DNS runs after the filter).
+# an IPv4 address or a partial one is never read as a MAC. Name = WLC hostname, else reverse DNS of the first IP.
 FILTER = (
+    "| eval ip=mvindex(ips, 0) "
+    "| lookup dnslookup clientip AS ip OUTPUT clienthost AS dns_name "
+    "| eval Name=coalesce(wl_name, dns_name, \"-\") "
     "| eval q=lower(trim(\"" + Q + "\")), qh=replace(q, \"[^0-9a-f]\", \"\") "
     "| eval mac_q=if(len(qh) >= 2 AND NOT match(q, \"^[0-9]{1,3}(\\.[0-9]{1,3}){1,3}\\.?$\") AND match(q, \"^[0-9a-f:.-]+$\"), 1, 0) "
     "| eval hit_mac=if(mac_q=1 AND like(replace(mac, \"[^0-9a-f]\", \"\"), \"%\".qh.\"%\"), 1, 0) "
     "| eval hit_ip=if(like(lower(mvjoin(ips, \" \")), \"%\".q.\"%\"), 1, 0) "
-    "| eval hit_name=if(like(lower(coalesce(wl_name, \"\")), \"%\".q.\"%\"), 1, 0) "
+    "| eval hit_name=if(like(lower(Name), \"%\".q.\"%\"), 1, 0) "
     "| where q=\"\" OR hit_mac=1 OR hit_ip=1 OR hit_name=1"
 )
 
 # Rows: the table columns, plus drill (the Interface Details or Wireless Client Details link for the row, hidden).
 ROWS = (
-    "| eval ip=mvindex(ips, 0) "
-    "| lookup dnslookup clientip AS ip OUTPUT clienthost AS dns_name "
-    "| eval Name=coalesce(wl_name, dns_name, \"-\"), IP=ips, MAC=mac, Type=type, "
+    "| eval IP=ips, MAC=mac, Type=type, "
     "Where=if(type=\"Wireless\", coalesce(wlc, \"-\").\" · \".coalesce(ap_name, eth_mac, \"-\").\" · \".coalesce(ssid, \"-\"), "
     "coalesce(node, \"-\").\" · \".coalesce(port, \"-\").\" · VLAN \".coalesce(vlan, \"-\")), "
     "\"Last seen\"=strftime(t, \"%Y-%m-%d %H:%M\"), "
