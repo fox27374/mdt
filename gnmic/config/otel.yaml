@@ -157,7 +157,9 @@ processors:
           - keep_keys(datapoint.attributes, ["source"]) where metric.name == "cisco.one-minute"
           - keep_keys(datapoint.attributes, ["source", "power-stack-name", "switch-num"]) where IsMatch(metric.name, "^cisco\\.(power-(allocated|budget)|consumed-poe-power|available-power)")
           - keep_keys(datapoint.attributes, ["source", "interface_name", "device-name", "port-id", "platform-name", "ip-address"]) where metric.name == "cisco.device-name_info"
-          - keep_keys(datapoint.attributes, ["source", "mac", "port"]) where metric.name == "cisco.port_info"
+          # MAC table: the VLAN key under the dial-in label name.
+          - set(datapoint.attributes["matm_mac_entry_vlan_id_number"], datapoint.attributes["vlan-id-number"]) where metric.name == "cisco.port_info"
+          - keep_keys(datapoint.attributes, ["source", "mac", "port", "matm_mac_entry_vlan_id_number"]) where metric.name == "cisco.port_info"
           - keep_keys(datapoint.attributes, ["source", "cname", "part-no"]) where metric.name == "cisco.part-no_info"
       # Last: the renames above match on the cisco.* names.
       - context: metric

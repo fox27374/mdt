@@ -33,8 +33,10 @@ WIRED = (
     "| rename extracted_source as node, matm_mac_entry_mac as mac, matm_mac_entry_vlan_id_number as vlan "
     "| append [| mstats latest_time(_value) as t WHERE index=cisco_metrics metric_name=mdt_nx_mac_info_age BY extracted_source port vlan mac type "
     "| rename extracted_source as node | where type!=\"gateway\" | eval vlan=replace(vlan, \"^vlan-\", \"\")] "
-    "| append [| mstats latest_time(_value) as t WHERE index=cisco_metrics metric_name=cisco.port_info BY extracted_source port mac | rename extracted_source as node] "
-    "| eval mac=lower(mac) | where NOT match(port, \"(?i)^(sup|cpu|vl|lo|nve|tu|app|mgmt)\") "
+    "| append [| mstats latest_time(_value) as t WHERE index=cisco_metrics metric_name=cisco.port_info BY extracted_source port mac matm_mac_entry_vlan_id_number "
+    "| rename extracted_source as node, matm_mac_entry_vlan_id_number as vlan] "
+    # FHRP virtual MACs (HSRP v1/v2, VRRP) are gateways, not clients.
+    "| eval mac=lower(mac) | where NOT match(mac, \"^(00:00:0c:07:ac|00:00:0c:9f:f|00:00:5e:00:01)\") | where NOT match(port, \"(?i)^(sup|cpu|vl|lo|nve|tu|app|mgmt)\") "
     "| eval ik=lower(node).\"|\".`mdt_ifkey(port)` "
     "| join type=left ik [| `mdt_cdp(*)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)`, is_cdp=1 | dedup ik | fields ik is_cdp] "
     "| eval prio=if(is_cdp=1, 2, 1), type=\"Wired\"]"
@@ -55,12 +57,13 @@ ARP_IPS = (
 )
 
 # Filter: MAC (any format, compared without separators), IP and name as case-insensitive substrings. A query that looks like
-# an IPv4 address or a partial one is never read as a MAC. Name = WLC hostname, else reverse DNS of the first IP.
+# an IPv4 address or a partial one is never read as a MAC. * is dropped: the input defaults to * (an empty text input leaves
+# its token unset and the table would not run). Name = WLC hostname, else reverse DNS of the first IP.
 FILTER = (
     "| eval ip=mvindex(ips, 0) "
     "| lookup dnslookup clientip AS ip OUTPUT clienthost AS dns_name "
     "| eval Name=coalesce(wl_name, dns_name, \"-\") "
-    "| eval q=lower(trim(\"" + Q + "\")), qh=replace(q, \"[^0-9a-f]\", \"\") "
+    "| eval q=lower(trim(replace(\"" + Q + "\", \"\\*\", \"\"))), qh=replace(q, \"[^0-9a-f]\", \"\") "
     "| eval mac_q=if(len(qh) >= 2 AND NOT match(q, \"^[0-9]{1,3}(\\.[0-9]{1,3}){1,3}\\.?$\") AND match(q, \"^[0-9a-f:.-]+$\"), 1, 0) "
     "| eval hit_mac=if(mac_q=1 AND like(replace(mac, \"[^0-9a-f]\", \"\"), \"%\".qh.\"%\"), 1, 0) "
     "| eval hit_ip=if(like(lower(mvjoin(ips, \" \")), \"%\".q.\"%\"), 1, 0) "
@@ -68,16 +71,17 @@ FILTER = (
     "| where q=\"\" OR hit_mac=1 OR hit_ip=1 OR hit_name=1"
 )
 
-# Rows: the table columns, plus drill (the Interface Details or Wireless Client Details link for the row, hidden).
+# Rows: the table columns, plus the hidden drilldown parts.
 ROWS = (
     "| eval IP=ips, MAC=mac, Type=type, "
     "Where=if(type=\"Wireless\", coalesce(wlc, \"-\").\" · \".coalesce(ap_name, eth_mac, \"-\").\" · \".coalesce(ssid, \"-\"), "
     "coalesce(node, \"-\").\" · \".coalesce(port, \"-\").\" · VLAN \".coalesce(vlan, \"-\")), "
     "\"Last seen\"=strftime(t, \"%Y-%m-%d %H:%M\"), "
-    "drill=if(type=\"Wireless\", \"/app/mdt_infra_monitoring/wireless_client_details?form.wlc=\".wlc.\"&form.tk_client=\".mac, "
-    "\"/app/mdt_infra_monitoring/interface_details?form.tk_node=\".node.\"&form.tk_interface=\".port) "
+    # Drilldown parts (hidden: leading _). Studio URL-encodes a token, so the URL template holds the path and each part fills one slot.
+    # Port-channels have no Interface Details (drop-if-stats-interfaces drops their stats): those open Switch Details.
+    "_view=case(type=\"Wireless\", \"wireless_client_details\", match(port, \"(?i)^po\"), \"switch_details\", true(), \"interface_details\"), _wlc=coalesce(wlc, \"-\"), _node=coalesce(node, \"-\"), _port=coalesce(port, \"-\") "
     "| sort 0 - t "
-    "| table Type MAC IP Name Where \"Last seen\" drill"
+    "| table Type MAC IP Name Where \"Last seen\" _view _wlc _node _port"
 )
 
 SEARCH = (WIRELESS + " " + WIRED + " | sort 0 mac prio - t | dedup mac "
@@ -86,20 +90,20 @@ SEARCH = (WIRELESS + " " + WIRED + " | sort 0 mac prio - t | dedup mac "
 dataSources = {"ds_clients": {"type": "ds.search", "name": "clients", "options": {"query": SEARCH}}}
 
 viz = {
-    "viz_clients": {"type": "splunk.table", "title": "Clients: wired and wireless, latest sighting in range. Click a row to open its switch port or wireless client",
+    "viz_clients": {"type": "splunk.table", "title": "Clients: wired and wireless, latest sighting in range. Click a row to open its switch port (port-channel: the switch) or wireless client",
                     "dataSources": {"primary": "ds_clients"},
-                    "options": {"count": 100, "columnFormat": {"drill": {"hidden": True}}},
+                    "options": {"count": 100, "showInternalFields": False},
                     "eventHandlers": [{"type": "drilldown.customUrl", "options": {
-                        "url": "$row.drill.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+                        "url": "/app/mdt_infra_monitoring/$row._view.value$?form.wlc=$row._wlc.value$&form.tk_client=$row.MAC.value$&form.tk_node=$row._node.value$&form.tk_interface=$row._port.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
                         "newTab": True}}],
                     "showProgressBar": True},
 }
 
 inputs = {
     "input_time": {"type": "input.timerange", "title": "Time range",
-                   "options": {"token": "global_time", "defaultValue": "-24h@m,now"}},
-    "input_q": {"type": "input.text", "title": "Search: MAC (any format), IP or name",
-                "options": {"token": "q", "defaultValue": ""}},
+                   "options": {"token": "global_time", "defaultValue": "-24h@h,now"}},
+    "input_q": {"type": "input.text", "title": "Search: MAC (any format), IP or name (* = all)",
+                "options": {"token": "q", "defaultValue": "*"}},
 }
 
 layout = {
