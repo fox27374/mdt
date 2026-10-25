@@ -59,8 +59,8 @@
         <option name="trellis.size">medium</option>
         <drilldown>
           <!-- ponytail: APs recognised by name (contains -ap); an AP named otherwise opens Switch Details. Upgrade: collect AP names into a token.
-               No regex here: a bare $ is a token delimiter in Simple XML and breaks the condition. -->
-          <condition match="like($nd_value_token|s$, &quot;%-ap%&quot;)">
+               Drilldown match is eval over the click fields: name them in single quotes, $tokens$ are not substituted here. -->
+          <condition match="like('row.from', &quot;%-ap%&quot;)">
             <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
           </condition>
           <condition>
