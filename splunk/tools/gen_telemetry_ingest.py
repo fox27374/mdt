@@ -8,7 +8,13 @@ OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data",
 PIPE = ('case(match(metric_name, "^mdt_xe_"), "gnmic IOS-XE", match(metric_name, "^mdt_nx_"), "gnmic NX-OS", '
         'match(metric_name, "^mdt_wl_"), "gnmic WLC", match(metric_name, "^mdt_panos_"), "gnmic PAN-OS", '
         'match(metric_name, "^cisco[.]"), "OTel dial-out", match(metric_name, "^(system[.]|up$|scrape_)"), "Collector host", true(), "Other")')
-LIC = "(idx=cisco_metrics OR idx=cisco_syslog)"
+# The app's index names, read from the mdt_metrics_index / mdt_syslog_index macros (local overrides included):
+# a subsearch that returns (<field>=<metrics index> OR <field>=<syslog index>).
+def indexes(field):
+    return ('[| rest splunk_server=local /servicesNS/-/mdt_infra_monitoring/admin/macros count=0 '
+            '| search title=mdt_metrics_index OR title=mdt_syslog_index '
+            f'| rex field=definition "index=\\"?(?<{field}>[^\\"\\s)]+)" | dedup {field} | fields {field}]')
+LIC = indexes("idx")
 POOL = ('| appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise '
         '| eval pool_bytes=tonumber(effective_quota) | fields pool_bytes]')
 # Devices: data points and last time over the last 15 minutes, distinct gnmic subscriptions, and every device seen in the last 7 days
@@ -52,7 +58,7 @@ bases = {
     "ds_ingest": "| mstats count(_value) as n WHERE `mdt_metrics_index` metric_name=* BY metric_name span=5m "
                  f"| eval pipe={PIPE} | stats sum(n) as n by _time pipe "
                  "| where _time + 300 <= now() | eval rate=round(n / 300, 1) | xyseries _time pipe rate | fillnull value=0",
-    "ds_storage": "| rest /services/data/indexes datatype=all count=0 | search title=cisco_metrics OR title=cisco_syslog "
+    "ds_storage": "| rest /services/data/indexes datatype=all count=0 | search " + indexes("title") + " "
                   "| eval Index=title, Type=if(datatype=\"metric\", \"metric\", \"event\"), \"Size on disk (MB)\"=round(currentDBSizeMB, 1), "
                   "\"Events / data points\"=totalEventCount, \"Retention (days)\"=round(frozenTimePeriodInSecs / 86400, 0) "
                   "| table Index Type \"Size on disk (MB)\" \"Events / data points\" \"Retention (days)\" | sort Index",

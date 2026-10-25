@@ -38,9 +38,8 @@ Every search reads the indexes through two macros in `default/macros.conf`:
 To use other index names, do not edit the app. Override the macros in `local/macros.conf` of the app, or in
 **Settings > Advanced search > Search macros** (`mdt_metrics_index`, `mdt_syslog_index`).
 
-Two places match the index names literally and do not use the macros: the licence and storage panels of Telemetry
-Ingest (`idx=` in the license usage search, `title=` in the index REST call; see `gen_telemetry_ingest.py`). Change those
-in the generator if you rename the indexes.
+The licence and storage panels of Telemetry Ingest read the index names from these two macros over REST, so they
+follow an override too.
 
 ## Data contract
 
