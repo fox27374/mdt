@@ -2,6 +2,11 @@
   <label>Network Overview</label>
   <row>
     <panel>
+      <html>Device roles and the fixed layout are set on <a href="/app/mdt_infra_monitoring/topology_settings">Topology Settings</a>.</html>
+    </panel>
+  </row>
+  <row>
+    <panel>
       <title>CDP topology. Switches and APs (wifi icon) by health: green OK, yellow warning, red critical, dark grey no data. Click a switch for Switch Details, an AP for Wireless Overview</title>
       <viz type="network-diagram-viz.network-diagram-viz">
         <search>
@@ -18,7 +23,9 @@
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
 | append [| `mdt_switch_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d") | rename node as from | fields from color]
 | append [| `mdt_ap_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="wifi" | rename ap as from | fields from color type]
-| table from to linkwidth color type</query>
+| appendpipe [| `mdt_topology_positions`]
+| eventstats max(x) as x max(y) as y max(value) as value by from
+| table from to linkwidth color type x y value</query>
           <earliest>-15m</earliest>
           <latest>now</latest>
           <refresh>1m</refresh>
@@ -32,21 +39,15 @@
         <option name="network-diagram-viz.network-diagram-viz.clusterBy">none</option>
         <option name="network-diagram-viz.network-diagram-viz.defaultLinkLength">100</option>
         <option name="network-diagram-viz.network-diagram-viz.defaultNodeType">server</option>
-        <option name="network-diagram-viz.network-diagram-viz.draggableNodes">true</option>
+        <option name="network-diagram-viz.network-diagram-viz.draggableNodes">false</option>
         <option name="network-diagram-viz.network-diagram-viz.drilldownClick">single</option>
         <option name="network-diagram-viz.network-diagram-viz.enablePhysics">false</option>
-        <option name="network-diagram-viz.network-diagram-viz.hierarchy">true</option>
-        <option name="network-diagram-viz.network-diagram-viz.hierarchyDirection">Top-Down</option>
-        <option name="network-diagram-viz.network-diagram-viz.hierarchySortMethod">hubsize</option>
-        <option name="network-diagram-viz.network-diagram-viz.levelSeparation">250</option>
+        <option name="network-diagram-viz.network-diagram-viz.hierarchy">false</option>
         <option name="network-diagram-viz.network-diagram-viz.linkTextLocation">bottom</option>
         <option name="network-diagram-viz.network-diagram-viz.linkTextSize">small</option>
         <option name="network-diagram-viz.network-diagram-viz.missingImageURL">/static/app/network-diagram-viz/customimages/404.gif</option>
-        <option name="network-diagram-viz.network-diagram-viz.nodeSpacing">300</option>
         <option name="network-diagram-viz.network-diagram-viz.nodeTextSize">small</option>
-        <option name="network-diagram-viz.network-diagram-viz.physicsModel">forceAtlas2Based</option>
-        <option name="network-diagram-viz.network-diagram-viz.shakeTowards">roots</option>
-        <option name="network-diagram-viz.network-diagram-viz.smoothEdgeType">dyanmic</option>
+        <option name="network-diagram-viz.network-diagram-viz.smoothEdgeType">cubicbezier</option>
         <option name="network-diagram-viz.network-diagram-viz.smoothEdges">true</option>
         <option name="network-diagram-viz.network-diagram-viz.tokenNode">nd_node_token</option>
         <option name="network-diagram-viz.network-diagram-viz.tokenToNode">nd_to_node_token</option>
@@ -58,9 +59,9 @@
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
         <drilldown>
-          <!-- ponytail: APs recognised by name (contains -ap); an AP named otherwise opens Switch Details. Upgrade: collect AP names into a token.
-               Drilldown match is eval over the click fields: name them in single quotes, $tokens$ are not substituted here. -->
-          <condition match="like('row.from', &quot;%-ap%&quot;)">
+          <!-- Click fields are eval names in single quotes ($tokens$ are not substituted here). row.type is wifi for APs (icon type);
+               row.value is the node's role (tooltip). Viz drilldownClick=single fires on double click only (see report). -->
+          <condition match="'row.type'=&quot;wifi&quot; OR 'row.value'=&quot;wlc&quot;">
             <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
           </condition>
           <condition>

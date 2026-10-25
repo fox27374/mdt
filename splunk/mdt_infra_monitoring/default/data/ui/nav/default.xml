@@ -1,5 +1,6 @@
 <nav search_view="search" color="transparent">
   <view name="network_overview" default="true" />
+  <view name="topology_settings" />
   <view name="switch_details" />
   <view name="interface_details" />
   <view name="wireless_overview" />

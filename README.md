@@ -304,6 +304,12 @@ Overview (the start page), Switch Overview, Switch Details, Wireless Overview an
 Details, one XML file per dashboard in `default/data/ui/views/`. Network Overview is a classic
 Simple XML dashboard and needs the `network-diagram-viz` app; the others are Dashboard Studio.
 
+Network Overview places the topology by device role. Roles are KV store entries (pattern with `*`
+to role: core, distribution, access, wlc, firewall, server), edited on the **Topology Settings**
+page (`topology_settings.xml`); the collection starts empty. The layout is computed in
+`mdt_topology_positions` in `default/macros.conf`. A new KV store collection needs one Splunk
+restart after its first deploy.
+
 Switch Details is generated: edit [splunk/tools/gen_switch_details.py](splunk/tools/gen_switch_details.py)
 (and `portview.spl`, the port view search) and run `python3 splunk/tools/gen_switch_details.py`,
 which rewrites `switch_details.xml`. Its searches use the macros in `default/macros.conf`.
