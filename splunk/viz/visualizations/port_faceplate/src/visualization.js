@@ -100,7 +100,7 @@ function renderPorts(rows) {
         ? `<div class="viz-note" style="color:${colors.muted}">${layout.skipped} port(s) with no slot in the faceplate are in the Interfaces table.</div>`
         : '';
     // Chassis frame around the faceplate, with more room left and right than above and below.
-    const inset = 7, insetX = 20, pad = 14, padX = 27;
+    const inset = 7, insetX = 32, pad = 14, padX = 39;
     const frame = `<rect x="${-insetX}" y="${-inset}" width="${layout.width + 2 * insetX}" height="${layout.height + 2 * inset}" rx="6" fill="none" stroke="${colors.outline}" stroke-width="1.5"/>`;
     const swatch = (fill) => `<span class="viz-swatch" style="background:${fill};border-color:${colors.outline}"></span>`;
     const bolt = (fill) => `<svg class="viz-legend-bolt" viewBox="0 0 10 10"><polygon points="${boltPoints(0, 0, 10)}" fill="${fill}" stroke="#1a1a1a" stroke-width="0.5"/></svg>`;
