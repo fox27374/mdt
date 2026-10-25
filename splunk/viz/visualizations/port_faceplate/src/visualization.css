@@ -38,3 +38,30 @@
     font-size: 11px;
     text-align: center;
 }
+
+.viz-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 14px;
+    font-size: 11px;
+    padding-top: 4px;
+}
+
+.viz-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.viz-legend .viz-swatch {
+    width: 10px;
+    height: 10px;
+    border: 1px solid;
+    border-radius: 2px;
+}
+
+.viz-legend-bolt {
+    width: 14px;
+    height: 14px;
+}

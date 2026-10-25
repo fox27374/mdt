@@ -12,6 +12,14 @@ const PORT = {
 const BOLT = { on: '#f5d90a', deny: '#dc4e41' };
 // Bolt outline in a unit box (x, y pairs), scaled into the middle of the port square.
 const BOLT_SHAPE = [0.70, 0, 0.16, 0.58, 0.45, 0.58, 0.34, 1, 0.86, 0.40, 0.56, 0.40];
+// Legend entries, in the order shown under the faceplate.
+const LEGEND = [
+    ['copper', 'Copper'], ['copper-slow', 'Copper, reduced speed'], ['fibre', 'Fibre'], ['fibre-slow', 'Fibre, reduced speed'],
+    ['admin', 'Admin down'], ['down', 'Down'],
+];
+// Frame of a port with errors in the time range.
+const ERROR_FRAME = '#ff3b30';
+const errors = (row) => (Number(row.in_errs) || 0) + (Number(row.out_errs) || 0);
 const COLORS = {
     dark: { outline: '#5b6670', text: '#dfe3e8', muted: '#8a929b' },
     light: { outline: '#3c444d', text: '#1f2933', muted: '#5f6b76' },
@@ -51,6 +59,7 @@ function tooltip(row) {
         const w = Math.round(Number(row.poe_w) * 10) / 10;
         parts.push(`PoE ${w} W${/^\d+$/.test(row.pd_class ?? '') ? `, class ${row.pd_class}` : ''}`);
     }
+    if (errors(row) > 0) parts.push(`Errors: ${Number(row.in_errs) || 0} in, ${Number(row.out_errs) || 0} out`);
     return parts.filter(Boolean).join(' · ');
 }
 
@@ -83,16 +92,23 @@ function renderPorts(rows) {
                 ? `<polygon points="${boltPoints(it.x, it.y, it.size)}" fill="${BOLT[mark]}" stroke="#1a1a1a" stroke-width="0.8" stroke-linejoin="round"/>`
                 : '';
             return `<g class="viz-port" data-i="${it.index}"><title>${escapeHtml(tooltip(row))}</title>` +
-                `<rect x="${it.x}" y="${it.y}" width="${it.size}" height="${it.size}" rx="3" fill="${PORT[portKind(row)]}" stroke="${colors.outline}"/>${bolt}</g>`;
+                `<rect x="${it.x}" y="${it.y}" width="${it.size}" height="${it.size}" rx="3" fill="${PORT[portKind(row)]}" ` +
+                (errors(row) > 0 ? `stroke="${ERROR_FRAME}" stroke-width="2.5"` : `stroke="${colors.outline}"`) + `/>${bolt}</g>`;
         })
         .join('');
     const note = layout.skipped
         ? `<div class="viz-note" style="color:${colors.muted}">${layout.skipped} port(s) with no slot in the faceplate are in the Interfaces table.</div>`
         : '';
     const pad = 4;
+    const swatch = (fill) => `<span class="viz-swatch" style="background:${fill};border-color:${colors.outline}"></span>`;
+    const bolt = (fill) => `<svg class="viz-legend-bolt" viewBox="0 0 10 10"><polygon points="${boltPoints(0, 0, 10)}" fill="${fill}" stroke="#1a1a1a" stroke-width="0.5"/></svg>`;
+    const legend = `<div class="viz-legend" style="color:${colors.muted}">` +
+        LEGEND.map(([k, label]) => `<span>${swatch(PORT[k])}${label}</span>`).join('') +
+        `<span>${bolt(BOLT.on)}PoE</span><span>${bolt(BOLT.deny)}PoE denied</span>` +
+        `<span><span class="viz-swatch" style="border:2px solid ${ERROR_FRAME}"></span>Errors</span></div>`;
     container.innerHTML =
         `<svg class="viz-svg" viewBox="${-pad} ${-pad} ${layout.width + 2 * pad} ${layout.height + 2 * pad}" preserveAspectRatio="xMidYMid meet" role="img">` +
-        heads + ports + labels + '</svg>' + note;
+        heads + ports + labels + '</svg>' + legend + note;
     container.classList.remove('viz-container--empty');
 }
 
