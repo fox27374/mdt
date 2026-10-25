@@ -51,9 +51,11 @@ export function poeMark(row) {
 }
 
 // Member strip label: "Switch 1 · C9300-24P" when a port row of the member carries its model, else "Switch 1".
-export function memberLabel(member, model) {
+// The model alone when known; stacks keep the member number so the strips stay apart.
+export function memberLabel(member, model, stacked = false) {
   const m = String(model ?? '').trim();
-  return m ? `Switch ${member} · ${m}` : `Switch ${member}`;
+  if (!m) return `Switch ${member}`;
+  return stacked ? `Switch ${member} · ${m}` : m;
 }
 
 const colX = (col) => col * PITCH + Math.floor(col / 6) * GROUP_GAP;
@@ -97,12 +99,9 @@ export function layoutFaceplate(rows) {
     });
 
     const y0 = top + HEAD;
-    heads.push({ text: memberLabel(member, models.get(member)), x: 0, y: top + 11 });
+    heads.push({ text: memberLabel(member, models.get(member), members.size > 1), x: 0, y: top + 11 });
     let x0 = 0;
     [...blocks.keys()].sort((a, b) => a - b).forEach((module) => {
-      if (module !== 0) {
-        heads.push({ text: `Module ${module}`, x: x0, y: top + 11 });
-      }
       let blockWidth = 0;
       blocks.get(module).forEach((slot) => {
         const x = x0 + colX(slotCol(slot.port));

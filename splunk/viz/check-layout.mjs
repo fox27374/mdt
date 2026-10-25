@@ -80,13 +80,15 @@ assert.ok(at(stackLayout, stack, 'GigabitEthernet2/0/1').y > at(stackLayout, sta
 assert.deepEqual(stackLayout.heads.map((h) => h.text), ['Switch 1', 'Switch 2']);
 
 // Member label carries the switch model when a row of that member has one (inventory or CDP fallback).
-assert.equal(memberLabel(1, 'C9300-24P'), 'Switch 1 · C9300-24P');
-assert.equal(memberLabel(1, '  C9300L-24P-4X '), 'Switch 1 · C9300L-24P-4X');
+assert.equal(memberLabel(1, 'C9300-24P'), 'C9300-24P');
+assert.equal(memberLabel(1, '  C9300L-24P-4X '), 'C9300L-24P-4X');
+assert.equal(memberLabel(2, 'C9300-24P', true), 'Switch 2 · C9300-24P');
 assert.equal(memberLabel(1, ''), 'Switch 1');
 assert.equal(memberLabel(2, undefined), 'Switch 2');
 const modelRows = [...rowsOf(range('GigabitEthernet1/0/', 1, 2)), { interface: 'GigabitEthernet2/0/1', model: 'C9200L-48P-4G' }, { interface: 'GigabitEthernet2/0/2', model: '' }];
 assert.deepEqual(layoutFaceplate(modelRows).heads.map((h) => h.text), ['Switch 1', 'Switch 2 · C9200L-48P-4G']);
 assert.deepEqual(layoutFaceplate(rowsOf(range('GigabitEthernet1/0/', 1, 2))).heads.map((h) => h.text), ['Switch 1']);
+assert.deepEqual(layoutFaceplate([{ interface: 'GigabitEthernet1/0/1', model: 'C9300-24P' }, { interface: 'TenGigabitEthernet1/1/1' }]).heads.map((h) => h.text), ['C9300-24P']);
 
 // Unparseable names are counted, not drawn.
 const odd = layoutFaceplate(rowsOf(['Vlan10', 'GigabitEthernet1/0/1']));

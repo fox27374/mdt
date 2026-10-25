@@ -319,7 +319,7 @@ and run `python3 splunk/tools/gen_switch_details.py`, which rewrites `switch_det
 use the macros in `default/macros.conf`.
 
 The port view is the custom Dashboard Studio visualization `port_faceplate` (Splunk 10.4+), source in
-[splunk/viz/](splunk/viz/). A yellow bolt on a port means it is drawing PoE, a red bolt means PoE was denied (`mdt_poe_port` in `default/macros.conf`). The member strip is labelled with the switch model (`Switch 1 · C9300-24P`) from `mdt_model` in `default/macros.conf`: the gnmic chassis part number, else the platform a CDP neighbour reports. Its built bundle is committed in
+[splunk/viz/](splunk/viz/). A yellow bolt on a port means it is drawing PoE, a red bolt means PoE was denied (`mdt_poe_port` in `default/macros.conf`). The faceplate is labelled with the switch model (`C9300-24P`; stack members as `Switch 2 · C9300-24P`, `Switch 1` when unknown) from `mdt_model` in `default/macros.conf`: the gnmic chassis part number, else the platform a CDP neighbour reports. Its built bundle is committed in
 `appserver/static/visualizations/port_faceplate/` together with `default/visualizations.conf`, so the
 app needs no build on the host. After changing the source, rebuild and copy the bundle into the app:
 
