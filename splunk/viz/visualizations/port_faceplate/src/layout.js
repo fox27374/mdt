@@ -29,6 +29,19 @@ export function parseInterface(name) {
   return { member, module: a, port: b, lane: null };
 }
 
+// Colour key for a port, after the Meraki switch view: copper green, fibre blue, light at full speed
+// (1 Gb/s and up on copper, 10 Gb/s and up on fibre), dark at reduced speed; admin down and down
+// (disconnected) are the same for both.
+const FIBRE = /^(TwentyFive|Forty|Fifty|Hundred|FourHundred)/i;
+export function portKind(row) {
+  if (row.state === "admin down") return "admin";
+  if (row.state !== "up") return "down";
+  const p = parseInterface(row.interface);
+  const fibre = !!p && (p.module !== 0 || NX_OS.test(row.interface) || FIBRE.test(row.interface));
+  const full = Number(row.speed) >= (fibre ? 1e10 : 1e9);
+  return (fibre ? "fibre" : "copper") + (full ? "" : "-slow");
+}
+
 const colX = (col) => col * PITCH + Math.floor(col / 6) * GROUP_GAP;
 const slotCol = (port) => Math.floor((port - 1) / 2);
 const slotY = (port) => (port % 2 === 1 ? 0 : ROW);

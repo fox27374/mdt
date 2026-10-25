@@ -48,7 +48,7 @@
  "visualizations": {
   "viz_ports": {
    "type": "mdt_infra_monitoring.port_faceplate",
-   "title": "Ports: green up, dark down, grey admin down. Click a port to open its details.",
+   "title": "Ports: green copper, blue fibre (dark = reduced speed), grey admin down, black down. Click a port to open its details.",
    "dataSources": {
     "primary": "ds_ports"
    },

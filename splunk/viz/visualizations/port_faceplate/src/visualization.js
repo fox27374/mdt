@@ -1,12 +1,16 @@
 import { VisualizationAPI } from '@splunk/dashboard-studio-extension';
-import { layoutFaceplate } from './layout.js';
+import { layoutFaceplate, portKind } from './layout.js';
 import './visualization.css';
 
-// Colours per theme. Down is a dark square on the dark theme and a lighter grey on the light one
-// so it still shows on a white page. Admin down is grey on both.
+// Port colours after the Meraki switch view (see portKind). Down is black with a grey outline so it
+// still shows on the dark theme.
+const PORT = {
+    copper: '#7ed321', 'copper-slow': '#0b7a32', fibre: '#7b9cf0', 'fibre-slow': '#3157d5',
+    admin: '#a6a6a6', down: '#000000',
+};
 const COLORS = {
-    dark: { up: '#53a051', down: '#30363d', admin: '#8a929b', text: '#dfe3e8', muted: '#8a929b' },
-    light: { up: '#53a051', down: '#5b6670', admin: '#8a929b', text: '#1f2933', muted: '#5f6b76' },
+    dark: { outline: '#5b6670', text: '#dfe3e8', muted: '#8a929b' },
+    light: { outline: '#3c444d', text: '#1f2933', muted: '#5f6b76' },
 };
 
 const container = document.createElement('div');
@@ -30,11 +34,6 @@ function formatSpeed(bps) {
     const n = Number(bps);
     if (!(n > 0)) return '';
     return n >= 1000000000 ? `${Math.round(n / 1000000000 * 10) / 10} Gb/s` : `${Math.round(n / 1000000)} Mb/s`;
-}
-
-function stateColor(row, colors) {
-    if (row.state === 'up') return colors.up;
-    return row.state === 'admin down' ? colors.admin : colors.down;
 }
 
 function tooltip(row) {
@@ -63,7 +62,7 @@ function renderPorts(rows) {
         .map((it) => {
             const row = rows[it.index];
             return `<g class="viz-port" data-i="${it.index}"><title>${escapeHtml(tooltip(row))}</title>` +
-                `<rect x="${it.x}" y="${it.y}" width="${it.size}" height="${it.size}" rx="3" fill="${stateColor(row, colors)}"/></g>`;
+                `<rect x="${it.x}" y="${it.y}" width="${it.size}" height="${it.size}" rx="3" fill="${PORT[portKind(row)]}" stroke="${colors.outline}"/></g>`;
         })
         .join('');
     const note = layout.skipped
@@ -90,16 +89,20 @@ function update() {
 
 // A click opens Interface Details for the port. The payload carries the port under
 // click.value and row.interface.value, the tokens the dashboard's drilldown reads.
+// Studio keeps only top-level name, value, row.* and click.* keys of the payload.
 container.addEventListener('click', (event) => {
     const port = event.target.closest('.viz-port');
     if (!port) return;
     const row = state.rows[Number(port.dataset.i)];
     if (!row) return;
     VisualizationAPI.triggerDrilldown({
-        action: 'click',
+        action: 'point.click',
         payload: {
+            name: 'interface',
             value: row.interface,
-            data: { 'click.value': row.interface, 'row.interface.value': row.interface },
+            'click.name': 'interface',
+            'click.value': row.interface,
+            'row.interface.value': row.interface,
         },
         originalEvent: event,
     });

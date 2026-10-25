@@ -89,7 +89,7 @@ viz = {
     # Custom visualization (splunk/viz, built into the app): the type is <app id>.<visualization name>.
     # Clicking a port sends its interface as click.value, see visualization.js.
     "viz_ports": {"type": "mdt_infra_monitoring.port_faceplate",
-                  "title": "Ports: green up, dark down, grey admin down. Click a port to open its details.",
+                  "title": "Ports: green copper, blue fibre (dark = reduced speed), grey admin down, black down. Click a port to open its details.",
                   "dataSources": {"primary": "ds_ports"}, "options": {},
                   "eventHandlers": open_port("$click.value$")},
     "viz_nodata": {"type": "splunk.table", "dataSources": {"primary": "ds_nodata"}, "options": {},

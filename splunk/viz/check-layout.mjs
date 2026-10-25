@@ -1,6 +1,6 @@
 // Runnable check for the faceplate layout: node check-layout.mjs (exits non-zero on failure).
 import assert from 'node:assert/strict';
-import { layoutFaceplate, parseInterface } from './visualizations/port_faceplate/src/layout.js';
+import { layoutFaceplate, parseInterface, portKind } from './visualizations/port_faceplate/src/layout.js';
 
 const range = (prefix, from, to) => Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
 const rowsOf = (names) => names.map((interface_) => ({ interface: interface_ }));
@@ -83,5 +83,17 @@ assert.deepEqual(stackLayout.heads.map((h) => h.text), ['Switch 1', 'Switch 2'])
 const odd = layoutFaceplate(rowsOf(['Vlan10', 'GigabitEthernet1/0/1']));
 assert.equal(odd.skipped, 1);
 assert.equal(odd.items.length, 1);
+
+// Colour keys: copper vs fibre, full vs reduced speed, admin down, down.
+const kind = (name, state, speed) => portKind({ interface: name, state, speed: String(speed) });
+assert.equal(kind('GigabitEthernet1/0/1', 'up', 1e9), 'copper');
+assert.equal(kind('GigabitEthernet1/0/1', 'up', 1e8), 'copper-slow');
+assert.equal(kind('TenGigabitEthernet1/1/1', 'up', 1e10), 'fibre');
+assert.equal(kind('GigabitEthernet1/1/1', 'up', 1e9), 'fibre-slow');
+assert.equal(kind('TwentyFiveGigE1/0/3', 'up', 25e9), 'fibre');
+assert.equal(kind('eth1/12', 'up', 1e10), 'fibre');
+assert.equal(kind('Ethernet1/3', 'up', 1e9), 'fibre-slow');
+assert.equal(kind('GigabitEthernet1/0/2', 'admin down', 0), 'admin');
+assert.equal(kind('GigabitEthernet1/0/2', 'down', 0), 'down');
 
 console.log('check-layout: all assertions passed');
