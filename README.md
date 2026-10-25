@@ -76,7 +76,7 @@ Subscriptions are grouped by platform:
 - **Cisco IOS-XE switches** (`xe_*`) — interface stats, CPU, memory, PoE, interface
   info, CDP neighbors, MAC table. Per-port PoE (`xe_poe_stats`, power drawn, state and class) is
   collected from dial-in switches; a switch that sends dial-out needs a `/poe-ios-xe-oper:poe-oper-data/poe-port-detail`
-  subscription (300 s) for it to show in the Switch Details faceplate.
+  subscription (300 s) for it to show in the Switch Details faceplate. `xe_inventory` (1 h) takes the chassis part number, which names the switch model on the faceplate's member strip.
 - **Cisco NX-OS switches** (`nx_*`) — interface stats/info, CPU load, memory, CDP, MAC
   (uses `config/ca.pem` for TLS).
 - **Cisco Catalyst WLC** (`wl_*`) — wireless client signal/SNR/retries, AP utilization
@@ -319,7 +319,7 @@ and run `python3 splunk/tools/gen_switch_details.py`, which rewrites `switch_det
 use the macros in `default/macros.conf`.
 
 The port view is the custom Dashboard Studio visualization `port_faceplate` (Splunk 10.4+), source in
-[splunk/viz/](splunk/viz/). A yellow bolt on a port means it is drawing PoE, a red bolt means PoE was denied (`mdt_poe_port` in `default/macros.conf`). Its built bundle is committed in
+[splunk/viz/](splunk/viz/). A yellow bolt on a port means it is drawing PoE, a red bolt means PoE was denied (`mdt_poe_port` in `default/macros.conf`). The member strip is labelled with the switch model (`Switch 1 · C9300-24P`) from `mdt_model` in `default/macros.conf`: the gnmic chassis part number, else the platform a CDP neighbour reports. Its built bundle is committed in
 `appserver/static/visualizations/port_faceplate/` together with `default/visualizations.conf`, so the
 app needs no build on the host. After changing the source, rebuild and copy the bundle into the app:
 

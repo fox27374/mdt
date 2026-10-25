@@ -38,6 +38,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_inventory
 
   172.24.80.244:57400:
     name: "ibk-lab-sw99"
@@ -49,6 +50,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_inventory
 
   172.24.80.251:57400:
     name: "ibk-lab-sw03"
@@ -60,6 +62,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_inventory
 
   # SD-Access fabric switches (Catalyst Center managed). gNMI uses Catalyst Center's device certificate:
   # gnxi / gnxi secure-password-auth / gnxi secure-port 57400 / gnxi secure-trustpoint sdn-network-infra-iwan / gnxi secure-server
@@ -74,6 +77,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_inventory
 
   172.24.80.232:57400:
     name: "ibk-lab-border02"
@@ -84,6 +88,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_inventory
 
   10.20.0.40:57400:
     name: "ibk-lab-edge01"
@@ -95,6 +100,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_inventory
 
   10.20.0.35:57400:
     name: "ibk-lab-edge02"
@@ -106,6 +112,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_inventory
 
   10.20.0.7:57400:
     name: "ibk-lab-edge03"
@@ -117,6 +124,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_inventory
 
   # NX-OS Switches
   # crypto ca trustpoint NTSRootCA
@@ -274,6 +282,18 @@ subscriptions:
     mode: stream
     stream-mode: sample
     sample-interval: 300s
+    outputs:
+      - nats
+
+  # Chassis part number per stack member (hw-dev-index = member number). The leaf path gives one event per
+  # inventory entry, keyed by device-inventory_hw-type and device-inventory_hw-dev-index; drop-xe-inventory-non-chassis
+  # keeps the chassis rows. Hourly: the part number does not change between reboots and the lab has no stacks to check against.
+  xe_inventory:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-device-hardware-oper:device-hardware-data/device-hardware/device-inventory/part-number"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 3600s
     outputs:
       - nats
 
@@ -520,6 +540,19 @@ processors:
     event-drop:
       condition: '.tags["subscription-name"] == "xe_mac_info" and (.values | to_entries | any(.value == "CPU"))'
 
+  drop-xe-inventory-non-chassis:
+    event-drop:
+      condition: '.tags["subscription-name"] == "xe_inventory" and .tags["device-inventory_hw-type"] != "hw-type-chassis"'
+
+  # IOS-XE pads part numbers with spaces; trim them so the label is clean.
+  trim-xe-inventory:
+    event-jq:
+      expression: |
+        .[] |
+        if .tags["subscription-name"] == "xe_inventory" then
+          .values |= map_values(if type == "string" then gsub("^\\s+|\\s+$"; "") else . end)
+        else . end
+
   # Pause and MAC control frames from ethernet/state/counters; no dashboard uses them.
   delete-nx-if-stats-fields:
     event-delete:
@@ -634,5 +667,7 @@ outputs:
       - xe-poe-port-interface
       - drop-if-stats-interfaces
       - drop-xe-mac-cpu
+      - drop-xe-inventory-non-chassis
+      - trim-xe-inventory
       - rename-metrics
 

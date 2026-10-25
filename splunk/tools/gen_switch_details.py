@@ -39,10 +39,13 @@ bases = {
 # Time charts leave out the current 5-minute bucket: not every port has reported in it yet, so its sum is too low.
 chains = {  # name: (base, post-process)
     # One row per front-panel port for the port_faceplate visualization (the viz lays the ports out itself).
-    "ds_ports": ("ds_status", f"{slots} | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
+    # Stack member (first number of the name) joins the switch model: the strip label shows it.
+    "ds_ports": ("ds_status", f"{slots} | rex field=interface \"^\\D+(?<member>\\d+)/\" "
+                 f"| join type=left node member [| `mdt_model({N})` | fields node member model] | fillnull value=\"\" model "
+                 f"| eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
                  # Uplinks learn hundreds of MACs; the first 5 are listed, the count is in macs.
                  "| eval neighbour=mvjoin(neighbour, \", \"), mac_list=mvjoin(mvindex(mac_list, 0, min(4, mvcount(mac_list) - 1)), \", \") "
-                 "| fillnull value=0 macs | fillnull value=\"\" neighbour mac_list | fields interface state speed neighbour macs mac_list poe_w poe_state pd_class in_errs out_errs"),
+                 "| fillnull value=0 macs | fillnull value=\"\" neighbour mac_list | fields interface state speed neighbour macs mac_list poe_w poe_state pd_class in_errs out_errs model"),
     "ds_nodata": ("ds_status", f"| stats count | where count=0 "
                   f"| eval Note=\"No telemetry for {N}. Switch Details covers switches that stream interface data.\" | fields Note"),
     "ds_ports_up": ("ds_status", f"{slots} | stats count as total sum(oper_up) as up "
@@ -70,7 +73,7 @@ chains = {  # name: (base, post-process)
 }
 
 import re
-GEN = "mdt_nodes|mdt_if_status|mdt_if_counters|mdt_cpu|mdt_mem|mdt_poe_port|mdt_poe|mdt_cdp|mdt_mac"
+GEN = "mdt_nodes|mdt_if_status|mdt_if_counters|mdt_cpu|mdt_mem|mdt_poe_port|mdt_poe|mdt_cdp|mdt_model|mdt_mac"
 # Generating macros start with mstats, so they need a leading pipe, at query start and inside subsearches.
 bases = {k: re.sub(r"(^|\[)`(" + GEN + ")", r"\1| `\2", q) for k, q in bases.items()}
 dataSources = {k: {"type": "ds.search", "name": k[3:], "options": {"query": q}} for k, q in bases.items()}

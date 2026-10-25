@@ -50,6 +50,12 @@ export function poeMark(row) {
   return null;
 }
 
+// Member strip label: "Switch 1 · C9300-24P" when a port row of the member carries its model, else "Switch 1".
+export function memberLabel(member, model) {
+  const m = String(model ?? '').trim();
+  return m ? `Switch ${member} · ${m}` : `Switch ${member}`;
+}
+
 const colX = (col) => col * PITCH + Math.floor(col / 6) * GROUP_GAP;
 const slotCol = (port) => Math.floor((port - 1) / 2);
 const slotY = (port) => (port % 2 === 1 ? 0 : ROW);
@@ -58,6 +64,7 @@ const slotY = (port) => (port % 2 === 1 ? 0 : ROW);
 // items: {index, x, y, size} with index into rows; labels: {text, x, y}; heads: {text, x, y}.
 export function layoutFaceplate(rows) {
   const members = new Map();
+  const models = new Map();
   let skipped = 0;
   rows.forEach((row, index) => {
     const p = parseInterface(row.interface);
@@ -67,6 +74,7 @@ export function layoutFaceplate(rows) {
     }
     if (!members.has(p.member)) members.set(p.member, []);
     members.get(p.member).push({ ...p, index });
+    if (!models.has(p.member) && String(row.model ?? '').trim()) models.set(p.member, row.model);
   });
 
   const items = [];
@@ -89,7 +97,7 @@ export function layoutFaceplate(rows) {
     });
 
     const y0 = top + HEAD;
-    heads.push({ text: `Switch ${member}`, x: 0, y: top + 11 });
+    heads.push({ text: memberLabel(member, models.get(member)), x: 0, y: top + 11 });
     let x0 = 0;
     [...blocks.keys()].sort((a, b) => a - b).forEach((module) => {
       if (module !== 0) {
