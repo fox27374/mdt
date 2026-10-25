@@ -99,9 +99,9 @@ function renderPorts(rows) {
     const note = layout.skipped
         ? `<div class="viz-note" style="color:${colors.muted}">${layout.skipped} port(s) with no slot in the faceplate are in the Interfaces table.</div>`
         : '';
-    // Chassis frame around the faceplate, inset by half the padding.
-    const pad = 14, inset = 7;
-    const frame = `<rect x="${-inset}" y="${-inset}" width="${layout.width + 2 * inset}" height="${layout.height + 2 * inset}" rx="6" fill="none" stroke="${colors.outline}" stroke-width="1.5"/>`;
+    // Chassis frame around the faceplate, with more room left and right than above and below.
+    const inset = 7, insetX = 20, pad = 14, padX = 27;
+    const frame = `<rect x="${-insetX}" y="${-inset}" width="${layout.width + 2 * insetX}" height="${layout.height + 2 * inset}" rx="6" fill="none" stroke="${colors.outline}" stroke-width="1.5"/>`;
     const swatch = (fill) => `<span class="viz-swatch" style="background:${fill};border-color:${colors.outline}"></span>`;
     const bolt = (fill) => `<svg class="viz-legend-bolt" viewBox="0 0 10 10"><polygon points="${boltPoints(0, 0, 10)}" fill="${fill}" stroke="#1a1a1a" stroke-width="0.5"/></svg>`;
     const legend = `<div class="viz-legend" style="color:${colors.muted}">` +
@@ -109,7 +109,7 @@ function renderPorts(rows) {
         `<span>${bolt(BOLT.on)}PoE</span><span>${bolt(BOLT.deny)}PoE denied</span>` +
         `<span><span class="viz-swatch" style="border:2px solid ${ERROR_FRAME}"></span>Errors</span></div>`;
     container.innerHTML =
-        `<svg class="viz-svg" viewBox="${-pad} ${-pad} ${layout.width + 2 * pad} ${layout.height + 2 * pad}" preserveAspectRatio="xMidYMid meet" role="img">` +
+        `<svg class="viz-svg" viewBox="${-padX} ${-pad} ${layout.width + 2 * padX} ${layout.height + 2 * pad}" preserveAspectRatio="xMidYMid meet" role="img">` +
         frame + heads + ports + labels + '</svg>' + legend + note;
     container.classList.remove('viz-container--empty');
 }
