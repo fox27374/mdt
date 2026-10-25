@@ -75,7 +75,7 @@ Subscriptions are grouped by platform:
 
 - **Cisco IOS-XE switches** (`xe_*`) — interface stats, CPU, memory, PoE, interface
   info, CDP neighbors, MAC table. Per-port PoE (`xe_poe_stats`, power drawn, state and class) is
-  collected from dial-in switches; a switch that sends dial-out needs a `/poe-ios-xe-oper:poe-oper-data/poe-port`
+  collected from dial-in switches; a switch that sends dial-out needs a `/poe-ios-xe-oper:poe-oper-data/poe-port-detail`
   subscription (300 s) for it to show in the Switch Details faceplate.
 - **Cisco NX-OS switches** (`nx_*`) — interface stats/info, CPU load, memory, CDP, MAC
   (uses `config/ca.pem` for TLS).
