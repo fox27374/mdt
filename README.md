@@ -313,8 +313,21 @@ and its links out of the topology, for example servers. The layout is computed i
 restart after its first deploy.
 
 Switch Details is generated: edit [splunk/tools/gen_switch_details.py](splunk/tools/gen_switch_details.py)
-(and `portview.spl`, the port view search) and run `python3 splunk/tools/gen_switch_details.py`,
-which rewrites `switch_details.xml`. Its searches use the macros in `default/macros.conf`.
+and run `python3 splunk/tools/gen_switch_details.py`, which rewrites `switch_details.xml`. Its searches
+use the macros in `default/macros.conf`.
+
+The port view is the custom Dashboard Studio visualization `port_faceplate` (Splunk 10.4+), source in
+[splunk/viz/](splunk/viz/). Its built bundle is committed in
+`appserver/static/visualizations/port_faceplate/` together with `default/visualizations.conf`, so the
+app needs no build on the host. After changing the source, rebuild and copy the bundle into the app:
+
+```bash
+cd splunk/viz && npm install && npm run sync && npm run check
+```
+
+`npm run check` runs the layout parser checks (`check-layout.mjs`). The layout is in
+`src/layout.js`, the drawing in `src/visualization.js`. Splunk Web needs a restart after a new
+bundle is first deployed (`/services/server/control/restart_webui`).
 
 Deploy it with:
 

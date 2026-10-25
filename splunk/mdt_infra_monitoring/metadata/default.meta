@@ -9,3 +9,6 @@ export = none
 [transforms/mdt_device_roles]
 access = read : [ * ], write : [ admin, power ]
 export = none
+
+[visualizations/port_faceplate]
+export = system

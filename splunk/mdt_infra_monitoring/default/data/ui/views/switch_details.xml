@@ -47,471 +47,12 @@
  },
  "visualizations": {
   "viz_ports": {
-   "type": "splunk.table",
-   "title": "Ports: green up, dark down, light grey admin down. Click a port to open its details.",
+   "type": "mdt_infra_monitoring.port_faceplate",
+   "title": "Ports: green up, dark down, grey admin down. Click a port to open its details.",
    "dataSources": {
     "primary": "ds_ports"
    },
-   "options": {
-    "count": 20,
-    "fontSize": "extraSmall",
-    "headerVisibility": "none",
-    "table": "> primary | frameWithoutSeriesNames(\"_s01\", \"_s03\", \"_s05\", \"_s07\", \"_s09\", \"_s11\", \"_s13\", \"_s15\", \"_s17\", \"_s19\", \"_s21\", \"_s23\", \"_s25\", \"_s27\", \"_s29\", \"_s31\", \"_s33\", \"_s35\", \"_s37\", \"_s39\", \"_s41\", \"_s43\", \"_s45\", \"_s47\", \"_s49\", \"_s51\", \"_s53\", \"_s55\", \"_s57\", \"_s59\", \"_s61\", \"_s63\", \"_s65\", \"_s67\", \"_s69\", \"_s71\", \"_s73\", \"_s75\", \"_s77\", \"_s79\", \"_s81\", \"_s83\", \"_s85\", \"_s87\", \"_s89\", \"_s91\", \"_s93\", \"_s95\", \"_sU1\", \"_sU3\", \"_sU5\", \"_sU7\")",
-    "tableFormat": {
-     "rowBackgroundColors": "> table | seriesByIndex(0) | pick(black)"
-    },
-    "columnFormat": {
-     "01_": {
-      "width": 4
-     },
-     "03_": {
-      "width": 4
-     },
-     "05_": {
-      "width": 4
-     },
-     "07_": {
-      "width": 4
-     },
-     "09_": {
-      "width": 4
-     },
-     "11_": {
-      "width": 4
-     },
-     "13_": {
-      "width": 4
-     },
-     "15_": {
-      "width": 4
-     },
-     "17_": {
-      "width": 4
-     },
-     "19_": {
-      "width": 4
-     },
-     "21_": {
-      "width": 4
-     },
-     "23_": {
-      "width": 4
-     },
-     "25_": {
-      "width": 4
-     },
-     "27_": {
-      "width": 4
-     },
-     "29_": {
-      "width": 4
-     },
-     "31_": {
-      "width": 4
-     },
-     "33_": {
-      "width": 4
-     },
-     "35_": {
-      "width": 4
-     },
-     "37_": {
-      "width": 4
-     },
-     "39_": {
-      "width": 4
-     },
-     "41_": {
-      "width": 4
-     },
-     "43_": {
-      "width": 4
-     },
-     "45_": {
-      "width": 4
-     },
-     "47_": {
-      "width": 4
-     },
-     "49_": {
-      "width": 4
-     },
-     "51_": {
-      "width": 4
-     },
-     "53_": {
-      "width": 4
-     },
-     "55_": {
-      "width": 4
-     },
-     "57_": {
-      "width": 4
-     },
-     "59_": {
-      "width": 4
-     },
-     "61_": {
-      "width": 4
-     },
-     "63_": {
-      "width": 4
-     },
-     "65_": {
-      "width": 4
-     },
-     "67_": {
-      "width": 4
-     },
-     "69_": {
-      "width": 4
-     },
-     "71_": {
-      "width": 4
-     },
-     "73_": {
-      "width": 4
-     },
-     "75_": {
-      "width": 4
-     },
-     "77_": {
-      "width": 4
-     },
-     "79_": {
-      "width": 4
-     },
-     "81_": {
-      "width": 4
-     },
-     "83_": {
-      "width": 4
-     },
-     "85_": {
-      "width": 4
-     },
-     "87_": {
-      "width": 4
-     },
-     "89_": {
-      "width": 4
-     },
-     "91_": {
-      "width": 4
-     },
-     "93_": {
-      "width": 4
-     },
-     "95_": {
-      "width": 4
-     },
-     "U1_": {
-      "width": 4
-     },
-     "U3_": {
-      "width": 4
-     },
-     "U5_": {
-      "width": 4
-     },
-     "U7_": {
-      "width": 4
-     },
-     "01": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s01\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s01\") | matchValue(textColors)"
-     },
-     "03": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s03\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s03\") | matchValue(textColors)"
-     },
-     "05": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s05\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s05\") | matchValue(textColors)"
-     },
-     "07": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s07\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s07\") | matchValue(textColors)"
-     },
-     "09": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s09\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s09\") | matchValue(textColors)"
-     },
-     "11": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s11\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s11\") | matchValue(textColors)"
-     },
-     "13": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s13\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s13\") | matchValue(textColors)"
-     },
-     "15": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s15\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s15\") | matchValue(textColors)"
-     },
-     "17": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s17\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s17\") | matchValue(textColors)"
-     },
-     "19": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s19\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s19\") | matchValue(textColors)"
-     },
-     "21": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s21\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s21\") | matchValue(textColors)"
-     },
-     "23": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s23\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s23\") | matchValue(textColors)"
-     },
-     "25": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s25\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s25\") | matchValue(textColors)"
-     },
-     "27": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s27\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s27\") | matchValue(textColors)"
-     },
-     "29": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s29\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s29\") | matchValue(textColors)"
-     },
-     "31": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s31\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s31\") | matchValue(textColors)"
-     },
-     "33": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s33\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s33\") | matchValue(textColors)"
-     },
-     "35": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s35\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s35\") | matchValue(textColors)"
-     },
-     "37": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s37\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s37\") | matchValue(textColors)"
-     },
-     "39": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s39\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s39\") | matchValue(textColors)"
-     },
-     "41": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s41\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s41\") | matchValue(textColors)"
-     },
-     "43": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s43\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s43\") | matchValue(textColors)"
-     },
-     "45": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s45\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s45\") | matchValue(textColors)"
-     },
-     "47": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s47\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s47\") | matchValue(textColors)"
-     },
-     "49": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s49\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s49\") | matchValue(textColors)"
-     },
-     "51": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s51\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s51\") | matchValue(textColors)"
-     },
-     "53": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s53\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s53\") | matchValue(textColors)"
-     },
-     "55": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s55\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s55\") | matchValue(textColors)"
-     },
-     "57": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s57\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s57\") | matchValue(textColors)"
-     },
-     "59": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s59\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s59\") | matchValue(textColors)"
-     },
-     "61": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s61\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s61\") | matchValue(textColors)"
-     },
-     "63": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s63\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s63\") | matchValue(textColors)"
-     },
-     "65": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s65\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s65\") | matchValue(textColors)"
-     },
-     "67": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s67\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s67\") | matchValue(textColors)"
-     },
-     "69": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s69\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s69\") | matchValue(textColors)"
-     },
-     "71": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s71\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s71\") | matchValue(textColors)"
-     },
-     "73": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s73\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s73\") | matchValue(textColors)"
-     },
-     "75": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s75\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s75\") | matchValue(textColors)"
-     },
-     "77": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s77\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s77\") | matchValue(textColors)"
-     },
-     "79": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s79\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s79\") | matchValue(textColors)"
-     },
-     "81": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s81\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s81\") | matchValue(textColors)"
-     },
-     "83": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s83\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s83\") | matchValue(textColors)"
-     },
-     "85": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s85\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s85\") | matchValue(textColors)"
-     },
-     "87": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s87\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s87\") | matchValue(textColors)"
-     },
-     "89": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s89\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s89\") | matchValue(textColors)"
-     },
-     "91": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s91\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s91\") | matchValue(textColors)"
-     },
-     "93": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s93\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s93\") | matchValue(textColors)"
-     },
-     "95": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_s95\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_s95\") | matchValue(textColors)"
-     },
-     "U1": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_sU1\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_sU1\") | matchValue(textColors)"
-     },
-     "U3": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_sU3\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_sU3\") | matchValue(textColors)"
-     },
-     "U5": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_sU5\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_sU5\") | matchValue(textColors)"
-     },
-     "U7": {
-      "width": 52,
-      "rowBackgroundColors": "> primary | seriesByName(\"_sU7\") | matchValue(stateColors)",
-      "rowColors": "> primary | seriesByName(\"_sU7\") | matchValue(textColors)"
-     }
-    }
-   },
-   "context": {
-    "stateColors": [
-     {
-      "match": "up",
-      "value": "#53a051"
-     },
-     {
-      "match": "down",
-      "value": "#30363d"
-     },
-     {
-      "match": "admin down",
-      "value": "#8a929b"
-     }
-    ],
-    "black": [
-     "#000000"
-    ],
-    "textColors": [
-     {
-      "match": "up",
-      "value": "#ffffff"
-     },
-     {
-      "match": "down",
-      "value": "#ffffff"
-     },
-     {
-      "match": "admin down",
-      "value": "#ffffff"
-     }
-    ]
-   },
+   "options": {},
    "eventHandlers": [
     {
      "type": "drilldown.customUrl",
@@ -808,7 +349,7 @@
    "name": "ports",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | eval parts=split(path, \"/\"), port=tonumber(mvindex(parts, -1)), unit=mvindex(parts, 0), uplink=if(mvcount(parts)=3 AND mvindex(parts, 1)!=\"0\", \"U\", \"\") | where isnotnull(port) | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval pair=floor((port - 1) / 2) * 2 + 1, col=uplink.if(uplink=\"\" AND pair < 10, \"0\", \"\").pair, row=unit.if(port % 2 == 1, \"a\", \"b\") | eval {col}=path, s_{col}=state | fields row 0* 1* 2* 3* 4* 5* 6* 7* 8* 9* U* s_* | stats values(*) as * by row | foreach s_* [eval \"<<FIELD>>\"=mvindex('<<FIELD>>', -1)] | appendpipe [where like(row, \"%a\") | eval row=row.\"_\" | fields - s_* | foreach 0* 1* 2* 3* 4* 5* 6* 7* 8* 9* U* [eval \"<<FIELD>>\"=\" \"]] | rename s_* as _s* | sort row | fields - row | foreach 0* 1* 2* 3* 4* 5* 6* 7* 8* 9* U* [eval \"<<FIELD>>_\"=\" \"]"
+    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval neighbour=mvjoin(neighbour, \", \"), mac_list=mvjoin(mvindex(mac_list, 0, min(4, mvcount(mac_list) - 1)), \", \") | fillnull value=0 macs | fillnull value=\"\" neighbour mac_list | fields interface state speed neighbour macs mac_list"
    }
   },
   "ds_nodata": {
@@ -887,7 +428,7 @@
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 1930
+     "height": 1960
     },
     "structure": [
      {
@@ -967,7 +508,7 @@
        "x": 0,
        "y": 540,
        "w": 1440,
-       "h": 170
+       "h": 200
       }
      },
      {
@@ -975,7 +516,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 710,
+       "y": 740,
        "w": 720,
        "h": 320
       }
@@ -985,7 +526,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 710,
+       "y": 740,
        "w": 720,
        "h": 320
       }
@@ -995,7 +536,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1030,
+       "y": 1060,
        "w": 940,
        "h": 480
       }
@@ -1005,7 +546,7 @@
       "type": "block",
       "position": {
        "x": 940,
-       "y": 1030,
+       "y": 1060,
        "w": 500,
        "h": 480
       }
@@ -1015,7 +556,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1510,
+       "y": 1540,
        "w": 1440,
        "h": 420
       }

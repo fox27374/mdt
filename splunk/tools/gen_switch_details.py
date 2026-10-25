@@ -30,13 +30,13 @@ bases = {
     "ds_logs": f"index=cisco_syslog host=\"{N}\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) "
                f"| table _time severity message | sort - _time | head 200",
 }
-# Port view: one row per stack member and odd/even port, one column per port pair named after the odd port (zero padded so they sort);
-# _s<col> columns carry the state for the cell colour and are left out of the display.
-COLS = [f"{p:02d}" for p in range(1, 96, 2)] + [f"U{p}" for p in range(1, 8, 2)]
-portview = open(sys.path[0] + "/portview.spl").read().strip().replace("\n", " ")
 # Time charts leave out the current 5-minute bucket: not every port has reported in it yet, so its sum is too low.
 chains = {  # name: (base, post-process)
-    "ds_ports": ("ds_status", f"{phys} {portview}"),
+    # One row per front-panel port for the port_faceplate visualization (the viz lays the ports out itself).
+    "ds_ports": ("ds_status", f"{slots} | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
+                 # Uplinks learn hundreds of MACs; the first 5 are listed, the count is in macs.
+                 "| eval neighbour=mvjoin(neighbour, \", \"), mac_list=mvjoin(mvindex(mac_list, 0, min(4, mvcount(mac_list) - 1)), \", \") "
+                 "| fillnull value=0 macs | fillnull value=\"\" neighbour mac_list | fields interface state speed neighbour macs mac_list"),
     "ds_nodata": ("ds_status", f"| stats count | where count=0 "
                   f"| eval Note=\"No telemetry for {N}. Switch Details covers switches that stream interface data.\" | fields Note"),
     "ds_ports_up": ("ds_status", f"{slots} | stats count as total sum(oper_up) as up "
@@ -86,17 +86,11 @@ def open_port(port):
              + "&form.tk_interface=" + port + "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
              "newTab": True}}]
 viz = {
-    "viz_ports": {"type": "splunk.table", "title": "Ports: green up, dark down, light grey admin down. Click a port to open its details.",
-                  "dataSources": {"primary": "ds_ports"},
-                  "options": {"count": 20, "fontSize": "extraSmall", "headerVisibility": "none",
-                              "table": "> primary | frameWithoutSeriesNames(" + ", ".join(f'"_s{c}"' for c in COLS) + ")",
-                              "tableFormat": {"rowBackgroundColors": "> table | seriesByIndex(0) | pick(black)"},
-                              "columnFormat": {**{f"{c}_": {"width": 4} for c in COLS}, **{c: {"width": 52, "rowBackgroundColors": f'> primary | seriesByName("_s{c}") | matchValue(stateColors)',
-                                                   "rowColors": f'> primary | seriesByName("_s{c}") | matchValue(textColors)'} for c in COLS}}},
-                  "context": {"stateColors": [{"match": "up", "value": "#53a051"}, {"match": "down", "value": "#30363d"},
-                                              {"match": "admin down", "value": "#8a929b"}],
-                              "black": ["#000000"],
-                              "textColors": [{"match": s, "value": "#ffffff"} for s in ("up", "down", "admin down")]},
+    # Custom visualization (splunk/viz, built into the app): the type is <app id>.<visualization name>.
+    # Clicking a port sends its interface as click.value, see visualization.js.
+    "viz_ports": {"type": "mdt_infra_monitoring.port_faceplate",
+                  "title": "Ports: green up, dark down, grey admin down. Click a port to open its details.",
+                  "dataSources": {"primary": "ds_ports"}, "options": {},
                   "eventHandlers": open_port("$click.value$")},
     "viz_nodata": {"type": "splunk.table", "dataSources": {"primary": "ds_nodata"}, "options": {},
                    "containerOptions": {"visibility": {"hideWhenNoData": True}}},
@@ -131,15 +125,15 @@ rows = [  # (item, x, y, w, h)
     ("viz_nodata", 0, 0, 1440, 80),
     ("viz_cpu", 0, 80, 360, 200), ("viz_mem", 360, 80, 360, 200), ("viz_poe", 720, 80, 360, 200), ("viz_ports_up", 1080, 80, 360, 200),
     ("viz_top_util", 0, 280, 720, 260), ("viz_top_errors", 720, 280, 720, 260),
-    ("viz_ports", 0, 540, 1440, 170),
-    ("viz_throughput", 0, 710, 720, 320), ("viz_errors", 720, 710, 720, 320),
-    ("viz_ifaces", 0, 1030, 940, 480), ("viz_mac", 940, 1030, 500, 480),
-    ("viz_logs", 0, 1510, 1440, 420),
+    ("viz_ports", 0, 540, 1440, 200),
+    ("viz_throughput", 0, 740, 720, 320), ("viz_errors", 720, 740, 720, 320),
+    ("viz_ifaces", 0, 1060, 940, 480), ("viz_mac", 940, 1060, 500, 480),
+    ("viz_logs", 0, 1540, 1440, 420),
 ]
 layout = {
     "type": "grid",
     "globalInputs": ["input_time", "input_node"],
-    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1930},
+    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1960},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Switch", "layoutId": "layout_1"}]},
 }
