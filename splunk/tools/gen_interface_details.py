@@ -52,8 +52,8 @@ STATUS = (f"| `mdt_if_status({N})` {phys} {PICK_ONE} | eval inorm=`mdt_ifkey(int
           "| join type=left node inorm [| `mdt_links`] "
           "| join type=left far_node far_inorm [| `mdt_if_status(*)` " + phys + " | eval inorm=`mdt_ifkey(interface)` "
           "| rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] "
-          # A neighbour without telemetry has no telemetry port name; CDP still names the neighbour.
-          "| eval neighbour_md=if(isnull(far_node), \"none\", \"[\".far_node.\" \".coalesce(far_interface, \"\").\"](/app/mdt_infra_monitoring/interface_details?form.tk_node=\".far_node.\"&form.tk_interface=\".coalesce(far_interface, \"\")"
+          # A neighbour without telemetry (an AP, a phone) has no telemetry port: its CDP name only, no link.
+          "| eval neighbour_md=case(isnull(far_node), \"none\", isnull(far_interface), far_node, true(), \"[\".far_node.\" \".far_interface.\"](/app/mdt_infra_monitoring/interface_details?form.tk_node=\".far_node.\"&form.tk_interface=\".far_interface"
           ".\"&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$)\") "
           "| eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")")
 
