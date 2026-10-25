@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Applies gnmic/config/dialout-iosxe.yaml to the dial-out switches over gNMI (gnmic in the gnmic-1 container,
 # switch credentials from its environment). Replaces the listed subscriptions and deletes any other one in
-# 57001-57099; other subscriptions (Catalyst Center 500-8882) are left alone. Running config only: the switch
-# does not save it to startup-config.
+# 57001-57099; other subscriptions (Catalyst Center 500-8882) are left alone. Running config only; save it with
+#   printf 'write memory\nexit\n' | scripts/swcli <switch ip>
 #
 # Run on the container host:  scripts/mdthost 'scripts/dialout-apply [switch ...]'   (default: all switches)
 import json, re, subprocess, sys, yaml
