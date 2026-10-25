@@ -1,0 +1,78 @@
+<dashboard version="1.1" theme="dark">
+  <label>Topology Settings</label>
+  <description>Device roles for the Network Overview topology. Patterns map host names to a role; the topology places devices by role</description>
+  <init>
+    <set token="table_refresh">0</set>
+  </init>
+  <fieldset submitButton="true" autoRun="false">
+    <input type="text" token="new_pattern">
+      <label>Add: pattern (* matches any text, for example ibk-lab-sw*)</label>
+    </input>
+    <input type="dropdown" token="new_role">
+      <label>Add: role</label>
+      <choice value="core">core</choice>
+      <choice value="distribution">distribution</choice>
+      <choice value="access">access</choice>
+      <choice value="wlc">wlc</choice>
+      <choice value="firewall">firewall</choice>
+      <choice value="server">server</choice>
+      <default>core</default>
+    </input>
+    <input type="text" token="sel_key">
+      <label>Delete: selected entry (click a row in the table below)</label>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>How it works</title>
+      <html>
+        <ul>
+          <li>Submit adds the pattern and role when a pattern is filled in, and deletes the selected entry when one is selected. Both can happen with one Submit.</li>
+          <li>Patterns are host names. * matches any text. A device takes the role of the longest pattern that matches it.</li>
+          <li>Roles: core, distribution and access are the rows of the tree, top to bottom. APs (wifi) are always the bottom row and need no entry.</li>
+          <li>wlc, firewall and server are not in the tree: they sit in a side column to the right.</li>
+          <li>Devices without a role are placed one row below their highest neighbour by CDP link. Devices not reached from a role device go to the islands block on the far right.</li>
+          <li>Changes show on Network Overview after its next refresh (1 minute).</li>
+        </ul>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Entries (sorted by pattern)</title>
+      <table>
+        <search>
+          <query>| inputlookup mdt_device_roles | eval refresh="$table_refresh$" | sort 0 pattern | table _key pattern role</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">100</option>
+        <option name="drilldown">row</option>
+        <option name="refresh.display">none</option>
+        <drilldown>
+          <set token="sel_key">$row._key$</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <search depends="$form.new_pattern$">
+    <query>| makeresults | eval pattern=trim("$form.new_pattern|s$"), role="$form.new_role|s$" | where len(pattern) &gt; 0 | fields pattern role | outputlookup append=true mdt_device_roles</query>
+    <earliest>-15m</earliest>
+    <latest>now</latest>
+    <done>
+      <unset token="form.new_pattern"></unset>
+      <unset token="new_pattern"></unset>
+      <set token="table_refresh">$job.sid$</set>
+    </done>
+  </search>
+  <search depends="$form.sel_key$">
+    <query>| inputlookup mdt_device_roles | where _key!="$form.sel_key|s$" | outputlookup mdt_device_roles</query>
+    <earliest>-15m</earliest>
+    <latest>now</latest>
+    <done>
+      <unset token="form.sel_key"></unset>
+      <unset token="sel_key"></unset>
+      <set token="table_refresh">$job.sid$</set>
+    </done>
+  </search>
+</dashboard>
