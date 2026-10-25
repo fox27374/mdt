@@ -25,3 +25,4 @@ subscriptions:
   - {id: 57007, gnmic: xe_poe_stats, period: 300, xpath: /poe-ios-xe-oper:poe-oper-data/poe-port-detail}
   # device-hardware-oper (what gnmic reads) is accepted but never sent on 16.12; platform-oper part-no is.
   - {id: 57008, gnmic: xe_inventory, period: 3600, xpath: /platform-ios-xe-oper:components/component/state/part-no}
+  - {id: 57009, gnmic: xe_arp_info, period: 300, xpath: /arp-ios-xe-oper:arp-data/arp-vrf/arp-oper}
