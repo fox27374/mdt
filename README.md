@@ -74,7 +74,15 @@ of Podman containers managed with `podman-compose`.
 Subscriptions are grouped by platform:
 
 - **Cisco IOS-XE switches** (`xe_*`) — interface stats, CPU, memory, PoE, interface
-  info, CDP neighbors, MAC table.
+  info, CDP neighbors, MAC table, per-port PoE (`xe_poe_stats`) and the chassis part number
+  (`xe_inventory`, 1 h), which names the switch model on the Switch Details faceplate.
+
+IOS-XE switches that are not gnmic targets send the same data by gRPC dial-out to the OTel collector
+(port 57000). Their subscriptions are defined in [config/dialout-iosxe.yaml](config/dialout-iosxe.yaml)
+and applied over gNMI with `scripts/mdthost 'scripts/dialout-apply [switch ...]'`, which owns subscription
+IDs 57001-57099 on the switch (running config only). **Dial-in and dial-out carry the same subscriptions:**
+a change to an `xe_*` subscription in `mdt.yaml` gets the same change in `dialout-iosxe.yaml` and, for new
+metric names, in `filter/cisco` and `transform/cisco` in `otel.yaml`.
 - **Cisco NX-OS switches** (`nx_*`) — interface stats/info, CPU load, memory, CDP, MAC
   (uses `config/ca.pem` for TLS).
 - **Cisco Catalyst WLC** (`wl_*`) — wireless client signal/SNR/retries, AP utilization
@@ -313,8 +321,24 @@ and its links out of the topology, for example servers. The layout is computed i
 restart after its first deploy.
 
 Switch Details is generated: edit [splunk/tools/gen_switch_details.py](splunk/tools/gen_switch_details.py)
-(and `portview.spl`, the port view search) and run `python3 splunk/tools/gen_switch_details.py`,
-which rewrites `switch_details.xml`. Its searches use the macros in `default/macros.conf`.
+and run `python3 splunk/tools/gen_switch_details.py`, which rewrites `switch_details.xml`. Its searches
+use the macros in `default/macros.conf`.
+
+The port view is the custom Dashboard Studio visualization `port_faceplate` (Splunk 10.4+), source in
+[splunk/viz/](splunk/viz/). A yellow bolt on a port means it is drawing PoE, a red bolt means PoE was denied (`mdt_poe_port` in `default/macros.conf`). The faceplate is labelled with the switch model (`C9300-24P`; stack members as `Switch 2 · C9300-24P`, `Switch 1` when unknown) from `mdt_model` in `default/macros.conf`: the gnmic chassis part number, else the platform a CDP neighbour reports. Its built bundle is committed in
+`appserver/static/visualizations/port_faceplate/` together with `default/visualizations.conf`, so the
+app needs no build on the host. After changing the source, rebuild and copy the bundle into the app:
+
+```bash
+cd splunk/viz && npm install && npm run sync && npm run check
+```
+
+`npm run check` runs the layout parser checks (`check-layout.mjs`). The layout is in
+`src/layout.js`, the drawing in `src/visualization.js`. Studio loads `visualization.js` from a URL that
+browsers cache for a year and that changes only with a Splunk upgrade, so the published
+`visualization.js` is a small loader (`loader.js`) that fetches the bundle, `faceplate.js`, with a fresh
+query string: a deployed change shows on the next page load. Changes to the loader itself need a
+Splunk Web restart (`/services/server/control/restart_webui`) and a cleared browser cache.
 
 Deploy it with:
 

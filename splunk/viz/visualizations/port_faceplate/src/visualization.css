@@ -1,0 +1,67 @@
+.viz-container {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 8px 16px;
+    font-family: 'Splunk Platform Sans', sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.viz-container--empty {
+    align-items: center;
+}
+
+.viz-svg {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    flex: 1 1 auto;
+}
+
+.viz-port {
+    cursor: pointer;
+}
+
+.viz-port:hover rect {
+    stroke: #6ab0f9;
+    stroke-width: 2;
+}
+
+.viz-message {
+    padding: 20px;
+    color: #8a929b;
+}
+
+.viz-note {
+    font-size: 11px;
+    text-align: center;
+}
+
+.viz-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 14px;
+    font-size: 11px;
+    padding-top: 4px;
+}
+
+.viz-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.viz-legend .viz-swatch {
+    width: 10px;
+    height: 10px;
+    border: 1px solid;
+    border-radius: 2px;
+}
+
+.viz-legend-bolt {
+    width: 14px;
+    height: 14px;
+}

@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+# Applies gnmic/config/dialout-iosxe.yaml to the dial-out switches over gNMI (gnmic in the gnmic-1 container,
+# switch credentials from its environment). Replaces the listed subscriptions and deletes any other one in
+# 57001-57099; other subscriptions (Catalyst Center 500-8882) are left alone. Running config only; save it with
+#   printf 'write memory\nexit\n' | scripts/swcli <switch ip>
+#
+# Run on the container host:  scripts/mdthost 'scripts/dialout-apply [switch ...]'   (default: all switches)
+import json, re, subprocess, sys, yaml
+
+cfg = yaml.safe_load(open("gnmic/config/dialout-iosxe.yaml"))
+SUB = "rfc7951:/Cisco-IOS-XE-mdt-cfg:mdt-config-data/mdt-subscription"
+
+
+def gnmic(addr, *args):
+    cmd = '/app/gnmic -a "$A" --insecure -u "$SWITCH_USERNAME" -p "$SWITCH_PASSWORD" --timeout 60s -e json_ietf "$@"'
+    r = subprocess.run(["podman", "exec", "-e", f"A={addr}:57400", "gnmic-1", "sh", "-c", cmd, "sh", *args],
+                       capture_output=True, text=True)
+    if r.returncode:
+        sys.exit(f"{addr}: gnmic {args[0]} failed:\n{r.stderr or r.stdout}")
+    return r.stdout
+
+
+for name, addr in cfg["switches"].items():
+    if len(sys.argv) > 1 and name not in sys.argv[1:]:
+        continue
+    current = {int(i) for i in re.findall(r"subscription-id=(\d+)\]", gnmic(addr, "get", "--path", SUB))}
+    wanted = {s["id"] for s in cfg["subscriptions"]}
+    args = ["set"]
+    for i in sorted(i for i in current if 57001 <= i <= 57099 and i not in wanted):
+        args += ["--delete", f"{SUB}[subscription-id={i}]"]
+    for s in cfg["subscriptions"]:
+        value = {"subscription-id": s["id"],
+                 "base": {"stream": "yang-push", "encoding": "encode-kvgpb", "source-address": addr,
+                          "period": s["period"] * 100,  # centiseconds
+                          "xpath": s["xpath"]},
+                 "mdt-receivers": [{"address": cfg["receiver"]["address"], "port": cfg["receiver"]["port"],
+                                    "protocol": "grpc-tcp"}]}
+        args += ["--replace-path", f"{SUB}[subscription-id={s['id']}]", "--replace-value", json.dumps(value)]
+    gnmic(addr, *args)
+    print(f"{name} ({addr}): {len(wanted)} subscriptions set")
