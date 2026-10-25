@@ -58,8 +58,9 @@
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
         <drilldown>
-          <!-- ponytail: APs recognised by name (ends in -apNN); an AP named otherwise opens Switch Details. Upgrade: collect AP names into a token. -->
-          <condition match="match($nd_value_token|s$, &quot;(?i)-ap\d+$&quot;)">
+          <!-- ponytail: APs recognised by name (contains -ap); an AP named otherwise opens Switch Details. Upgrade: collect AP names into a token.
+               No regex here: a bare $ is a token delimiter in Simple XML and breaks the condition. -->
+          <condition match="like($nd_value_token|s$, &quot;%-ap%&quot;)">
             <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
           </condition>
           <condition>
