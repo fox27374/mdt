@@ -85,8 +85,30 @@ targets:
       - xe_cdp_info
       - xe_mac_info
 
+  10.20.0.40:57400:
+    name: "ibk-lab-edge01"
+    subscriptions:
+      - xe_if_stats
+      - xe_cpu_stats
+      - xe_mem_stats
+      - xe_poe_stats
+      - xe_if_info
+      - xe_cdp_info
+      - xe_mac_info
+
   10.20.0.35:57400:
     name: "ibk-lab-edge02"
+    subscriptions:
+      - xe_if_stats
+      - xe_cpu_stats
+      - xe_mem_stats
+      - xe_poe_stats
+      - xe_if_info
+      - xe_cdp_info
+      - xe_mac_info
+
+  10.20.0.7:57400:
+    name: "ibk-lab-edge03"
     subscriptions:
       - xe_if_stats
       - xe_cpu_stats
