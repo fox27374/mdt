@@ -33,8 +33,9 @@ WIRED = (
     "| rename extracted_source as node, matm_mac_entry_mac as mac, matm_mac_entry_vlan_id_number as vlan "
     "| append [| mstats latest_time(_value) as t WHERE index=cisco_metrics metric_name=mdt_nx_mac_info_age BY extracted_source port vlan mac type "
     "| rename extracted_source as node | where type!=\"gateway\" | eval vlan=replace(vlan, \"^vlan-\", \"\")] "
-    "| append [| mstats latest_time(_value) as t WHERE index=cisco_metrics metric_name=cisco.port_info BY extracted_source port mac matm_mac_entry_vlan_id_number "
-    "| rename extracted_source as node, matm_mac_entry_vlan_id_number as vlan] "
+    # Dial-out has no VLAN (the yang_grpc receiver drops numeric keys, otel.yaml): shown as VLAN -.
+    "| append [| mstats latest_time(_value) as t WHERE index=cisco_metrics metric_name=cisco.port_info BY extracted_source port mac "
+    "| rename extracted_source as node] "
     # FHRP virtual MACs (HSRP v1/v2, VRRP) are gateways, not clients.
     "| eval mac=lower(mac) | where NOT match(mac, \"^(00:00:0c:07:ac|00:00:0c:9f:f|00:00:5e:00:01)\") | where NOT match(port, \"(?i)^(sup|cpu|vl|lo|nve|tu|app|mgmt)\") "
     "| eval ik=lower(node).\"|\".`mdt_ifkey(port)` "
