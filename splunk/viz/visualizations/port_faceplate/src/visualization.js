@@ -50,6 +50,7 @@ function formatSpeed(bps) {
 
 function tooltip(row) {
     const parts = [row.interface, row.state || 'down', formatSpeed(row.speed)];
+    if (row.port_channel) parts.push(`Port-channel: ${row.port_channel}`);
     if (row.neighbour) parts.push(`CDP: ${row.neighbour}`);
     const macs = Number(row.macs) || 0;
     if (macs > 5) parts.push(`${macs} MACs`);

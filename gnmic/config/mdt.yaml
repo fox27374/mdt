@@ -39,6 +39,7 @@ targets:
       - xe_cdp_info
       - xe_mac_info
       - xe_arp_info
+      - xe_lag_info
       - xe_inventory
 
   172.24.80.244:57400:
@@ -52,6 +53,7 @@ targets:
       - xe_cdp_info
       - xe_mac_info
       - xe_arp_info
+      - xe_lag_info
       - xe_inventory
 
   172.24.80.251:57400:
@@ -65,6 +67,7 @@ targets:
       - xe_cdp_info
       - xe_mac_info
       - xe_arp_info
+      - xe_lag_info
       - xe_inventory
 
   # SD-Access fabric switches (Catalyst Center managed). gNMI uses Catalyst Center's device certificate:
@@ -81,6 +84,7 @@ targets:
       - xe_cdp_info
       - xe_mac_info
       - xe_arp_info
+      - xe_lag_info
       - xe_inventory
 
   172.24.80.232:57400:
@@ -93,6 +97,7 @@ targets:
       - xe_cdp_info
       - xe_mac_info
       - xe_arp_info
+      - xe_lag_info
       - xe_inventory
 
   10.20.0.40:57400:
@@ -106,6 +111,7 @@ targets:
       - xe_cdp_info
       - xe_mac_info
       - xe_arp_info
+      - xe_lag_info
       - xe_inventory
 
   10.20.0.35:57400:
@@ -119,6 +125,7 @@ targets:
       - xe_cdp_info
       - xe_mac_info
       - xe_arp_info
+      - xe_lag_info
       - xe_inventory
 
   10.20.0.7:57400:
@@ -132,6 +139,7 @@ targets:
       - xe_cdp_info
       - xe_mac_info
       - xe_arp_info
+      - xe_lag_info
       - xe_inventory
 
   # NX-OS Switches
@@ -161,6 +169,7 @@ targets:
       - nx_cdp_info
       - nx_mac_info
       - nx_arp_info
+      - nx_lag_info
 
   172.24.80.196:57400:
     name: "ntsnxsw02"
@@ -175,6 +184,7 @@ targets:
       - nx_cdp_info
       - nx_mac_info
       - nx_arp_info
+      - nx_lag_info
 
   # Enable SSID Stats: conf t --- ap profile <profile-name> --- bssid-stats
   # ibk-lab-ewlc01#sh run | sec ap profile ibk-lab
@@ -321,6 +331,21 @@ subscriptions:
     outputs:
       - nats
 
+  # Port-channel membership and switchport VLANs (openconfig), 300 s. aggregate-id on a member port names its port-channel.
+  # The VLANs are the port-channel's own switched-vlan. trunk-vlans is only filled for a restricted trunk; empty means all VLANs.
+  # Empty values (ports that are not members, no access VLAN) are dropped by drop-xe-lag-empty.
+  xe_lag_info:
+    paths:
+      - "openconfig:/interfaces/interface/ethernet/state/aggregate-id"
+      - "openconfig:/interfaces/interface/aggregation/switched-vlan/state/interface-mode"
+      - "openconfig:/interfaces/interface/aggregation/switched-vlan/state/access-vlan"
+      - "openconfig:/interfaces/interface/aggregation/switched-vlan/config/trunk-vlans"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
   nx_if_stats:
     paths:
       - "openconfig:/interfaces/interface/state/counters/in-octets"
@@ -384,9 +409,29 @@ subscriptions:
     outputs:
       - nats
 
+  # Port-channels (AggrIf-list, DME). The device sends the whole list per sample (AggrIf-list.N/...); nx-normalize-interfaces
+  # splits it per port-channel (key id, po103) and each leaf becomes a metric with its value as the label. operMode is the
+  # operational switchport mode (access or trunk), operSpeed the bundle speed (25G, auto when no member is up). The top-level
+  # mode leaf is always trunk, so it is not used. tDn is a member port, renamed to member. The entry has ~150 more leaves;
+  # only these are subscribed.
+  nx_lag_info:
+    paths:
+      - "/System/intf-items/aggr-items/AggrIf-list/aggrif-items/operMode"
+      - "/System/intf-items/aggr-items/AggrIf-list/aggrif-items/operSpeed"
+      - "/System/intf-items/aggr-items/AggrIf-list/accessVlan"
+      - "/System/intf-items/aggr-items/AggrIf-list/trunkVlans"
+      - "/System/intf-items/aggr-items/AggrIf-list/rsmbrIfs-items/RsMbrIfs-list/tDn"
+    mode: stream
+    encoding: json
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
   nx_cdp_info:
     paths:
       - "/System/cdp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/devId"
+      - "/System/cdp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/portId"
     mode: stream
     encoding: json
     stream-mode: sample
@@ -557,10 +602,11 @@ processors:
         - path-base:
             apply-on: "name"
 
-  # Management ports: NX-OS mgmt0, IOS-XE GigabitEthernet0/0.
+  # Management ports: NX-OS mgmt0, IOS-XE GigabitEthernet0/0. Port-channels (po, Port-channel) are kept: status, counters and
+  # members are used by Switch Details. Aggregate totals stay physical-only in the dashboards (mdt_is_physical).
   drop-if-stats-interfaces:
     event-drop:
-      condition: '.tags.interface_name != null and (.tags.interface_name | test("^(vlan|loopback|tunnel|app|nve|po|bluetooth|mgmt|GigabitEthernet0/0$)"; "i"))'
+      condition: '.tags.interface_name != null and (.tags.interface_name | test("^(vlan|loopback|tunnel|app|nve|bluetooth|mgmt|GigabitEthernet0/0$)"; "i"))'
 
   # PoE port entries are keyed by intf-name (tag poe-port-detail_intf-name); give them the interface_name tag the other XE interface data uses.
   xe-poe-port-interface:
@@ -574,6 +620,11 @@ processors:
   drop-xe-mac-cpu:
     event-drop:
       condition: '.tags["subscription-name"] == "xe_mac_info" and (.values | to_entries | any(.value == "CPU"))'
+
+  # Ports that are not members, and VLAN leaves not set, come as empty strings or lists: no series for them.
+  drop-xe-lag-empty:
+    event-drop:
+      condition: '.tags["subscription-name"] == "xe_lag_info" and ([.values[] | select(. != "" and . != [] and . != null)] | length == 0)'
 
   drop-xe-inventory-non-chassis:
     event-drop:
@@ -629,8 +680,9 @@ processors:
           tags: ($ev.tags + ($tags | map_values(tostring))), values: $values};
         if ($ev.tags["subscription-name"] == "nx_cdp_info") then
           # ponytail: one neighbour per port; a second adjacency on the same port is dropped
-          rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(.devId != null)
-          | entry({interface_name: .id}; {devId: .devId})
+          # devId and portId arrive as separate events (one per path): each becomes its own metric, joined by port in mdt_cdp.
+          rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(.devId != null or .portId != null)
+          | entry({interface_name: .id}; {devId: .devId, portId: .portId} | with_entries(select(.value != null)))
         elif ($ev.tags["subscription-name"] == "nx_if_errors") then
           rows("PhysIf-list\\.(?P<idx>[0-9]+)/")[] | select(.id != null)
           | entry({interface_name: .id}; del(.id))
@@ -638,6 +690,18 @@ processors:
           # supeth1 is the supervisor (CPU): its own MACs, not learned ones
           rows("MacAddressEntry-list\\.(?P<idx>[0-9]+)/")[] | select((.port // "") | test("^sup"; "i") | not)
           | entry({port: .port, vlan: .vlan, mac: .macAddress, type: .type}; {age: .age})
+        elif ($ev.tags["subscription-name"] == "nx_lag_info") then
+          # Port-channels (AggrIf-list.N/...): one event per leaf, keyed by the port-channel name (the N/id leaf). A member
+          # (RsMbrIfs-list.M/tDn) becomes member="eth1/3". Each leaf is its own metric with its value as the label.
+          ($ev.values | to_entries) as $kv
+          | ([$kv[] | select(.key | test("AggrIf-list\\.[0-9]+/id$")) | {(.key | capture("AggrIf-list\\.(?<i>[0-9]+)/").i): .value}] | add) as $names
+          | $kv[] | select(.key | test("AggrIf-list\\.[0-9]+/(aggrif-items/operMode|aggrif-items/operSpeed|accessVlan|trunkVlans)$|RsMbrIfs-list\\.[0-9]+/tDn$")) | . as $leaf
+          | ($leaf.key | capture("AggrIf-list\\.(?<i>[0-9]+)/").i) as $i
+          | entry({interface_name: $names[$i]};
+              if ($leaf.key | endswith("/tDn"))
+              then {member: (try ($leaf.value | capture("id='(?<m>[^']+)'").m) catch $leaf.value)}
+              elif ($leaf.key | endswith("/operMode")) then {mode: $leaf.value}
+              else {($leaf.key | split("/") | last): $leaf.value} end)
         elif ($ev.tags["subscription-name"] == "nx_arp_info") then
           # One object per AdjEp entry: the leaves of an entry share the path before the leaf name.
           ([$ev.values | to_entries[] | {idx: (.key | split("/") | .[:-1] | join("/")), f: (.key | split("/") | last), v: .value}]
@@ -709,6 +773,7 @@ outputs:
       - xe-poe-port-interface
       - drop-if-stats-interfaces
       - drop-xe-mac-cpu
+      - drop-xe-lag-empty
       - drop-xe-inventory-non-chassis
       - trim-xe-inventory
       - rename-metrics

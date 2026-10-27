@@ -152,8 +152,8 @@ func TestParseConfigRealFile(t *testing.T) {
 	if sw98 == nil {
 		t.Fatalf("target 'ibk-lab-sw98' not found")
 	}
-	if len(sw98.Subs) != 8 {
-		t.Errorf("ibk-lab-sw98: expected 8 subs, got %d", len(sw98.Subs))
+	if len(sw98.Subs) != 10 {
+		t.Errorf("ibk-lab-sw98: expected 10 subs, got %d", len(sw98.Subs))
 	}
 	for _, sub := range sw98.Subs {
 		if sub.Interval <= 0 {
