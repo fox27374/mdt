@@ -38,6 +38,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_arp_info
       - xe_inventory
 
   172.24.80.244:57400:
@@ -50,6 +51,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_arp_info
       - xe_inventory
 
   172.24.80.251:57400:
@@ -62,6 +64,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_arp_info
       - xe_inventory
 
   # SD-Access fabric switches (Catalyst Center managed). gNMI uses Catalyst Center's device certificate:
@@ -77,6 +80,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_arp_info
       - xe_inventory
 
   172.24.80.232:57400:
@@ -88,6 +92,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_arp_info
       - xe_inventory
 
   10.20.0.40:57400:
@@ -100,6 +105,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_arp_info
       - xe_inventory
 
   10.20.0.35:57400:
@@ -112,6 +118,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_arp_info
       - xe_inventory
 
   10.20.0.7:57400:
@@ -124,6 +131,7 @@ targets:
       - xe_if_info
       - xe_cdp_info
       - xe_mac_info
+      - xe_arp_info
       - xe_inventory
 
   # NX-OS Switches
@@ -152,6 +160,7 @@ targets:
       - nx_if_info
       - nx_cdp_info
       - nx_mac_info
+      - nx_arp_info
 
   172.24.80.196:57400:
     name: "ntsnxsw02"
@@ -165,6 +174,7 @@ targets:
       - nx_if_info
       - nx_cdp_info
       - nx_mac_info
+      - nx_arp_info
 
   # Enable SSID Stats: conf t --- ap profile <profile-name> --- bssid-stats
   # ibk-lab-ewlc01#sh run | sec ap profile ibk-lab
@@ -285,6 +295,20 @@ subscriptions:
     outputs:
       - nats
 
+  # ARP table (all VRFs), one event per leaf and entry like xe_mac_info: address and vrf are the keys (labels), hardware
+  # (MAC) and interface are strings (labels). mode tells the switch's own addresses (interface mode) from learned ones; the
+  # Client Search dashboard drops those, because they are the switch's own SVIs and routed ports, not clients.
+  xe_arp_info:
+    paths:
+      - "rfc7951:/Cisco-IOS-XE-arp-oper:arp-data/arp-vrf/arp-oper/hardware"
+      - "rfc7951:/Cisco-IOS-XE-arp-oper:arp-data/arp-vrf/arp-oper/interface"
+      - "rfc7951:/Cisco-IOS-XE-arp-oper:arp-data/arp-vrf/arp-oper/mode"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
   # Chassis part number per stack member (hw-dev-index = member number). The leaf path gives one event per
   # inventory entry, keyed by device-inventory_hw-type and device-inventory_hw-dev-index; drop-xe-inventory-non-chassis
   # keeps the chassis rows. Hourly: the part number does not change between reboots and the lab has no stacks to check against.
@@ -376,7 +400,7 @@ subscriptions:
     mode: stream
     encoding: json
     stream-mode: sample
-    sample-interval: 1h
+    sample-interval: 300s
     outputs:
       - nats
 
@@ -513,6 +537,17 @@ subscriptions:
 # Processors
 ###################################
 
+  # ARP adjacencies (DME), one event per entry, split per entry by nx-normalize-interfaces. Own addresses are dropped in the dashboard.
+  nx_arp_info:
+    paths:
+      - "/System/arp-items/inst-items/dom-items/Dom-list/db-items/Db-list/adj-items/AdjEp-list"
+    mode: stream
+    encoding: json
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
 processors:
   rename-metrics:
     event-strings:
@@ -603,6 +638,13 @@ processors:
           # supeth1 is the supervisor (CPU): its own MACs, not learned ones
           rows("MacAddressEntry-list\\.(?P<idx>[0-9]+)/")[] | select((.port // "") | test("^sup"; "i") | not)
           | entry({port: .port, vlan: .vlan, mac: .macAddress, type: .type}; {age: .age})
+        elif ($ev.tags["subscription-name"] == "nx_arp_info") then
+          # One object per AdjEp entry: the leaves of an entry share the path before the leaf name.
+          ([$ev.values | to_entries[] | {idx: (.key | split("/") | .[:-1] | join("/")), f: (.key | split("/") | last), v: .value}]
+           | group_by(.idx) | map(map({(.f): .v}) | add))[]
+          # INCOMPLETE entries (all-zero MAC, no reply yet) are no client. The table has no VRF leaf on this path.
+          | select(.ip != null and .mac != null and .mac != "00:00:00:00:00:00")
+          | entry({arp_oper_address: .ip, vlan: .ifId}; {hardware: .mac, interface: .physIfId})
         elif ($ev.tags["subscription-name"] == "nx_if_stats" or $ev.tags["subscription-name"] == "nx_if_info") then
           ( $ev.values | to_entries
             | group_by(.key | capture("interface\\.(?P<idx>[0-9]+)/") | .idx)
