@@ -13,6 +13,7 @@ switches:  # name: address (gNMI, insecure, port 57400)
   ibk-lab-sw11: 172.24.80.243
   ibk-lab-sw12: 172.24.80.242
   ibk-lab-sw13: 172.24.80.241
+  ibk-lab-seminar: 172.24.80.238  # WS-C3850-24P, 16.12
 
 subscriptions:
   - {id: 57001, gnmic: xe_cpu_stats, period: 60, xpath: /process-cpu-ios-xe-oper:cpu-usage/cpu-utilization/one-minute}

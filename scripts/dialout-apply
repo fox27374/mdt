@@ -15,7 +15,7 @@ def gnmic(addr, *args):
     cmd = '/app/gnmic -a "$A" --insecure -u "$SWITCH_USERNAME" -p "$SWITCH_PASSWORD" --timeout 60s -e json_ietf "$@"'
     r = subprocess.run(["podman", "exec", "-e", f"A={addr}:57400", "gnmic-1", "sh", "-c", cmd, "sh", *args],
                        capture_output=True, text=True)
-    if r.returncode:
+    if r.returncode and not (args[0] == "get" and "code = NotFound" in r.stderr + r.stdout):  # no subscriptions yet
         sys.exit(f"{addr}: gnmic {args[0]} failed:\n{r.stderr or r.stdout}")
     return r.stdout
 
