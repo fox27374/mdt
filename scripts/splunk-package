@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Package the Splunk app splunk/mdt_infra_monitoring as a .spl file (Apps > Manage Apps > Install app from file).
+#
+#   scripts/splunk-package [output-file]     default: mdt_infra_monitoring.spl in the repo root
+#
+# Leaves out .DS_Store and the app's local/ folder (per-host edits and overrides).
+set -euo pipefail
+root=$(git rev-parse --show-toplevel)
+app=mdt_infra_monitoring
+out=${1:-$root/$app.spl}
+[ -d "$root/splunk/$app" ] || { echo "no app at splunk/$app" >&2; exit 1; }
+COPYFILE_DISABLE=1 tar --no-xattrs -C "$root/splunk" --exclude=.DS_Store --exclude="$app/local" -czf "$out" "$app"
+echo "wrote $out"

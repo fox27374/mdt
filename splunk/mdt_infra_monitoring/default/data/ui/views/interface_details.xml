@@ -207,7 +207,7 @@
    "type": "ds.search",
    "name": "logs",
    "options": {
-    "query": "index=cisco_syslog host=\"$tk_node$\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) | eval tp=if(match(\"$tk_interface$\", \"^\\D\"), replace(\"$tk_interface$\", \"^\\D+\", \"\"), \"$tk_interface$\") | where match(message, \"(?<![\\d/])\" . tp . \"(?![\\d/])\") | table _time severity message | sort - _time | head 200"
+    "query": "`mdt_syslog_index` host=\"$tk_node$\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) | eval tp=if(match(\"$tk_interface$\", \"^\\D\"), replace(\"$tk_interface$\", \"^\\D+\", \"\"), \"$tk_interface$\") | where match(message, \"(?<![\\d/])\" . tp . \"(?![\\d/])\") | table _time severity message | sort - _time | head 200"
    }
   },
   "ds_flow": {

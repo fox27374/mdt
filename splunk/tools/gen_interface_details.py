@@ -63,7 +63,7 @@ MACS = (f"| `mdt_mac({T_NODE},{T_IF})` "
 
 # Syslog naming the port by its path (Gi1/1/4, TenGigabitEthernet1/1/4, Ethernet1/23, eth1/23 all contain the path).
 tokpath = f"if(match(\"{I}\", \"^\\D\"), replace(\"{I}\", \"^\\D+\", \"\"), \"{I}\")"
-LOGS = (f"index=cisco_syslog host=\"{N}\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) "
+LOGS = (f"`mdt_syslog_index` host=\"{N}\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) "
         f"| eval tp={tokpath} | where match(message, \"(?<![\\d/])\" . tp . \"(?![\\d/])\") "
         "| table _time severity message | sort - _time | head 200")
 

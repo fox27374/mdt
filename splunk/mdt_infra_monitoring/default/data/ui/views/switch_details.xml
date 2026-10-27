@@ -341,7 +341,7 @@
    "type": "ds.search",
    "name": "logs",
    "options": {
-    "query": "index=cisco_syslog host=\"$tk_node$\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) | table _time severity message | sort - _time | head 200"
+    "query": "`mdt_syslog_index` host=\"$tk_node$\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) | table _time severity message | sort - _time | head 200"
    }
   },
   "ds_ports": {

@@ -4,7 +4,7 @@ import json, os, sys
 
 OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data", "ui", "views", "wireless_overview.xml")
 
-W = 'index=cisco_metrics extracted_source="$wlc$"'
+W = '`mdt_metrics_index` extracted_source="$wlc$"'
 BAND = lambda f: f'band=case({f}=0, "2.4 GHz", {f}=1, "5 GHz", {f}=2, "6 GHz")'
 COLORS = {"2.4 GHz": "#1e93c6", "5 GHz": "#f2b827", "6 GHz": "#d6563c"}
 # gnmic samples every 30s: take the latest value per series and minute, then add up across APs (summing raw samples counts each twice).
@@ -44,7 +44,7 @@ APS = (f"| mstats latest(_value) WHERE {W} metric_name=mdt_wl_info_eth_mac BY et
        "| eval State=coalesce(ap_operation_state, \"not joined\")")
 
 bases = {
-    "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE index=cisco_metrics metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
+    "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
     "ds_clients_now": CLIENTS + "| stats sum(c) as c by _time | stats latest(c) as clients",
     "ds_aps": APS,
     "ds_sys_now": SYS,

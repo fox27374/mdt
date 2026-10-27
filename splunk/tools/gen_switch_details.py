@@ -33,7 +33,7 @@ bases = {
     "ds_mem": f"`mdt_mem({N})` | stats latest(mem) as mem | eval mem=round(mem, 0)",
     # MACs on port-channels and VLANs; the Interfaces table shows those on front-panel ports.
     "ds_mac": f"`mdt_mac({N},*)` | where NOT (`mdt_is_physical`) | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node",
-    "ds_logs": f"index=cisco_syslog host=\"{N}\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) "
+    "ds_logs": f"`mdt_syslog_index` host=\"{N}\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) "
                f"| table _time severity message | sort - _time | head 200",
 }
 # Time charts leave out the current 5-minute bucket: not every port has reported in it yet, so its sum is too low.

@@ -8,24 +8,29 @@ OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data",
 PIPE = ('case(match(metric_name, "^mdt_xe_"), "gnmic IOS-XE", match(metric_name, "^mdt_nx_"), "gnmic NX-OS", '
         'match(metric_name, "^mdt_wl_"), "gnmic WLC", match(metric_name, "^mdt_panos_"), "gnmic PAN-OS", '
         'match(metric_name, "^cisco[.]"), "OTel dial-out", match(metric_name, "^(system[.]|up$|scrape_)"), "Collector host", true(), "Other")')
-LIC = "(idx=cisco_metrics OR idx=cisco_syslog)"
+# The app's index names, read from the mdt_metrics_index / mdt_syslog_index macros (local overrides included):
+# a subsearch that returns (<field>=<metrics index> OR <field>=<syslog index>).
+def indexes(field):
+    return ('[| rest splunk_server=local /servicesNS/-/mdt_infra_monitoring/admin/macros count=0 '
+            '| search title=mdt_metrics_index OR title=mdt_syslog_index '
+            f'| rex field=definition "index=\\"?(?<{field}>[^\\"\\s)]+)" | dedup {field} | fields {field}]')
+LIC = indexes("idx")
 POOL = ('| appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise '
         '| eval pool_bytes=tonumber(effective_quota) | fields pool_bytes]')
-# Configured devices (gnmic mdt.yaml targets and the switches that dial out to the OTel collector). Silent when they send nothing.
-GNMIC = "ibk-lab-sw98,ibk-lab-sw99,ibk-lab-sw03,ntsnxsw01,ntsnxsw02,ibk-lab-ewlc01,Lab-IBK-PA560-2"
-OTEL = "ibk-lab-sw05,ibk-lab-sw11,ibk-lab-sw12,ibk-lab-sw13"
-
-# Devices: data points and last time over the last 15 minutes, distinct gnmic subscriptions, and the configured list.
+# Devices: data points and last time over the last 15 minutes, distinct gnmic subscriptions, and every device seen in the last 7 days
+# (expected devices: one that is silent in the picked range shows as silent, not missing). The 7-day subsearch has its own earliest.
 DEVICES = (
-    "| mstats count(_value) as n latest_time(_value) as t WHERE index=cisco_metrics metric_name=* earliest=-15m BY metric_name extracted_source "
+    "| mstats count(_value) as n latest_time(_value) as t WHERE `mdt_metrics_index` metric_name=* earliest=-15m BY metric_name extracted_source "
     f"| eval pipe={PIPE}, device=extracted_source "
     "| where pipe!=\"Collector host\" AND isnotnull(device) "
     "| stats sum(n) as n max(t) as seen values(pipe) as pipe by device "
-    "| append [| mstats count(_value) as n WHERE index=cisco_metrics metric_name=mdt_* earliest=-15m BY extracted_source subscription_name "
+    "| append [| mstats count(_value) as n WHERE `mdt_metrics_index` metric_name=mdt_* earliest=-15m BY extracted_source subscription_name "
     "| stats dc(subscription_name) as subs by extracted_source | rename extracted_source as device] "
     "| stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device "
-    f"| append [| makeresults | eval device=split(\"{GNMIC}\", \",\") | mvexpand device | eval pipe=\"gnmic\"] "
-    f"| append [| makeresults | eval device=split(\"{OTEL}\", \",\") | mvexpand device | eval pipe=\"OTel dial-out\"] "
+    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` metric_name=* earliest=-7d BY metric_name extracted_source "
+    f"| eval pipe={PIPE}, device=extracted_source "
+    "| where pipe!=\"Collector host\" AND isnotnull(device) "
+    "| stats max(t) as seen values(pipe) as pipe by device] "
     "| stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device "
     "| eval Pipeline=case(match(mvjoin(pipe, \",\"), \"gnmic\"), \"gnmic\", match(mvjoin(pipe, \",\"), \"OTel\"), \"OTel dial-out\", true(), \"Other\")"
 )
@@ -34,10 +39,10 @@ DEVICES = (
 USAGE = f"index=_internal source=*license_usage.log type=Usage {LIC}"
 
 bases = {
-    "ds_tile_metrics": "| mstats count(_value) as n WHERE index=cisco_metrics metric_name=* earliest=-15m "
+    "ds_tile_metrics": "| mstats count(_value) as n WHERE `mdt_metrics_index` metric_name=* earliest=-15m "
                        "| eval rate=round(n / 900, 0) | fields rate",
     "ds_devices": DEVICES,
-    "ds_subs": "| mstats count(_value) WHERE index=cisco_metrics metric_name=mdt_* earliest=-15m BY extracted_source subscription_name "
+    "ds_subs": "| mstats count(_value) WHERE `mdt_metrics_index` metric_name=mdt_* earliest=-15m BY extracted_source subscription_name "
                "| stats count as subscriptions",
     "ds_lic_today": f"{USAGE} | stats sum(b) as bytes",
     "ds_lic_table": (f"{USAGE} "
@@ -50,10 +55,10 @@ bases = {
                      "| table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\""),
     "ds_lic_chart": f"{USAGE} | bin _time span=1d | stats sum(b) as bytes by _time idx "
                     "| eval MB=round(bytes / 1048576, 1) | xyseries _time idx MB | fillnull value=0",
-    "ds_ingest": "| mstats count(_value) as n WHERE index=cisco_metrics metric_name=* BY metric_name span=5m "
+    "ds_ingest": "| mstats count(_value) as n WHERE `mdt_metrics_index` metric_name=* BY metric_name span=5m "
                  f"| eval pipe={PIPE} | stats sum(n) as n by _time pipe "
                  "| where _time + 300 <= now() | eval rate=round(n / 300, 1) | xyseries _time pipe rate | fillnull value=0",
-    "ds_storage": "| rest /services/data/indexes datatype=all count=0 | search title=cisco_metrics OR title=cisco_syslog "
+    "ds_storage": "| rest /services/data/indexes datatype=all count=0 | search " + indexes("title") + " "
                   "| eval Index=title, Type=if(datatype=\"metric\", \"metric\", \"event\"), \"Size on disk (MB)\"=round(currentDBSizeMB, 1), "
                   "\"Events / data points\"=totalEventCount, \"Retention (days)\"=round(frozenTimePeriodInSecs / 86400, 0) "
                   "| table Index Type \"Size on disk (MB)\" \"Events / data points\" \"Retention (days)\" | sort Index",
