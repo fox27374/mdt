@@ -21,6 +21,8 @@ bases = {
                  # PoE per port, joined on the interface key: gnmic and OTel name the same port with the same short or long form.
                  f"| eval inorm=`mdt_ifkey(interface)` | join type=left node inorm [`mdt_poe_port({N})` "
                  f"| eval inorm=`mdt_ifkey(interface)` | fields node inorm poe_w poe_state pd_class] "
+                 # Port-channel a member port belongs to (port-channel103, the key the port-channel rows use).
+                 f"| join type=left node inorm [`mdt_lag_members({N})` | rename member as inorm, po as port_channel | fields node inorm port_channel] "
                  # Errors in the time range, for the red frame on the faceplate.
                  f"| join type=left node interface [`mdt_if_counters({N},*)` | `mdt_if_rates` "
                  f"| stats sum(in_errs) as in_errs sum(out_errs) as out_errs by node interface | where in_errs + out_errs > 0]",
@@ -45,7 +47,9 @@ chains = {  # name: (base, post-process)
                  f"| eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
                  # Uplinks learn hundreds of MACs; the first 5 are listed, the count is in macs.
                  "| eval neighbour=mvjoin(neighbour, \", \"), mac_list=mvjoin(mvindex(mac_list, 0, min(4, mvcount(mac_list) - 1)), \", \") "
-                 "| fillnull value=0 macs | fillnull value=\"\" neighbour mac_list | fields interface state speed neighbour macs mac_list poe_w poe_state pd_class in_errs out_errs model"),
+                 "| fillnull value=0 macs | fillnull value=\"\" neighbour mac_list "
+                 "| eval port_channel=if(isnull(port_channel), \"\", \"Po\".replace(port_channel, \"^port-channel\", \"\")) | fillnull value=\"\" port_channel "
+                 "| fields interface state speed neighbour macs mac_list poe_w poe_state pd_class in_errs out_errs model port_channel"),
     "ds_nodata": ("ds_status", f"| stats count | where count=0 "
                   f"| eval Note=\"No telemetry for {N}. Switch Details covers switches that stream interface data.\" | fields Note"),
     "ds_ports_up": ("ds_status", f"{slots} | stats count as total sum(oper_up) as up "
@@ -60,7 +64,31 @@ chains = {  # name: (base, post-process)
                         # Uplinks learn hundreds of MACs; list up to 5, count beyond that.
                         f"| eval MACs=case(macs > 5, macs.\" MACs\", macs > 0, mac_list) | fillnull value=\"\" \"Down for\" \"CDP neighbour\" MACs "
                         f"| rename interface as Interface, neighbour as \"CDP neighbour\" "
-                        f"| table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"),
+                        # Member ports show their port-channel (Po103); other ports leave it empty.
+                        f"| eval \"Port-channel\"=if(isnull(port_channel), \"\", \"Po\".replace(port_channel, \"^port-channel\", \"\")) "
+                        f"| table Interface \"Port-channel\" Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"),
+    # Port-channels: one row each, with the member ports (state), the VLANs of the port-channel and the CDP neighbours of
+    # its members (neighbour (remote port)). Rows come from the status search: the port-channel's own row, and member rows
+    # (their port_channel). _port is the port-channel's name as the device names it, the Interface Details token.
+    "ds_pc": ("ds_status", "| eval st=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
+              "| eval is_po=if(match(interface, \"(?i)^(po[0-9]|port-channel[0-9])\"), 1, 0), pc=if(is_po=1, inorm, port_channel) "
+              "| where isnotnull(pc) "
+              f"| join type=left node interface [`mdt_cdp({N})` | eval cn=neighbour.if(coalesce(remote_interface, \"\")=\"\", \"\", \" (\".remote_interface.\")\") "
+              "| stats values(cn) as cn by node interface] "
+              f"| join type=left node pc [`mdt_lag_vlans({N})` | rename po as pc | fields node pc vlans] "
+              # NX-OS port-channels have no speed in mdt_if_status: the bundle speed the device reports.
+              f"| join type=left node pc [`mdt_lag_speed({N})` | rename po as pc, speed as lag_speed | fields node pc lag_speed] "
+              "| eval speed=coalesce(speed, lag_speed) "
+              "| eval mtxt=if(is_po=0, interface.\" (\".st.\")\", null()) "
+              "| stats values(eval(if(is_po=1, interface, null()))) as po_raw values(eval(if(is_po=1, st, null()))) as pst "
+              "max(eval(if(is_po=1, speed, null()))) as speed values(eval(if(is_po=1, vlans, null()))) as vlans "
+              "values(mtxt) as members values(cn) as cdp by node pc "
+              "| where isnotnull(po_raw) "
+              "| eval \"Port-channel\"=\"Po\".replace(pc, \"^port-channel\", \"\"), Status=mvindex(pst, 0), "
+              "Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\"), "
+              "Members=mvjoin(members, \", \"), VLANs=mvindex(vlans, 0), \"CDP neighbours\"=mvjoin(cdp, \", \"), _port=mvindex(po_raw, 0) "
+              "| fillnull value=\"\" VLANs \"CDP neighbours\" Members "
+              "| sort 0 pc | table \"Port-channel\" Status Speed Members VLANs \"CDP neighbours\" _port"),
     # The gauge has a fixed 0-100 scale, so it shows percent of PoE capacity (drawn + free).
     "ds_poe_gauge": ("ds_poe", "| eval pct=round(used / (used + free) * 100, 0) | fields pct"),
     "ds_throughput": ("ds_rates", "| bin _time span=5m | where _time + 300 <= now() | stats avg(in_bps) as in avg(out_bps) as out by _time interface "
@@ -73,7 +101,7 @@ chains = {  # name: (base, post-process)
 }
 
 import re
-GEN = "mdt_nodes|mdt_if_status|mdt_if_counters|mdt_cpu|mdt_mem|mdt_poe_port|mdt_poe|mdt_cdp|mdt_model|mdt_mac"
+GEN = "mdt_nodes|mdt_if_status|mdt_if_counters|mdt_cpu|mdt_mem|mdt_poe_port|mdt_poe|mdt_cdp|mdt_model|mdt_mac|mdt_lag_members|mdt_lag_vlans|mdt_lag_speed"
 # Generating macros start with mstats, so they need a leading pipe, at query start and inside subsearches.
 bases = {k: re.sub(r"(^|\[)`(" + GEN + ")", r"\1| `\2", q) for k, q in bases.items()}
 dataSources = {k: {"type": "ds.search", "name": k[3:], "options": {"query": q}} for k, q in bases.items()}
@@ -115,6 +143,8 @@ viz = {
                        "eventHandlers": open_port("$row.interface.value$")},
     "viz_ifaces": {**chart("splunk.table", "Interfaces; click a row to open", "ds_ifaces_table", count=100),
                    "eventHandlers": open_port("$row.Interface.value$")},
+    "viz_pc": {**chart("splunk.table", "Port-channels; click a row to open", "ds_pc", count=50, showInternalFields=False),
+               "containerOptions": {"visibility": {"hideWhenNoData": True}}, "eventHandlers": open_port("$row._port.value$")},
     "viz_mac": {**chart("splunk.table", "MAC addresses on port-channels and VLANs", "ds_mac", count=50),
                 "containerOptions": {"visibility": {"hideWhenNoData": True}}},
     "viz_logs": chart("splunk.table", "Syslog", "ds_logs", count=50),
@@ -137,12 +167,14 @@ rows = [  # (item, x, y, w, h)
     ("viz_top_util", 0, 480, 720, 260), ("viz_top_errors", 720, 480, 720, 260),
     ("viz_throughput", 0, 740, 720, 320), ("viz_errors", 720, 740, 720, 320),
     ("viz_ifaces", 0, 1060, 940, 480), ("viz_mac", 940, 1060, 500, 480),
-    ("viz_logs", 0, 1540, 1440, 420),
+    # Full width, hidden on switches without port-channels; the grid keeps its space.
+    ("viz_pc", 0, 1540, 1440, 300),
+    ("viz_logs", 0, 1840, 1440, 420),
 ]
 layout = {
     "type": "grid",
     "globalInputs": ["input_time", "input_node"],
-    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1960},
+    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 2260},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Switch", "layoutId": "layout_1"}]},
 }

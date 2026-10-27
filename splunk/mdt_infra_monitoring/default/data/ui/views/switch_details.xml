@@ -259,6 +259,32 @@
     }
    ]
   },
+  "viz_pc": {
+   "type": "splunk.table",
+   "title": "Port-channels; click a row to open",
+   "dataSources": {
+    "primary": "ds_pc"
+   },
+   "options": {
+    "count": 50,
+    "showInternalFields": false
+   },
+   "showProgressBar": true,
+   "containerOptions": {
+    "visibility": {
+     "hideWhenNoData": true
+    }
+   },
+   "eventHandlers": [
+    {
+     "type": "drilldown.customUrl",
+     "options": {
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row._port.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "newTab": true
+     }
+    }
+   ]
+  },
   "viz_mac": {
    "type": "splunk.table",
    "title": "MAC addresses on port-channels and VLANs",
@@ -299,7 +325,7 @@
    "type": "ds.search",
    "name": "status",
    "options": {
-    "query": "| `mdt_if_status($tk_node$)` | join type=left node interface [| `mdt_cdp($tk_node$)` | stats values(neighbour) as neighbour by node interface] | join type=left node interface [| `mdt_mac($tk_node$,*)` | eval entry=mac.if(vlan==\"-\", \"\", \" (VLAN \".vlan.\")\") | stats dc(mac) as macs values(entry) as mac_list by node interface] | eval inorm=`mdt_ifkey(interface)` | join type=left node inorm [| `mdt_poe_port($tk_node$)` | eval inorm=`mdt_ifkey(interface)` | fields node inorm poe_w poe_state pd_class] | join type=left node interface [| `mdt_if_counters($tk_node$,*)` | `mdt_if_rates` | stats sum(in_errs) as in_errs sum(out_errs) as out_errs by node interface | where in_errs + out_errs > 0]"
+    "query": "| `mdt_if_status($tk_node$)` | join type=left node interface [| `mdt_cdp($tk_node$)` | stats values(neighbour) as neighbour by node interface] | join type=left node interface [| `mdt_mac($tk_node$,*)` | eval entry=mac.if(vlan==\"-\", \"\", \" (VLAN \".vlan.\")\") | stats dc(mac) as macs values(entry) as mac_list by node interface] | eval inorm=`mdt_ifkey(interface)` | join type=left node inorm [| `mdt_poe_port($tk_node$)` | eval inorm=`mdt_ifkey(interface)` | fields node inorm poe_w poe_state pd_class] | join type=left node inorm [| `mdt_lag_members($tk_node$)` | rename member as inorm, po as port_channel | fields node inorm port_channel] | join type=left node interface [| `mdt_if_counters($tk_node$,*)` | `mdt_if_rates` | stats sum(in_errs) as in_errs sum(out_errs) as out_errs by node interface | where in_errs + out_errs > 0]"
    }
   },
   "ds_rates": {
@@ -349,7 +375,7 @@
    "name": "ports",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | rex field=interface \"^\\D+(?<member>\\d+)/\" | join type=left node member [| `mdt_model($tk_node$)` | fields node member model] | fillnull value=\"\" model | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval neighbour=mvjoin(neighbour, \", \"), mac_list=mvjoin(mvindex(mac_list, 0, min(4, mvcount(mac_list) - 1)), \", \") | fillnull value=0 macs | fillnull value=\"\" neighbour mac_list | fields interface state speed neighbour macs mac_list poe_w poe_state pd_class in_errs out_errs model"
+    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | rex field=interface \"^\\D+(?<member>\\d+)/\" | join type=left node member [| `mdt_model($tk_node$)` | fields node member model] | fillnull value=\"\" model | eval state=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval neighbour=mvjoin(neighbour, \", \"), mac_list=mvjoin(mvindex(mac_list, 0, min(4, mvcount(mac_list) - 1)), \", \") | fillnull value=0 macs | fillnull value=\"\" neighbour mac_list | eval port_channel=if(isnull(port_channel), \"\", \"Po\".replace(port_channel, \"^port-channel\", \"\")) | fillnull value=\"\" port_channel | fields interface state speed neighbour macs mac_list poe_w poe_state pd_class in_errs out_errs model port_channel"
    }
   },
   "ds_nodata": {
@@ -373,7 +399,15 @@
    "name": "ifaces_table",
    "options": {
     "extend": "ds_status",
-    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) | eval MACs=case(macs > 5, macs.\" MACs\", macs > 0, mac_list) | fillnull value=\"\" \"Down for\" \"CDP neighbour\" MACs | rename interface as Interface, neighbour as \"CDP neighbour\" | table Interface Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"
+    "query": "| `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") | eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) | eval \"Down for\"=if(oper_up==0 AND isnotnull(last_change), trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), null()) | eval MACs=case(macs > 5, macs.\" MACs\", macs > 0, mac_list) | fillnull value=\"\" \"Down for\" \"CDP neighbour\" MACs | rename interface as Interface, neighbour as \"CDP neighbour\" | eval \"Port-channel\"=if(isnull(port_channel), \"\", \"Po\".replace(port_channel, \"^port-channel\", \"\")) | table Interface \"Port-channel\" Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"
+   }
+  },
+  "ds_pc": {
+   "type": "ds.chain",
+   "name": "pc",
+   "options": {
+    "extend": "ds_status",
+    "query": "| eval st=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval is_po=if(match(interface, \"(?i)^(po[0-9]|port-channel[0-9])\"), 1, 0), pc=if(is_po=1, inorm, port_channel) | where isnotnull(pc) | join type=left node interface [`mdt_cdp($tk_node$)` | eval cn=neighbour.if(coalesce(remote_interface, \"\")=\"\", \"\", \" (\".remote_interface.\")\") | stats values(cn) as cn by node interface] | join type=left node pc [`mdt_lag_vlans($tk_node$)` | rename po as pc | fields node pc vlans] | join type=left node pc [`mdt_lag_speed($tk_node$)` | rename po as pc, speed as lag_speed | fields node pc lag_speed] | eval speed=coalesce(speed, lag_speed) | eval mtxt=if(is_po=0, interface.\" (\".st.\")\", null()) | stats values(eval(if(is_po=1, interface, null()))) as po_raw values(eval(if(is_po=1, st, null()))) as pst max(eval(if(is_po=1, speed, null()))) as speed values(eval(if(is_po=1, vlans, null()))) as vlans values(mtxt) as members values(cn) as cdp by node pc | where isnotnull(po_raw) | eval \"Port-channel\"=\"Po\".replace(pc, \"^port-channel\", \"\"), Status=mvindex(pst, 0), Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\"), Members=mvjoin(members, \", \"), VLANs=mvindex(vlans, 0), \"CDP neighbours\"=mvjoin(cdp, \", \"), _port=mvindex(po_raw, 0) | fillnull value=\"\" VLANs \"CDP neighbours\" Members | sort 0 pc | table \"Port-channel\" Status Speed Members VLANs \"CDP neighbours\" _port"
    }
   },
   "ds_poe_gauge": {
@@ -428,7 +462,7 @@
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 1960
+     "height": 2260
     },
     "structure": [
      {
@@ -552,11 +586,21 @@
       }
      },
      {
-      "item": "viz_logs",
+      "item": "viz_pc",
       "type": "block",
       "position": {
        "x": 0,
        "y": 1540,
+       "w": 1440,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_logs",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 1840,
        "w": 1440,
        "h": 420
       }

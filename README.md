@@ -75,7 +75,9 @@ Subscriptions are grouped by platform:
 
 - **Cisco IOS-XE switches** (`xe_*`) — interface stats, CPU, memory, PoE, interface
   info, CDP neighbors, MAC table, ARP table (`xe_arp_info`, all VRFs, 5 min), per-port PoE (`xe_poe_stats`) and the chassis part number
-  (`xe_inventory`, 1 h), which names the switch model on the Switch Details faceplate.
+  (`xe_inventory`, 1 h), which names the switch model on the Switch Details faceplate. `xe_lag_info` (5 min) gives the
+  port-channel of each member port (`ethernet/state/aggregate-id`) and the switchport VLANs of port-channels
+  (`aggregation/switched-vlan`: interface mode, access VLAN, restricted trunk VLANs; empty trunk list = all VLANs).
 
 IOS-XE switches that are not gnmic targets send the same data by gRPC dial-out to the OTel collector
 (port 57000). Their subscriptions are defined in [config/dialout-iosxe.yaml](config/dialout-iosxe.yaml)
@@ -84,7 +86,9 @@ IDs 57001-57099 on the switch (running config only). **Dial-in and dial-out carr
 a change to an `xe_*` subscription in `mdt.yaml` gets the same change in `dialout-iosxe.yaml` and, for new
 metric names, in `filter/cisco` and `transform/cisco` in `otel.yaml`.
 - **Cisco NX-OS switches** (`nx_*`) — interface stats/info, CPU load, memory, CDP, MAC (5 min),
-  ARP adjacencies (`nx_arp_info`, 5 min, DME path, split per entry like `nx_mac_info`)
+  ARP adjacencies (`nx_arp_info`, 5 min, DME path, split per entry like `nx_mac_info`), port-channels
+  (`nx_lag_info`, 5 min, `/System/intf-items/aggr-items/AggrIf-list`: operational mode, access and trunk VLANs,
+  member ports `rsmbrIfs`, split per port-channel by `nx-normalize-interfaces`)
   (uses `config/ca.pem` for TLS).
 - **Cisco Catalyst WLC** (`wl_*`) — wireless client signal/SNR/retries, AP utilization
   and noise, client/AP/SSID mappings, and client roaming history (`wl_client_roam`).
@@ -106,13 +110,80 @@ event. The dial-out subscription is `57009` in `dialout-iosxe.yaml`.
 - **`nx-normalize-interfaces`** — reshapes NX-OS interface stats so counters carry an
   `interface_name` tag.
 - **`drop-if-stats-interfaces`** — drops virtual/uninteresting interfaces (VLAN,
-  loopback, tunnel, port-channel, etc.).
+  loopback, tunnel, etc.). Port-channels are kept (since 2026-10-27): their status, counters and members are
+  shown in Switch Details. The dashboards keep totals (ports up %, throughput, errors, faceplate) on front-panel
+  ports only (`mdt_is_physical`), so a port-channel is not counted twice.
+- **`drop-xe-lag-empty`** — drops `xe_lag_info` events with no value (ports that are not members, unset VLANs).
 - **`rename-metrics`** — shortens metric names to their leaf (`path-base`).
 - **`delete-nx-cdp-fields`** — strips noisy NX-OS CDP fields.
 - **`delete-nx-if-stats-fields`** — drops the NX-OS pause and MAC control frame counters.
 - **`wl-split-roam-history`** — splits the WLC client roaming history into one event per association,
   with client MAC, AP, BSSID, radio slot, roam type and association time as labels and `run-latency` (ms)
   as the only metric (`mdt_wl_client_roam_run_latency`). Identity is the association time, not the list index.
+
+## Switch configuration
+
+### NX-OS: gRPC concurrent-call limit
+
+The gRPC setup for NX-OS (certificate, `feature grpc`, port 57400) is listed as comments above the NX-OS
+targets in `config/mdt.yaml`.
+
+NX-OS allows **8 concurrent gNMI calls per VRF by default** (configurable 1-16). Every gnmic subscription is
+one long-lived Subscribe call, and so is each one-off `gnmic get`. With 8 `nx_*` subscriptions per Nexus the
+default is used up: any further subscription or Get fails with
+
+```
+rpc error: code = ResourceExhausted desc = Max worker thread limit reached: 8
+```
+
+Raise the limit to the maximum on every Nexus target (ntsnxsw01 and ntsnxsw02 run with 16 since 2026-10-27):
+
+```
+configure terminal
+ grpc gnmi max-concurrent-calls 16
+end
+copy running-config startup-config
+```
+
+Open calls are not affected, gnmic needs no restart. Check the limit and the calls in use:
+
+```
+show grpc gnmi service statistics
+  Max concurrent calls : 16
+  Active calls         : 8
+```
+
+Keep the number of `nx_*` subscriptions plus concurrent Gets below 16. If more are needed, merge subscriptions
+with the same sample interval into one subscription (several `paths`); that renames their metrics
+(`mdt_nx_<subscription>_*`), so the Splunk macros and the `otel.yaml` scrape jobs change with them.
+
+### Port-channels
+
+Port-channels (NX-OS `po103`, IOS-XE `Port-channel22`) show on Switch Details: status, speed, member ports with
+their state, VLANs and the CDP neighbours of the members. Data:
+
+- **NX-OS** `nx_lag_info` (5 min, `/System/intf-items/aggr-items/AggrIf-list`): the operational switchport mode
+  (`aggrif-items/operMode`, access or trunk; the top-level `mode` leaf is always trunk and is not used), the bundle
+  speed (`operSpeed`), the access and trunk VLANs and the member ports (`rsmbrIfs`). The device sends the whole list in
+  one event; `nx-normalize-interfaces` splits it per port-channel. Each leaf is a metric with its value as label:
+  `mdt_nx_lag_info_mode`, `_accessVlan`, `_trunkVlans`, `_operSpeed`, `_member`.
+- **IOS-XE** `xe_lag_info` (5 min, openconfig): the member's `ethernet/state/aggregate-id` names its port-channel
+  (`mdt_xe_lag_info_aggregate_id`), the port-channel's `aggregation/switched-vlan` gives the interface mode, access VLAN
+  and restricted trunk list (`mdt_xe_lag_info_interface_mode`, `_access_vlan`, `_trunk_vlans`). An empty trunk list
+  means all VLANs. Empty values are dropped by `drop-xe-lag-empty`. The IOS-XE port-channel paths were checked with
+  `gnmic get` on border01 (17.18); a live subscription on a port-channel was not checked yet (no IOS-XE 17 port-channel
+  reachable during the change).
+- Port-channels are no longer dropped (`drop-if-stats-interfaces` in `mdt.yaml`, `filter/cisco` in `otel.yaml`), so
+  they also get status and counters. Every total on the dashboards (ports up %, throughput, errors, the faceplate and
+  the Network Overview) still counts front-panel ports only (`mdt_is_physical`).
+
+The Splunk macros `mdt_lag_members`, `mdt_lag_vlans` and `mdt_lag_speed` read these metrics and name the
+port-channel the same way as the interfaces (`mdt_ifkey`: `port-channel103`, `eth1/3`).
+
+**Gap: IOS-XE 16.12 dial-out (sw11, sw12, sw13, seminar).** Their port-channels show status and counters from the
+dial-out interface subscription, but no members and no VLANs. The openconfig xpaths that would carry them are
+rejected by the device (`show telemetry ietf subscription 57010 detail`: "Invalid XPath filter"), so `xe_lag_info` is
+not in `dialout-iosxe.yaml`. Dial-in (gnmic) switches are not affected.
 
 ## Usage
 

@@ -48,7 +48,9 @@ FLOW = (
 THIS = "| where side=\"this\""
 
 # Device status of the port (one row), with its CDP neighbour and far-end port.
-STATUS = (f"| `mdt_if_status({N})` {phys} {PICK_ONE} | eval inorm=`mdt_ifkey(interface)` "
+# Front-panel ports and port-channels (a port-channel's counters and status are not physical-only, but its ports are the front-panel ones).
+PO_OR_PHYS = "| where (`mdt_is_physical` OR match(interface, \"(?i)^(port-channel|po[0-9])\"))"
+STATUS = (f"| `mdt_if_status({N})` {PO_OR_PHYS} {PICK_ONE} | eval inorm=`mdt_ifkey(interface)` "
           "| join type=left node inorm [| `mdt_links`] "
           "| join type=left far_node far_inorm [| `mdt_if_status(*)` " + phys + " | eval inorm=`mdt_ifkey(interface)` "
           "| rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] "
@@ -98,7 +100,9 @@ COMPARE = (
 
 bases = {
     "ds_nodes": "| `mdt_nodes($global_time.earliest$)`",
-    "ds_ifaces": f"| `mdt_if_status({N})` {slots} | fields interface",
+    # Port-channels are listed after the front-panel ports, so a port-channel opened from Switch Details is in the dropdown.
+    "ds_ifaces": f"| `mdt_if_status({N})` {slots} | fields interface "
+                 f"| append [| `mdt_if_status({N})` | where match(interface, \"(?i)^(port-channel|po[0-9])\") | fields interface]",
     "ds_status": STATUS,
     "ds_macs": MACS,
     "ds_logs": LOGS,
