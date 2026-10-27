@@ -88,7 +88,7 @@ chains = {  # name: (base, post-process)
               "Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\"), "
               "Members=mvjoin(members, \", \"), VLANs=mvindex(vlans, 0), \"CDP neighbours\"=mvjoin(cdp, \", \"), _port=mvindex(po_raw, 0) "
               "| fillnull value=\"\" VLANs \"CDP neighbours\" Members "
-              "| sort 0 pc | table \"Port-channel\" Status Speed Members VLANs \"CDP neighbours\" _port"),
+              "| eval n=tonumber(replace(pc, \"^port-channel\", \"\")) | sort 0 n | table \"Port-channel\" Status Speed Members VLANs \"CDP neighbours\" _port"),
     # The gauge has a fixed 0-100 scale, so it shows percent of PoE capacity (drawn + free).
     "ds_poe_gauge": ("ds_poe", "| eval pct=round(used / (used + free) * 100, 0) | fields pct"),
     "ds_throughput": ("ds_rates", "| bin _time span=5m | where _time + 300 <= now() | stats avg(in_bps) as in avg(out_bps) as out by _time interface "
