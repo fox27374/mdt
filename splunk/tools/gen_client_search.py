@@ -40,6 +40,8 @@ WIRED = (
     "| eval mac=lower(mac) | where NOT match(mac, \"^(00:00:0c:07:ac|00:00:0c:9f:f|00:00:5e:00:01)\") | where NOT match(port, \"(?i)^(sup|cpu|vl|lo|nve|tu|app|mgmt)\") "
     "| eval ik=lower(node).\"|\".`mdt_ifkey(port)` "
     "| join type=left ik [| `mdt_cdp(*)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)`, is_cdp=1 | dedup ik | fields ik is_cdp] "
+    # MAC tables name ports short (Gi1/0/9); the Interface Details drilldown needs the telemetry name (GigabitEthernet1/0/9).
+    "| join type=left ik [| `mdt_if_status(*)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)` | dedup ik | rename interface as ifname | fields ik ifname] "
     "| eval prio=if(is_cdp=1, 2, 1), type=\"Wired\"]"
 )
 
@@ -80,7 +82,7 @@ ROWS = (
     "\"Last seen\"=strftime(t, \"%Y-%m-%d %H:%M\"), "
     # Drilldown parts (hidden: leading _). Studio URL-encodes a token, so the URL template holds the path and each part fills one slot.
     # Port-channels have no Interface Details (drop-if-stats-interfaces drops their stats): those open Switch Details.
-    "_view=case(type=\"Wireless\", \"wireless_client_details\", match(port, \"(?i)^po\"), \"switch_details\", true(), \"interface_details\"), _wlc=coalesce(wlc, \"-\"), _node=coalesce(node, \"-\"), _port=coalesce(port, \"-\") "
+    "_view=case(type=\"Wireless\", \"wireless_client_details\", match(port, \"(?i)^po\"), \"switch_details\", true(), \"interface_details\"), _wlc=coalesce(wlc, \"-\"), _node=coalesce(node, \"-\"), _port=coalesce(ifname, port, \"-\") "
     "| sort 0 - t "
     "| table Type MAC IP Name Where \"Last seen\" _view _wlc _node _port"
 )
