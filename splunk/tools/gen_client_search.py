@@ -37,7 +37,7 @@ WIRED = (
     "| append [| mstats latest_time(_value) as t WHERE index=cisco_metrics metric_name=cisco.port_info BY extracted_source port mac "
     "| rename extracted_source as node] "
     # FHRP virtual MACs (HSRP v1/v2, VRRP) are gateways, not clients.
-    "| eval mac=lower(mac) | where NOT match(mac, \"^(00:00:0c:07:ac|00:00:0c:9f:f|00:00:5e:00:01)\") | where NOT match(port, \"(?i)^(sup|cpu|vl|lo|nve|tu|app|mgmt)\") "
+    "| eval mac=lower(mac) | where NOT match(mac, \"^(00:00:0c:07:ac|00:00:0c:9f:f|00:00:5e:00:01)\") | where NOT match(port, \"(?i)^(sup|cpu|vl|lo|nve|tu|app|mgmt|drop)\") "
     "| eval ik=lower(node).\"|\".`mdt_ifkey(port)` "
     "| join type=left ik [| `mdt_cdp(*)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)`, is_cdp=1 | dedup ik | fields ik is_cdp] "
     # MAC tables name ports short (Gi1/0/9); the Interface Details drilldown needs the telemetry name (GigabitEthernet1/0/9).
