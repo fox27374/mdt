@@ -431,6 +431,7 @@ subscriptions:
   nx_cdp_info:
     paths:
       - "/System/cdp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/devId"
+      - "/System/cdp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/portId"
     mode: stream
     encoding: json
     stream-mode: sample
@@ -679,8 +680,9 @@ processors:
           tags: ($ev.tags + ($tags | map_values(tostring))), values: $values};
         if ($ev.tags["subscription-name"] == "nx_cdp_info") then
           # ponytail: one neighbour per port; a second adjacency on the same port is dropped
-          rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(.devId != null)
-          | entry({interface_name: .id}; {devId: .devId})
+          # devId and portId arrive as separate events (one per path): each becomes its own metric, joined by port in mdt_cdp.
+          rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(.devId != null or .portId != null)
+          | entry({interface_name: .id}; {devId: .devId, portId: .portId} | with_entries(select(.value != null)))
         elif ($ev.tags["subscription-name"] == "nx_if_errors") then
           rows("PhysIf-list\\.(?P<idx>[0-9]+)/")[] | select(.id != null)
           | entry({interface_name: .id}; del(.id))
