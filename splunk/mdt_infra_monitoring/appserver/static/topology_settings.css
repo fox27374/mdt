@@ -5,3 +5,7 @@
 /* Tab buttons (link input "tab") side by side instead of one per line */
 .input-link { width: auto !important; }
 .input-link button { width: auto !important; }
+
+/* Tables: Splunk's JS marks the hovered row "highlighted" and paints it dark blue over the colour-coded cells,
+   which keep their inline dark text. */
+.table-drilldown-row > tbody > tr.highlighted > td { color: #fff !important; }
