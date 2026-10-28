@@ -180,10 +180,16 @@ their state, VLANs and the CDP neighbours of the members. Data:
 The Splunk macros `mdt_lag_members`, `mdt_lag_vlans` and `mdt_lag_speed` read these metrics and name the
 port-channel the same way as the interfaces (`mdt_ifkey`: `port-channel103`, `eth1/3`).
 
-**Gap: IOS-XE 16.12 dial-out (sw11, sw12, sw13, seminar).** Their port-channels show status and counters from the
-dial-out interface subscription, but no members and no VLANs. The openconfig xpaths that would carry them are
-rejected by the device (`show telemetry ietf subscription 57010 detail`: "Invalid XPath filter"), so `xe_lag_info` is
-not in `dialout-iosxe.yaml`. Dial-in (gnmic) switches are not affected.
+**IOS-XE 16.12 dial-out (sw11, sw12, sw13, seminar).** `xe_lag_info` is in `dialout-iosxe.yaml` (57010, 57011), with
+two differences from gnmic:
+- 16.12 takes openconfig xpaths only with the short module prefixes (`/oc-if:interfaces/interface/oc-eth:ethernet/...`);
+  the full module names are "Invalid XPath filter".
+- It accepts `aggregation/switched-vlan` (the port-channel's own VLANs) but never sends it. 57011 reads the physical
+  ports' `ethernet/switched-vlan` instead, and `mdt_lag_vlans` gives a port-channel the VLANs of its members.
+
+The physical ports' VLANs also stand in for the VLAN of a learned MAC on these switches (Interface Details, Client
+Search): the dial-out receiver drops the MAC table's numeric `vlan-id-number` key. An access port shows its access
+VLAN, a trunk port shows `trunk`.
 
 ## Usage
 

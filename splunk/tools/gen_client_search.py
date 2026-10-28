@@ -33,7 +33,7 @@ WIRED = (
     "| rename extracted_source as node, matm_mac_entry_mac as mac, matm_mac_entry_vlan_id_number as vlan "
     "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` metric_name=mdt_nx_mac_info_age BY extracted_source port vlan mac type "
     "| rename extracted_source as node | where type!=\"gateway\" | eval vlan=replace(vlan, \"^vlan-\", \"\")] "
-    # Dial-out has no VLAN (the yang_grpc receiver drops numeric keys, otel.yaml): shown as VLAN -.
+    # Dial-out has no VLAN (the yang_grpc receiver drops numeric keys, otel.yaml): the port's, from mdt_port_vlan.
     "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` metric_name=cisco.port_info BY extracted_source port mac "
     "| rename extracted_source as node] "
     # FHRP virtual MACs (HSRP v1/v2, VRRP) are gateways, not clients.
@@ -42,6 +42,7 @@ WIRED = (
     "| join type=left ik [| `mdt_cdp(*)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)`, is_cdp=1 | dedup ik | fields ik is_cdp] "
     # MAC tables name ports short (Gi1/0/9); the Interface Details drilldown needs the telemetry name (GigabitEthernet1/0/9).
     "| join type=left ik [| `mdt_if_status(*)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)` | dedup ik | rename interface as ifname | fields ik ifname] "
+    "| join type=left ik [| `mdt_port_vlan(*)` | eval ik=lower(node).\"|\".ik | fields ik port_vlan] | eval vlan=coalesce(vlan, port_vlan) "
     "| eval prio=if(is_cdp=1, 2, 1), type=\"Wired\"]"
 )
 
