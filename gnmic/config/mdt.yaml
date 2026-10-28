@@ -208,6 +208,7 @@ targets:
     password: "${FW_PASSWORD}"
     subscriptions:
       - panos_if_stats
+      - panos_if_info
       - panos_session_stats
 
   172.24.88.157:9339:
@@ -216,6 +217,7 @@ targets:
     password: "${FW_PASSWORD}"
     subscriptions:
       - panos_if_stats
+      - panos_if_info
       - panos_session_stats
 
 ###################################
@@ -578,6 +580,19 @@ subscriptions:
       - "oc-if:/interfaces/interface/state/counters/out-errors"
     mode: stream
     sample-interval: 30s
+    outputs:
+      - nats
+
+  # Negotiated speed and duplex per port (strings: a value-1 series with the value as label, like nx_if_info port-speed).
+  # port-speed is SPEED_UNKNOWN with auto-negotiation on, so the negotiated leaves are the ones that say something.
+  panos_if_info:
+    paths:
+      - "oc-if:/interfaces/interface/ethernet/state/negotiated-port-speed"
+      - "oc-if:/interfaces/interface/ethernet/state/negotiated-duplex-mode"
+      - "oc-if:/interfaces/interface/ethernet/state/auto-negotiate"
+    mode: stream
+    stream-mode: sample
+    sample-interval: 300s
     outputs:
       - nats
 
