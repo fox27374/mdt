@@ -42,7 +42,7 @@
   </row>
   <row depends="$show_overview$">
     <panel>
-      <title>CDP topology. Switches and APs (wifi icon) by health: green OK, yellow warning, red critical, dark grey no data. Click a switch for Switch Details, an AP for Wireless Overview</title>
+      <title>CDP topology. Switches, APs (wifi icon) and firewalls (brick wall) by health: green OK, yellow warning, red critical, dark grey no data. Click a switch for Switch Details, an AP for Wireless Overview, a firewall for Firewall Details</title>
       <viz type="network-diagram-viz.network-diagram-viz">
         <search>
           <query>| `mdt_cdp(*)`
@@ -57,11 +57,12 @@
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
 | append [| `mdt_switch_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d") | rename node as from | fields from color]
 | append [| `mdt_ap_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="wifi" | rename ap as from | fields from color type]
+| append [| `mdt_firewall_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/firewall-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg", from=lower(node) | fields from color type customurl]
 | appendpipe [| `mdt_topology_positions`]
 | eventstats max(x) as x max(y) as y max(value) as value by from
 | eventstats values(eval(if(isnull(x), from, null()))) as hidden
 | where isnotnull(x) AND (isnull(hidden) OR isnull(to) OR isnull(mvfind(hidden, "^\Q".to."\E$")))
-| table from to linkwidth color type x y value</query>
+| table from to linkwidth color type customurl x y value</query>
           <earliest>-15m</earliest>
           <latest>now</latest>
           <refresh>1m</refresh>
@@ -95,10 +96,13 @@
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
         <drilldown>
-          <!-- Click fields are eval names in single quotes ($tokens$ are not substituted here). row.type is wifi for APs (icon type);
+          <!-- Click fields are eval names in single quotes ($tokens$ are not substituted here). row.type is wifi for APs and customimage for firewalls (icon type);
                row.value is the node's role (tooltip). Viz drilldownClick=single fires on double click only (see report). -->
           <condition match="'row.type'=&quot;wifi&quot; OR 'row.value'=&quot;wlc&quot;">
             <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+          </condition>
+          <condition match="'row.type'=&quot;customimage&quot;">
+            <link target="_blank">/app/mdt_infra_monitoring/firewall_details</link>
           </condition>
           <condition>
             <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$</link>
@@ -312,7 +316,7 @@
         <ul>
           <li>Patterns are host names. * matches any text. A device takes the role of the longest pattern that matches it. Adding an existing pattern changes its role.</li>
           <li>Roles: core, distribution and access are the rows of the tree, top to bottom. APs (wifi) are always the bottom row and need no entry.</li>
-          <li>wlc, firewall and server sit on the distribution row, right of the distribution switches.</li>
+          <li>Firewalls sit above the cores, over their neighbours. wlc and server sit on the distribution row, right of the distribution switches.</li>
           <li>hidden: the device and its links are left out of the topology (for example servers).</li>
           <li>Devices without a role are placed one row below their highest neighbour by CDP link. Devices not reached from a role device go to the islands block on the far right.</li>
           <li>Changes show on the Overview tab after its next refresh (1 minute). Only admin and power users can save.</li>
