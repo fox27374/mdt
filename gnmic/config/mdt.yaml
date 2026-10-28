@@ -202,6 +202,14 @@ targets:
       - wl_client_roam
 
   # PaloAlto Firewalls
+  172.24.88.156:9339:
+    name: "Lab-IBK-PA560-1"
+    username: "${FW_USERNAME}"
+    password: "${FW_PASSWORD}"
+    subscriptions:
+      - panos_if_stats
+      - panos_session_stats
+
   172.24.88.157:9339:
     name: "Lab-IBK-PA560-2"
     username: "${FW_USERNAME}"
