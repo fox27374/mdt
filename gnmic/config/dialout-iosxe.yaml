@@ -27,4 +27,9 @@ subscriptions:
   # device-hardware-oper (what gnmic reads) is accepted but never sent on 16.12; platform-oper part-no is.
   - {id: 57008, gnmic: xe_inventory, period: 3600, xpath: /platform-ios-xe-oper:components/component/state/part-no}
   - {id: 57009, gnmic: xe_arp_info, period: 300, xpath: /arp-ios-xe-oper:arp-data/arp-vrf/arp-oper}
-  # No xe_lag_info here: openconfig xpaths are "Invalid XPath filter" on 16.12 dial-out (see README, Port-channels).
+  # openconfig on 16.12 only with the short module prefixes (oc-if:, oc-eth:, oc-lag:, oc-vlan:); the full module names
+  # are "Invalid XPath filter". aggregation/switched-vlan (the port-channel's VLANs, what gnmic reads) is accepted but never
+  # sent, so 57011 reads the VLANs of the physical ports instead: mdt_lag_vlans takes a port-channel's from its members,
+  # and mdt_mac uses them for the VLAN of a learned MAC (the receiver drops the MAC table's numeric vlan-id-number key).
+  - {id: 57010, gnmic: xe_lag_info, period: 300, xpath: /oc-if:interfaces/interface/oc-eth:ethernet/state/oc-lag:aggregate-id}
+  - {id: 57011, gnmic: xe_lag_info, period: 300, xpath: /oc-if:interfaces/interface/oc-eth:ethernet/oc-vlan:switched-vlan/state}
