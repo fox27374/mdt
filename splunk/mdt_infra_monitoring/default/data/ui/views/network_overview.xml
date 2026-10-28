@@ -96,12 +96,12 @@
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
         <drilldown>
-          <!-- Click fields are eval names in single quotes ($tokens$ are not substituted here). row.type is wifi for APs and customimage for firewalls (icon type);
-               row.value is the node's role (tooltip). Viz drilldownClick=single fires on double click only (see report). -->
+          <!-- Click fields are eval names in single quotes ($tokens$ are not substituted here). row.type is wifi for APs (icon type);
+               row.value is the node's role (tooltip), firewall for firewalls. Viz drilldownClick=single fires on double click only (see report). -->
           <condition match="'row.type'=&quot;wifi&quot; OR 'row.value'=&quot;wlc&quot;">
             <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
           </condition>
-          <condition match="'row.type'=&quot;customimage&quot;">
+          <condition match="'row.value'=&quot;firewall&quot;">
             <link target="_blank">/app/mdt_infra_monitoring/firewall_details</link>
           </condition>
           <condition>
