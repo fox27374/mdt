@@ -9,7 +9,6 @@ receiver:
   port: 57000
 
 switches:  # name: address (gNMI, insecure, port 57400)
-  ibk-lab-sw05: 172.24.80.249
   ibk-lab-sw11: 172.24.80.243
   ibk-lab-sw12: 172.24.80.242
   ibk-lab-sw13: 172.24.80.241
