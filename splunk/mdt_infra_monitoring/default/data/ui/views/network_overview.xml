@@ -47,7 +47,9 @@
         <search>
           <query>| `mdt_cdp(*)`
 | where NOT match(interface, "(?i)^(mgmt|e0m)") AND NOT match(coalesce(remote_interface, ""), "(?i)^(mgmt|e0m)")
-| eval from=node, to=neighbour
+| eval from=node, to=neighbour, nk=lower(neighbour)
+| join type=left nk [| mstats count(_value) WHERE `mdt_metrics_index` metric_name=mdt_panos_* BY extracted_source | eval nk=lower(extracted_source), fw=extracted_source | fields nk fw]
+| eval to=coalesce(fw, to)
 | append [| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_name BY ap_name cdp_cache_data_cdp_cache_device_id
   | eval from=ap_name, to=replace(cdp_cache_data_cdp_cache_device_id, "\..*$", ""), interface="uplink" | fields from to interface]
 | where from!=to
@@ -57,7 +59,7 @@
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
 | append [| `mdt_switch_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d") | rename node as from | fields from color]
 | append [| `mdt_ap_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="wifi" | rename ap as from | fields from color type]
-| append [| `mdt_firewall_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/firewall-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg", from=lower(node) | fields from color type customurl]
+| append [| `mdt_firewall_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/firewall-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg", from=node | fields from color type customurl]
 | appendpipe [| `mdt_topology_positions`]
 | eventstats max(x) as x max(y) as y max(value) as value by from
 | eventstats values(eval(if(isnull(x), from, null()))) as hidden
@@ -102,7 +104,7 @@
             <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
           </condition>
           <condition match="'row.value'=&quot;firewall&quot;">
-            <link target="_blank">/app/mdt_infra_monitoring/firewall_details</link>
+            <link target="_blank">/app/mdt_infra_monitoring/firewall_details?form.tk_fw=$nd_node_token|u$</link>
           </condition>
           <condition>
             <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$</link>
