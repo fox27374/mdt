@@ -4,7 +4,7 @@
     <definition><![CDATA[
 {
  "title": "Switch Details",
- "description": "One switch: ports, CPU, memory, PoE, traffic, errors, CDP neighbours, MAC table and syslog. Covers Cribl (sw11-13) and gnmic (IOS-XE, NX-OS) telemetry.",
+ "description": "One switch: ports, CPU, memory, PoE, traffic, errors, CDP neighbours, MAC table and syslog. Covers gnmic (IOS-XE, NX-OS) and OTel dial-out (IOS-XE) telemetry.",
  "inputs": {
   "input_time": {
    "type": "input.timerange",

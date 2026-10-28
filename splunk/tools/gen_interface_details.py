@@ -16,7 +16,7 @@ MATCH = f"| where node=\"{N}\" AND (interface=\"{I}\" OR path=\"{I}\")"
 PICK_ONE = f"{REX} {MATCH} | sort 0 - oper_up - speed | dedup keepempty=true node path"
 
 # Counters per 5-minute bucket and port, as sums of per-minute deltas (a reset gives no delta) with the sample count.
-# name: raw field from mdt_if_counters / mdt_if_detail. Gnmic only for the detail counters; Cribl reports in/out errors only.
+# name: raw field from mdt_if_counters / mdt_if_detail. A platform without a detail counter reports in/out errors only.
 PAIRS = [("in_oct", "in_octets"), ("out_oct", "out_octets"), ("in_err", "in_errors"), ("out_err", "out_errors"),
          ("crc", "crc"), ("ov_rx", "oversize_rx"), ("un_rx", "undersize_rx"), ("frag_rx", "fragment_rx"),
          ("jab_rx", "jabber_rx"), ("tx_err", "tx_errors"), ("ov_tx", "oversize_tx")]
@@ -120,7 +120,7 @@ chains = {  # name: (base, post-process)
                       "| table _time \"In (Mb/s)\" \"Out (Mb/s)\""),
     # Oversize frames are only errors where the MTU is smaller (a jumbo port receives them fine), so Oversize is capped at the
     # input errors the always-error kinds leave, and Transmit at the output errors. Other = errors without a kind
-    # (Cribl reports only totals), floor 0.
+    # (a platform without detail counters), floor 0.
     "ds_errors": ("ds_flow", f"{THIS} | eval ie=coalesce(in_err, 0), oe=coalesce(out_err, 0), CRC=coalesce(crc, 0), Undersize=coalesce(un_rx, 0), "
                   "Fragment=coalesce(frag_rx, 0), Jabber=coalesce(jab_rx, 0) "
                   "| eval Oversize=min(coalesce(ov_rx, 0), max(0, ie - CRC - Undersize - Fragment - Jabber)), Transmit=min(coalesce(tx_err, 0), oe) "

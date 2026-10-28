@@ -43,7 +43,7 @@ follow an override too.
 
 ## Data contract
 
-The dashboards expect these series. Device name is the `extracted_source` dimension (gnmic and OTel), or `node` for Cribl.
+The dashboards expect these series. Device name is the `extracted_source` dimension (gnmic and OTel).
 
 | Source | Metric names | Dimensions used | Used for |
 |--------|--------------|-----------------|----------|
@@ -52,7 +52,6 @@ The dashboards expect these series. Device name is the `extracted_source` dimens
 | gnmic WLC | `mdt_wl_*` (info, client_stats, radio_info, ap_stats) | `extracted_source` (WLC name) | wireless overview, client details, client search |
 | gnmic PAN-OS | `mdt_panos_*` | `extracted_source` | ingest pipeline label only |
 | OTel dial-out | `cisco.*` (in-octets, speed, power-consumption, part-no_info, device-name_info, port_info, ...) | `extracted_source`, `interface_name` | interfaces, PoE, models, MAC table |
-| Cribl dial-out | `if-stats.*`, `cpu-util.usage`, `mem-stats.usage`, `poe-stats.*` | `node`, `interface` | interfaces, CPU, memory, PoE |
 | Collector host | `system.*`, `up`, `scrape_*` | none | excluded from device lists |
 
 Label-valued metrics (PoE oper state, PD class, interface oper status) are published as value-1 series with the state as a
