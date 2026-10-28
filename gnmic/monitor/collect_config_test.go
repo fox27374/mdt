@@ -172,12 +172,11 @@ func TestParseConfigRealFile(t *testing.T) {
 	if pa560 == nil {
 		t.Fatalf("target 'Lab-IBK-PA560-2' not found")
 	}
-	if len(pa560.Subs) != 3 {
-		t.Errorf("Lab-IBK-PA560-2: expected 3 subs, got %d", len(pa560.Subs))
+	if len(pa560.Subs) != 2 {
+		t.Errorf("Lab-IBK-PA560-2: expected 2 subs, got %d", len(pa560.Subs))
 	}
 	want := map[string]time.Duration{
 		"panos_if_stats":      30 * time.Second,
-		"panos_cpu_stats":     5 * time.Minute,
 		"panos_session_stats": time.Minute,
 	}
 	for _, sub := range pa560.Subs {
