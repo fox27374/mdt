@@ -92,8 +92,8 @@ metric names, in `filter/cisco` and `transform/cisco` in `otel.yaml`.
   (uses `config/ca.pem` for TLS).
 - **Cisco Catalyst WLC** (`wl_*`) — wireless client signal/SNR/retries, AP utilization
   and noise, client/AP/SSID mappings, and client roaming history (`wl_client_roam`).
-- **Palo Alto firewalls** (`panos_*`) — interface counters, CPU, session
-  stats.
+- **Palo Alto firewalls** (`panos_*`) — interface counters and session stats (Firewall Details
+  dashboard). No CPU: PAN-OS reports 0 on the openconfig CPU path.
 
 Each subscription streams in `sample` mode at its own interval (30s for interface
 counters, up to 1h for slow-changing info like CDP/inventory). MAC and ARP tables sample every 5 min.

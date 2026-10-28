@@ -1,0 +1,391 @@
+<dashboard version="2" theme="dark">
+    <label>Firewall Details</label>
+    <description>One Palo Alto firewall: sessions, throughput and errors per interface</description>
+    <definition><![CDATA[
+{
+ "title": "Firewall Details",
+ "description": "One Palo Alto firewall: sessions, throughput and errors per interface.",
+ "inputs": {
+  "input_time": {
+   "type": "input.timerange",
+   "title": "Time range",
+   "options": {
+    "token": "global_time",
+    "defaultValue": "-4h@m,now"
+   }
+  },
+  "input_fw": {
+   "type": "input.dropdown",
+   "title": "Firewall",
+   "dataSources": {
+    "primary": "ds_fws"
+   },
+   "options": {
+    "token": "tk_fw",
+    "selectFirstSearchResult": true,
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"node\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"node\") | renameSeries(\"value\")"
+   }
+  }
+ },
+ "defaults": {
+  "dataSources": {
+   "ds.search": {
+    "options": {
+     "queryParameters": {
+      "earliest": "$global_time.earliest$",
+      "latest": "$global_time.latest$"
+     },
+     "refresh": "90s",
+     "refreshType": "delay"
+    }
+   }
+  }
+ },
+ "visualizations": {
+  "viz_active": {
+   "type": "splunk.singlevalue",
+   "title": "Active sessions",
+   "dataSources": {
+    "primary": "ds_active"
+   },
+   "options": {
+    "majorColor": "#708794"
+   }
+  },
+  "viz_util": {
+   "type": "splunk.singlevalue",
+   "title": "Session table used",
+   "dataSources": {
+    "primary": "ds_util"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "unit": "%",
+    "unitPosition": "after"
+   }
+  },
+  "viz_in_total": {
+   "type": "splunk.singlevalue",
+   "title": "Total in (5 min average)",
+   "dataSources": {
+    "primary": "ds_in_total"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "unit": "Mb/s",
+    "unitPosition": "after"
+   }
+  },
+  "viz_out_total": {
+   "type": "splunk.singlevalue",
+   "title": "Total out (5 min average)",
+   "dataSources": {
+    "primary": "ds_out_total"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "unit": "Mb/s",
+    "unitPosition": "after"
+   }
+  },
+  "viz_err_ifs": {
+   "type": "splunk.singlevalue",
+   "title": "Interfaces with errors",
+   "dataSources": {
+    "primary": "ds_err_ifs"
+   },
+   "options": {
+    "majorColor": "#708794"
+   }
+  },
+  "viz_in": {
+   "type": "splunk.line",
+   "title": "In by interface, Mb/s (5 min average)",
+   "dataSources": {
+    "primary": "ds_in"
+   },
+   "options": {
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true
+  },
+  "viz_out": {
+   "type": "splunk.line",
+   "title": "Out by interface, Mb/s (5 min average)",
+   "dataSources": {
+    "primary": "ds_out"
+   },
+   "options": {
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true
+  },
+  "viz_sessions": {
+   "type": "splunk.line",
+   "title": "Active sessions",
+   "dataSources": {
+    "primary": "ds_active"
+   },
+   "options": {
+    "legendDisplay": "off"
+   },
+   "showProgressBar": true
+  },
+  "viz_errs": {
+   "type": "splunk.column",
+   "title": "Errors per 5 min by interface (in + out)",
+   "dataSources": {
+    "primary": "ds_errs"
+   },
+   "options": {
+    "stackMode": "stacked",
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true,
+   "containerOptions": {
+    "visibility": {
+     "hideWhenNoData": true
+    }
+   }
+  },
+  "viz_table": {
+   "type": "splunk.table",
+   "title": "Interfaces, whole time range",
+   "dataSources": {
+    "primary": "ds_table"
+   },
+   "options": {
+    "count": 30
+   },
+   "showProgressBar": true
+  }
+ },
+ "dataSources": {
+  "ds_fws": {
+   "type": "ds.search",
+   "name": "fws",
+   "options": {
+    "query": "| mstats count(_value) WHERE `mdt_metrics_index` metric_name=mdt_panos_* BY extracted_source | rename extracted_source as node | fields node | sort node"
+   }
+  },
+  "ds_flow": {
+   "type": "ds.search",
+   "name": "flow",
+   "options": {
+    "query": "| mstats latest(mdt_panos_if_stats_in_octets) as in_octets latest(mdt_panos_if_stats_out_octets) as out_octets latest(mdt_panos_if_stats_in_errors) as in_errors latest(mdt_panos_if_stats_out_errors) as out_errors WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=1m BY extracted_source interface_name | eval node=extracted_source, interface=interface_name | fields - extracted_source interface_name | `mdt_if_rates` | bin _time span=5m | stats avg(in_bps) as in_bps avg(out_bps) as out_bps sum(in_errs) as in_errs sum(out_errs) as out_errs by _time interface | where _time + 300 <= now()"
+   }
+  },
+  "ds_sessions": {
+   "type": "ds.search",
+   "name": "sessions",
+   "options": {
+    "query": "| mstats latest(mdt_panos_session_stats_active) as active latest(mdt_panos_session_stats_max) as max WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=5m"
+   }
+  },
+  "ds_active": {
+   "type": "ds.chain",
+   "name": "active",
+   "options": {
+    "extend": "ds_sessions",
+    "query": "| fields _time active | rename active as \"Active sessions\""
+   }
+  },
+  "ds_util": {
+   "type": "ds.chain",
+   "name": "util",
+   "options": {
+    "extend": "ds_sessions",
+    "query": "| eval \"Session table %\"=round(active / max * 100, 2) | fields _time \"Session table %\""
+   }
+  },
+  "ds_in_total": {
+   "type": "ds.chain",
+   "name": "in_total",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| stats sum(in_bps) as v by _time | eval \"In (Mb/s)\"=round(v / 1000000, 1) | fields _time \"In (Mb/s)\""
+   }
+  },
+  "ds_out_total": {
+   "type": "ds.chain",
+   "name": "out_total",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| stats sum(out_bps) as v by _time | eval \"Out (Mb/s)\"=round(v / 1000000, 1) | fields _time \"Out (Mb/s)\""
+   }
+  },
+  "ds_err_ifs": {
+   "type": "ds.chain",
+   "name": "err_ifs",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| stats sum(in_errs) as i sum(out_errs) as o by interface | where coalesce(i, 0) + coalesce(o, 0) > 0 | stats count as \"Interfaces with errors\""
+   }
+  },
+  "ds_in": {
+   "type": "ds.chain",
+   "name": "in",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| eval v=round(in_bps / 1000000, 2) | eventstats max(v) as m by interface | where m > 0 | xyseries _time interface v | fillnull value=0"
+   }
+  },
+  "ds_out": {
+   "type": "ds.chain",
+   "name": "out",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| eval v=round(out_bps / 1000000, 2) | eventstats max(v) as m by interface | where m > 0 | xyseries _time interface v | fillnull value=0"
+   }
+  },
+  "ds_errs": {
+   "type": "ds.chain",
+   "name": "errs",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| eval v=coalesce(in_errs, 0) + coalesce(out_errs, 0) | eventstats max(v) as m by interface | where m > 0 | xyseries _time interface v | fillnull value=0"
+   }
+  },
+  "ds_table": {
+   "type": "ds.chain",
+   "name": "table",
+   "options": {
+    "extend": "ds_flow",
+    "query": "| eventstats max(_time) as last | eval in_now=if(_time == last, in_bps, null()), out_now=if(_time == last, out_bps, null()) | stats max(in_now) as in_now max(out_now) as out_now avg(in_bps) as in_avg avg(out_bps) as out_avg max(in_bps) as in_max max(out_bps) as out_max sum(in_errs) as in_errs sum(out_errs) as out_errs by interface | foreach in_* out_* [eval <<FIELD>>=if(match(\"<<FIELD>>\", \"errs$\"), <<FIELD>>, round(<<FIELD>> / 1000000, 2))] | sort 0 - in_max | rename interface as Interface, in_now as \"In now (Mb/s)\", out_now as \"Out now (Mb/s)\", in_avg as \"In avg (Mb/s)\", out_avg as \"Out avg (Mb/s)\", in_max as \"In peak (Mb/s)\", out_max as \"Out peak (Mb/s)\", in_errs as \"Errors in\", out_errs as \"Errors out\" | table Interface \"In now (Mb/s)\" \"Out now (Mb/s)\" \"In avg (Mb/s)\" \"Out avg (Mb/s)\" \"In peak (Mb/s)\" \"Out peak (Mb/s)\" \"Errors in\" \"Errors out\""
+   }
+  }
+ },
+ "layout": {
+  "type": "grid",
+  "globalInputs": [
+   "input_time",
+   "input_fw"
+  ],
+  "layoutDefinitions": {
+   "layout_1": {
+    "type": "grid",
+    "options": {
+     "width": 1440,
+     "height": 1150
+    },
+    "structure": [
+     {
+      "item": "viz_active",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 0,
+       "w": 288,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_util",
+      "type": "block",
+      "position": {
+       "x": 288,
+       "y": 0,
+       "w": 288,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_in_total",
+      "type": "block",
+      "position": {
+       "x": 576,
+       "y": 0,
+       "w": 288,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_out_total",
+      "type": "block",
+      "position": {
+       "x": 864,
+       "y": 0,
+       "w": 288,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_err_ifs",
+      "type": "block",
+      "position": {
+       "x": 1152,
+       "y": 0,
+       "w": 288,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_in",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 110,
+       "w": 720,
+       "h": 320
+      }
+     },
+     {
+      "item": "viz_out",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 110,
+       "w": 720,
+       "h": 320
+      }
+     },
+     {
+      "item": "viz_sessions",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 430,
+       "w": 720,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_errs",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 430,
+       "w": 720,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_table",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 730,
+       "w": 1440,
+       "h": 420
+      }
+     }
+    ]
+   }
+  },
+  "tabs": {
+   "items": [
+    {
+     "label": "Firewall",
+     "layoutId": "layout_1"
+    }
+   ]
+  }
+ },
+ "applicationProperties": {}
+}
+    ]]></definition>
+</dashboard>

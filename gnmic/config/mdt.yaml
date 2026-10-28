@@ -206,7 +206,6 @@ targets:
     password: "${FW_PASSWORD}"
     subscriptions:
       - panos_if_stats
-      - panos_cpu_stats
       - panos_session_stats
 
 ###################################
@@ -559,14 +558,6 @@ subscriptions:
     outputs:
       - nats
 
-  panos_cpu_stats:
-    paths:
-      - "oc-sys:/system/cpus/cpu[index=ALL]"
-    mode: stream
-    sample-interval: 300s
-    outputs:
-      - nats
-  
   panos_session_stats:
     paths:
       - "/pan/session/state"

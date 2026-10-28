@@ -50,7 +50,7 @@ The dashboards expect these series. Device name is the `extracted_source` dimens
 | gnmic IOS-XE | `mdt_xe_*` (if_stats, if_info, cpu_stats, mem_stats, poe_stats, cdp_info, mac_info, arp_info, inventory) | `extracted_source`, `interface_name` | interfaces, CPU, memory, PoE, CDP, MAC and ARP tables, switch model |
 | gnmic NX-OS | `mdt_nx_*` (if_stats, if_info, cpu_stats, mem_stats, cdp_info, mac_info, arp_info) | `extracted_source`, `interface_name` | same as IOS-XE |
 | gnmic WLC | `mdt_wl_*` (info, client_stats, radio_info, ap_stats) | `extracted_source` (WLC name) | wireless overview, client details, client search |
-| gnmic PAN-OS | `mdt_panos_*` | `extracted_source` | ingest pipeline label only |
+| gnmic PAN-OS | `mdt_panos_*` (if_stats, session_stats) | `extracted_source`, `interface_name` | Firewall Details |
 | OTel dial-out | `cisco.*` (in-octets, speed, power-consumption, part-no_info, device-name_info, port_info, ...) | `extracted_source`, `interface_name` | interfaces, PoE, models, MAC table |
 | Collector host | `system.*`, `up`, `scrape_*` | none | excluded from device lists |
 
