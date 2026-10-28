@@ -29,7 +29,7 @@ def per_if(value):
             "| xyseries _time interface v | fillnull value=0")
 
 chains = {  # name: (base, post-process)
-    "ds_active": ("ds_sessions", "| fields _time active | rename active as \"Active sessions\""),
+    "ds_active": ("ds_sessions", "| timechart span=5m max(active) as \"Active sessions\""),  # timechart: empty buckets stay null, so gaps show
     "ds_util": ("ds_sessions", "| eval \"Session table %\"=round(active / max * 100, 2) | fields _time \"Session table %\""),
     "ds_in_total": ("ds_flow", "| stats sum(in_bps) as v by _time | eval \"In (Mb/s)\"=round(v / 1000000, 1) | fields _time \"In (Mb/s)\""),
     "ds_out_total": ("ds_flow", "| stats sum(out_bps) as v by _time | eval \"Out (Mb/s)\"=round(v / 1000000, 1) | fields _time \"Out (Mb/s)\""),
@@ -69,7 +69,7 @@ viz = {
     "viz_err_ifs": tile("Interfaces with errors", "ds_err_ifs"),
     "viz_in": chart("splunk.line", "In by interface, Mb/s (5 min average)", "ds_in", legendDisplay="bottom"),
     "viz_out": chart("splunk.line", "Out by interface, Mb/s (5 min average)", "ds_out", legendDisplay="bottom"),
-    "viz_sessions": chart("splunk.line", "Active sessions", "ds_active", legendDisplay="off"),
+    "viz_sessions": chart("splunk.line", "Active sessions", "ds_active", legendDisplay="off", nullValueDisplay="gaps"),
     "viz_errs": {**chart("splunk.column", "Errors per 5 min by interface (in + out)", "ds_errs",
                          stackMode="stacked", legendDisplay="bottom"),
                  "containerOptions": {"visibility": {"hideWhenNoData": True}}},

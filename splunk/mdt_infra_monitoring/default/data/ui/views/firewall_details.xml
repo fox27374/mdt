@@ -131,7 +131,8 @@
     "primary": "ds_active"
    },
    "options": {
-    "legendDisplay": "off"
+    "legendDisplay": "off",
+    "nullValueDisplay": "gaps"
    },
    "showProgressBar": true
   },
@@ -191,7 +192,7 @@
    "name": "active",
    "options": {
     "extend": "ds_sessions",
-    "query": "| fields _time active | rename active as \"Active sessions\""
+    "query": "| timechart span=5m max(active) as \"Active sessions\""
    }
   },
   "ds_util": {
