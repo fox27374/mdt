@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Deploy gnmic/config/mdt.yaml and otel.yaml to the live stack on the test host (kof-ibk-debian4) and restart it.
+# Maintainer lab only. The live stack runs from /home/claude/mdt/gnmic (compose project, claude-owned).
+#
+#   scripts/gnmic-deploy
+#
+# Each changed file is backed up to /home/claude/<file>.bak-<timestamp> first; rollback = copy it back and restart.
+# Restarts gnmic-1 gnmic-2 when mdt.yaml changed, otel-collector when otel.yaml changed. Nothing changed: no restart.
+# Env: MDTHOST (default claude@172.24.89.69), MDTHOST_KEY (optional ssh private key).
+set -euo pipefail
+host=${MDTHOST:-claude@172.24.89.69}
+live=/home/claude/mdt/gnmic/config
+ssh_cmd=(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "$host")
+[ -n "${MDTHOST_KEY:-}" ] && ssh_cmd=(ssh -i "$MDTHOST_KEY" -o IdentitiesOnly=yes "${ssh_cmd[@]:1}")
+root=$(git rev-parse --show-toplevel)
+exec 2> >(grep -v -E 'setlocale|Warning: Permanently' >&2)
+
+COPYFILE_DISABLE=1 tar --no-xattrs -C "$root/gnmic/config" -cf - mdt.yaml otel.yaml | "${ssh_cmd[@]}" "set -e
+  stage=\$(mktemp -d); trap 'rm -rf \$stage' EXIT; tar -xf - -C \$stage
+  ts=\$(date +%Y%m%d-%H%M%S); restart=''
+  for f in mdt.yaml otel.yaml; do
+    cmp -s \$stage/\$f $live/\$f && continue
+    cp $live/\$f /home/claude/\$f.bak-\$ts && cp \$stage/\$f $live/\$f
+    echo \"\$f updated, backup /home/claude/\$f.bak-\$ts\"
+    [ \$f = mdt.yaml ] && restart=\"\$restart gnmic-1 gnmic-2\" || restart=\"\$restart otel-collector\"
+  done
+  [ -z \"\$restart\" ] && { echo 'live config already matches, nothing restarted'; exit 0; }
+  export XDG_RUNTIME_DIR=/run/user/10782
+  podman restart \$restart >/dev/null
+  sleep 5
+  podman ps --filter name=gnmic-1 --filter name=gnmic-2 --filter name=otel-collector --format '{{.Names}} {{.Status}}'"

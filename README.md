@@ -85,7 +85,8 @@ and applied over gNMI with `scripts/mdthost 'scripts/dialout-apply [switch ...]'
 IDs 57001-57099 on the switch (running config only). **Dial-in and dial-out carry the same subscriptions:**
 a change to an `xe_*` subscription in `mdt.yaml` gets the same change in `dialout-iosxe.yaml` and, for new
 metric names, in `filter/cisco` and `transform/cisco` in `otel.yaml`.
-- **Cisco NX-OS switches** (`nx_*`) — interface stats/info, CPU load, memory, CDP (device and remote port), MAC (5 min),
+- **Cisco NX-OS switches** (`nx_*`) — interface stats/info, CPU load, memory, CDP (device and remote port),
+  LLDP neighbours (`nx_lldp_info`, 60s, needs `feature lldp`; named neighbours only, merged with CDP in `mdt_cdp`), MAC (5 min),
   ARP adjacencies (`nx_arp_info`, 5 min, DME path, split per entry like `nx_mac_info`), port-channels
   (`nx_lag_info`, 5 min, `/System/intf-items/aggr-items/AggrIf-list`: operational mode, access and trunk VLANs,
   member ports `rsmbrIfs`, split per port-channel by `nx-normalize-interfaces`)

@@ -167,6 +167,7 @@ targets:
       - nx_mem_stats
       - nx_if_info
       - nx_cdp_info
+      - nx_lldp_info
       - nx_mac_info
       - nx_arp_info
       - nx_lag_info
@@ -182,6 +183,7 @@ targets:
       - nx_mem_stats
       - nx_if_info
       - nx_cdp_info
+      - nx_lldp_info
       - nx_mac_info
       - nx_arp_info
       - nx_lag_info
@@ -438,6 +440,19 @@ subscriptions:
     outputs:
       - nats
 
+  # LLDP neighbours (needs feature lldp). Split per port like nx_cdp_info; neighbours without a host name
+  # (bare MAC, server NIC description) are dropped in nx-normalize-interfaces. mdt_cdp merges them with CDP.
+  nx_lldp_info:
+    paths:
+      - "/System/lldp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/sysName"
+      - "/System/lldp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/portIdV"
+    mode: stream
+    encoding: json
+    stream-mode: sample
+    sample-interval: 60s
+    outputs:
+      - nats
+
   nx_mac_info:
     paths:
       - "/System/mac-items/table-items/vlan-items/MacAddressEntry-list"
@@ -674,6 +689,10 @@ processors:
           # devId and portId arrive as separate events (one per path): each becomes its own metric, joined by port in mdt_cdp.
           rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(.devId != null or .portId != null)
           | entry({interface_name: .id}; {devId: .devId, portId: .portId} | with_entries(select(.value != null)))
+        elif ($ev.tags["subscription-name"] == "nx_lldp_info") then
+          # Same shape as nx_cdp_info. A sysName with a space is a NIC description, an empty one a bare MAC: no device.
+          rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(if .sysName != null then (.sysName | test("^\\S+$")) else .portIdV != null end)
+          | entry({interface_name: .id}; {sysName: .sysName, portIdV: .portIdV} | with_entries(select(.value != null)))
         elif ($ev.tags["subscription-name"] == "nx_if_errors") then
           rows("PhysIf-list\\.(?P<idx>[0-9]+)/")[] | select(.id != null)
           | entry({interface_name: .id}; del(.id))
