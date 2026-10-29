@@ -31,6 +31,9 @@ bases = {
                 f"| join type=left node interface [`mdt_if_status({N})` | fields node interface speed] "
                 f"| eval util=round(max(in_bps, out_bps) / speed * 100, 4)",
     "ds_poe": f"`mdt_poe({N})`",
+    # Address the switch is polled on (gnmic event-tags / otel.yaml mgmt_ip label), latest value in the last hour.
+    "ds_ip": f"| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=* extracted_source=\"{N}\" mgmt_ip=* earliest=-1h BY mgmt_ip "
+             "| fields mgmt_ip | head 1",
     "ds_cpu": f"`mdt_cpu({N})` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)",
     "ds_mem": f"`mdt_mem({N})` | stats latest(mem) as mem | eval mem=round(mem, 0)",
     # MACs on port-channels and VLANs; the Interfaces table shows those on front-panel ports.
@@ -131,6 +134,8 @@ viz = {
                   "eventHandlers": open_port("$click.value$")},
     "viz_nodata": {"type": "splunk.table", "dataSources": {"primary": "ds_nodata"}, "options": {},
                    "containerOptions": {"visibility": {"hideWhenNoData": True}}},
+    "viz_ip": {"type": "splunk.singlevalue", "title": "Management IP", "dataSources": {"primary": "ds_ip"},
+               "options": {"majorColor": "#708794", "majorFontSize": 36}},
     "viz_cpu": gauge("CPU %", "ds_cpu"),
     "viz_mem": gauge("Memory %", "ds_mem"),
     "viz_poe": {**gauge("PoE drawn (% of PoE capacity)", "ds_poe_gauge"), "containerOptions": {"visibility": {"hideWhenNoData": True}}},
@@ -162,7 +167,8 @@ inputs = {
 
 rows = [  # (item, x, y, w, h)
     ("viz_nodata", 0, 0, 1440, 80),
-    ("viz_cpu", 0, 80, 360, 200), ("viz_mem", 360, 80, 360, 200), ("viz_poe", 720, 80, 360, 200), ("viz_ports_up", 1080, 80, 360, 200),
+    ("viz_ip", 0, 80, 288, 200), ("viz_cpu", 288, 80, 288, 200), ("viz_mem", 576, 80, 288, 200), ("viz_poe", 864, 80, 288, 200),
+    ("viz_ports_up", 1152, 80, 288, 200),
     ("viz_ports", 0, 280, 1440, 200),
     ("viz_top_util", 0, 480, 720, 260), ("viz_top_errors", 720, 480, 720, 260),
     ("viz_throughput", 0, 740, 720, 320), ("viz_errors", 720, 740, 720, 320),

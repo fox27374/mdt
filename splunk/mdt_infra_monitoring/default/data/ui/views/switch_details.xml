@@ -75,6 +75,17 @@
     }
    }
   },
+  "viz_ip": {
+   "type": "splunk.singlevalue",
+   "title": "Management IP",
+   "dataSources": {
+    "primary": "ds_ip"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "majorFontSize": 36
+   }
+  },
   "viz_cpu": {
    "type": "splunk.markergauge",
    "title": "CPU %",
@@ -342,6 +353,13 @@
     "query": "| `mdt_poe($tk_node$)`"
    }
   },
+  "ds_ip": {
+   "type": "ds.search",
+   "name": "ip",
+   "options": {
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=* extracted_source=\"$tk_node$\" mgmt_ip=* earliest=-1h BY mgmt_ip | fields mgmt_ip | head 1"
+   }
+  },
   "ds_cpu": {
    "type": "ds.search",
    "name": "cpu",
@@ -476,12 +494,22 @@
       }
      },
      {
-      "item": "viz_cpu",
+      "item": "viz_ip",
       "type": "block",
       "position": {
        "x": 0,
        "y": 80,
-       "w": 360,
+       "w": 288,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_cpu",
+      "type": "block",
+      "position": {
+       "x": 288,
+       "y": 80,
+       "w": 288,
        "h": 200
       }
      },
@@ -489,9 +517,9 @@
       "item": "viz_mem",
       "type": "block",
       "position": {
-       "x": 360,
+       "x": 576,
        "y": 80,
-       "w": 360,
+       "w": 288,
        "h": 200
       }
      },
@@ -499,9 +527,9 @@
       "item": "viz_poe",
       "type": "block",
       "position": {
-       "x": 720,
+       "x": 864,
        "y": 80,
-       "w": 360,
+       "w": 288,
        "h": 200
       }
      },
@@ -509,9 +537,9 @@
       "item": "viz_ports_up",
       "type": "block",
       "position": {
-       "x": 1080,
+       "x": 1152,
        "y": 80,
-       "w": 360,
+       "w": 288,
        "h": 200
       }
      },
