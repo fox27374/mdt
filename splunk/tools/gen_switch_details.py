@@ -60,6 +60,8 @@ chains = {  # name: (base, post-process)
     "ds_ifaces_table": ("ds_status", f"{slots} "
                         f"| eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
                         f"| eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") "
+                        # Duplex (full, half), auto-negotiation (yes, no) and MTU from mdt_if_status; blank when the source has none.
+                        f"| eval Duplex=coalesce(duplex, \"\"), \"Auto-neg\"=coalesce(autoneg, \"\"), MTU=if(isnull(mtu), \"\", tostring(mtu)) "
                         f"| eval \"Last change\"=strftime(last_change, \"%Y-%m-%d %H:%M\") "
                         # "2d 15h 25m": zero parts left out, minutes shown when nothing else is
                         f"| eval d=floor(now() - last_change), dd=floor(d / 86400), dh=floor(d % 86400 / 3600), dm=floor(d % 3600 / 60) "
@@ -69,7 +71,7 @@ chains = {  # name: (base, post-process)
                         f"| rename interface as Interface, neighbour as \"CDP neighbour\" "
                         # Member ports show their port-channel (Po103); other ports leave it empty.
                         f"| eval \"Port-channel\"=if(isnull(port_channel), \"\", \"Po\".replace(port_channel, \"^port-channel\", \"\")) "
-                        f"| table Interface \"Port-channel\" Status Speed \"Last change\" \"Down for\" \"CDP neighbour\" MACs"),
+                        f"| table Interface \"Port-channel\" Status Speed Duplex \"Auto-neg\" MTU \"Last change\" \"Down for\" \"CDP neighbour\" MACs"),
     # Port-channels: one row each, with the member ports (state), the VLANs of the port-channel and the CDP neighbours of
     # its members (neighbour (remote port)). Rows come from the status search: the port-channel's own row, and member rows
     # (their port_channel). _port is the port-channel's name as the device names it, the Interface Details token.
