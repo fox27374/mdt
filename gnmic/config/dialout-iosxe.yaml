@@ -19,6 +19,8 @@ subscriptions:
   - {id: 57002, gnmic: xe_mem_stats, period: 300, xpath: /memory-ios-xe-oper:memory-statistics/memory-statistic}
   # Status (xe_if_info) rides along: otel reads oper/admin status from the same entry as speed.
   - {id: 57003, gnmic: xe_if_stats xe_if_info, period: 30, xpath: /interfaces-ios-xe-oper:interfaces/interface}
+  # CDP: whole entry; otel.yaml keeps device-name, interface (local-intf-name), port-id, platform-name, ip-address,
+  # the leaves xe_cdp_info subscribes to in mdt.yaml.
   - {id: 57004, gnmic: xe_cdp_info, period: 60, xpath: /cdp-ios-xe-oper:cdp-neighbor-details/cdp-neighbor-detail}
   - {id: 57005, gnmic: xe_mac_info, period: 300, xpath: /matm-ios-xe-oper:matm-oper-data/matm-table/matm-mac-entry}
   - {id: 57006, gnmic: xe_poe_stats, period: 300, xpath: /poe-ios-xe-oper:poe-oper-data/poe-switch}

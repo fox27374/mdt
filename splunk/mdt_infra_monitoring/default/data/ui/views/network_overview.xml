@@ -42,7 +42,7 @@
   </row>
   <row depends="$show_overview$">
     <panel>
-      <title>CDP topology. Switches, APs (wifi icon) and firewalls (brick wall) by health: green OK, yellow warning, red critical, dark grey no data. Click a switch for Switch Details, an AP for Wireless Overview, a firewall for Firewall Details</title>
+      <title>CDP topology. Switches (arrows), APs (wifi icon) and firewalls (brick wall) by health: green OK, yellow warning, red critical, dark grey no data (monitored, silent for 10 minutes), light grey not monitored (CDP neighbour only, e.g. an AP on a WLC without telemetry). Click a switch for Switch Details, an AP for Wireless Overview, a firewall for Firewall Details</title>
       <viz type="network-diagram-viz.network-diagram-viz">
         <search>
           <query>| `mdt_cdp(*)`
@@ -57,7 +57,9 @@
 | stats count by node1 node2
 | eval from=node1, to=node2, linkwidth=2
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
-| append [| `mdt_switch_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d") | rename node as from | fields from color]
+| append [| `mdt_cdp(*)` | where match(platform, "^(C9[2-6]\d\d|WS-C|N\dK-|IE-)") | stats count by neighbour | eval color="#7b8794", type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/switch-unmonitored.svg" | rename neighbour as from | fields from color type customurl]
+| append [| `mdt_switch_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/switch-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg" | rename node as from | fields from color type customurl]
+| append [| `mdt_cdp(*)` | where match(platform, "^(AIR-[A-Z]*AP|C91\d\dAX|CW91\d\d)") | stats count by neighbour | eval color="#7b8794", type="wifi" | rename neighbour as from | fields from color type]
 | append [| `mdt_ap_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="wifi" | rename ap as from | fields from color type]
 | append [| `mdt_firewall_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/firewall-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg", from=node | fields from color type customurl]
 | appendpipe [| `mdt_topology_positions`]
@@ -115,14 +117,14 @@
   </row>
   <row depends="$show_overview$">
     <panel>
-      <title>Switch health, last 15 minutes. Warning from 70 % (CPU, memory, busiest port) or above 5 errors/min, critical from 90 % or 100 errors/min. Click for Switch Details</title>
+      <title>Switch health, last 15 minutes. Warning from 70 % (CPU, memory, busiest port) or above 5 errors/min or an MTU mismatch to the far end of a link, critical from 90 %, 100 errors/min or a duplex mismatch. Click for Switch Details</title>
       <table>
         <search>
           <query>| `mdt_switch_health`
 | eval order=case(health=="Critical", 0, health=="Warning", 1, health=="No data", 2, true(), 3)
 | sort order node
-| rename node as Switch, health as Health, cpu as "CPU %", mem as "Memory %", util as "Busiest port %", errors as "Errors/min (busiest port)"
-| table Switch Health "CPU %" "Memory %" "Busiest port %" "Errors/min (busiest port)"</query>
+| rename node as Switch, health as Health, cpu as "CPU %", mem as "Memory %", util as "Busiest port %", errors as "Errors/min (busiest port)", duplex_mm as "Duplex mismatches", mtu_mm as "MTU mismatches"
+| table Switch Health "CPU %" "Memory %" "Busiest port %" "Errors/min (busiest port)" "Duplex mismatches" "MTU mismatches"</query>
           <earliest>-15m</earliest>
           <latest>now</latest>
           <refresh>1m</refresh>
@@ -149,6 +151,14 @@
         <format type="color" field="Errors/min (busiest port)">
           <colorPalette type="list">[#53a051,#f8be34,#dc4e41]</colorPalette>
           <scale type="threshold">6,100</scale>
+        </format>
+        <format type="color" field="Duplex mismatches">
+          <colorPalette type="list">[#53a051,#dc4e41]</colorPalette>
+          <scale type="threshold">1</scale>
+        </format>
+        <format type="color" field="MTU mismatches">
+          <colorPalette type="list">[#53a051,#f8be34]</colorPalette>
+          <scale type="threshold">1</scale>
         </format>
         <drilldown>
           <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$row.Switch|u$</link>
