@@ -32,8 +32,10 @@ bases = {
                 f"| eval util=round(max(in_bps, out_bps) / speed * 100, 4)",
     "ds_poe": f"`mdt_poe({N})`",
     # Address the switch is polled on (gnmic event-tags / otel.yaml mgmt_ip label), latest value in the last hour.
+    # Fallback: the address its CDP neighbours report, for a switch that sends no telemetry (sw03).
     "ds_ip": f"| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=* extracted_source=\"{N}\" mgmt_ip=* earliest=-1h BY mgmt_ip "
-             "| fields mgmt_ip | head 1",
+             f"| fields mgmt_ip | append [`mdt_cdp(*)` | where neighbour=lower(\"{N}\") AND ip!=\"\" | eval mgmt_ip=ip | fields mgmt_ip] "
+             "| head 1",
     "ds_cpu": f"`mdt_cpu({N})` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)",
     "ds_mem": f"`mdt_mem({N})` | stats latest(mem) as mem | eval mem=round(mem, 0)",
     # MACs on port-channels and VLANs; the Interfaces table shows those on front-panel ports.

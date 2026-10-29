@@ -326,11 +326,15 @@ subscriptions:
     outputs:
       - nats
 
+  # Leaves: device-name local-intf-name port-id platform-name ip-address. Dial-out 57004 (dialout-iosxe.yaml) reads the
+  # whole entry and otel.yaml transform/cisco keeps the same leaves (cisco.device-name_info): change both together.
   xe_cdp_info:
     paths:
       - "rfc7951:/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details/cdp-neighbor-detail/device-name"
       - "rfc7951:/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details/cdp-neighbor-detail/local-intf-name"
       - "rfc7951:/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details/cdp-neighbor-detail/port-id"
+      - "rfc7951:/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details/cdp-neighbor-detail/platform-name"
+      - "rfc7951:/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details/cdp-neighbor-detail/ip-address"
     mode: stream
     stream-mode: sample
     # Lab value; production can go back to a longer interval.
@@ -480,6 +484,8 @@ subscriptions:
     paths:
       - "/System/cdp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/devId"
       - "/System/cdp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/portId"
+      - "/System/cdp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/platId"
+      - "/System/cdp-items/inst-items/if-items/If-list/adj-items/AdjEp-list/mgmt-items/MgmtAddr-list/addr"
     mode: stream
     encoding: json
     stream-mode: sample
@@ -747,9 +753,9 @@ processors:
           tags: ($ev.tags + ($tags | map_values(tostring))), values: $values};
         if ($ev.tags["subscription-name"] == "nx_cdp_info") then
           # ponytail: one neighbour per port; a second adjacency on the same port is dropped
-          # devId and portId arrive as separate events (one per path): each becomes its own metric, joined by port in mdt_cdp.
-          rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(.devId != null or .portId != null)
-          | entry({interface_name: .id}; {devId: .devId, portId: .portId} | with_entries(select(.value != null)))
+          # devId, portId, platId and addr arrive as separate events (one per path): each becomes its own metric, joined by port in mdt_cdp.
+          rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(.devId != null or .portId != null or .platId != null or .addr != null)
+          | entry({interface_name: .id}; {devId: .devId, portId: .portId, platId: .platId, addr: .addr} | with_entries(select(.value != null)))
         elif ($ev.tags["subscription-name"] == "nx_lldp_info") then
           # Same shape as nx_cdp_info. A sysName with a space is a NIC description, an empty one a bare MAC: no device.
           rows("If-list\\.(?P<idx>[0-9]+)/")[] | select(if .sysName != null then (.sysName | test("^\\S+$")) else .portIdV != null end)
