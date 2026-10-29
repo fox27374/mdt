@@ -57,9 +57,9 @@
 | stats count by node1 node2
 | eval from=node1, to=node2, linkwidth=2
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
-| append [| `mdt_cdp(*)` | where match(platform, "^(C9[2-6]\d\d|WS-C|N\dK-|IE-)") | stats count by neighbour | eval color="#7b8794", type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/switch-unmonitored.svg" | rename neighbour as from | fields from color type customurl]
+| append [| `mdt_cdp(*)` | eval kind=case(match(platform, "^(C9[2-6]\d\d|WS-C|N\dK-|IE-)"), "switch", match(platform, "^(AIR-[A-Z]*AP|C91\d\dAX|CW91\d\d)"), "ap") | where isnotnull(kind) | stats count by neighbour kind
+  | eval color="#7b8794", type=if(kind=="ap", "wifi", "customimage"), customurl=if(kind=="ap", null(), "/static/app/mdt_infra_monitoring/icons/switch-unmonitored.svg") | rename neighbour as from | fields from color type customurl]
 | append [| `mdt_switch_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/switch-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg" | rename node as from | fields from color type customurl]
-| append [| `mdt_cdp(*)` | where match(platform, "^(AIR-[A-Z]*AP|C91\d\dAX|CW91\d\d)") | stats count by neighbour | eval color="#7b8794", type="wifi" | rename neighbour as from | fields from color type]
 | append [| `mdt_ap_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="wifi" | rename ap as from | fields from color type]
 | append [| `mdt_firewall_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/firewall-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg", from=node | fields from color type customurl]
 | appendpipe [| `mdt_topology_positions`]
