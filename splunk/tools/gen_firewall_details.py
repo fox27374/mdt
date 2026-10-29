@@ -1,6 +1,7 @@
 # Generates the Firewall Details dashboard (Dashboard Studio JSON in views/firewall_details.xml).
 # Edit this script, not the XML:  python3 splunk/tools/gen_firewall_details.py  then scripts/splunk-deploy
-# Data: gnmic PAN-OS subscriptions panos_if_stats (30s counters per interface) and panos_session_stats (60s).
+# Data: gnmic PAN-OS subscriptions panos_if_stats (30s counters per interface), panos_if_info (300s negotiated speed, duplex,
+# auto-negotiation) and panos_session_stats (60s).
 import json, os, sys
 
 OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data", "ui", "views", "firewall_details.xml")
@@ -43,11 +44,18 @@ chains = {  # name: (base, post-process)
                             "| stats max(in_now) as in_now max(out_now) as out_now avg(in_bps) as in_avg avg(out_bps) as out_avg "
                             "max(in_bps) as in_max max(out_bps) as out_max sum(in_errs) as in_errs sum(out_errs) as out_errs by interface "
                             "| foreach in_* out_* [eval <<FIELD>>=if(match(\"<<FIELD>>\", \"errs$\"), <<FIELD>>, round(<<FIELD>> / 1000000, 2))] "
+                            # Negotiated speed / duplex (panos_if_info, 300s): one value-1 series per leaf with the value as label.
+                            # One mstats per leaf: mstats BY drops series that lack a BY dimension.
+                            "| join type=left interface [| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=mdt_panos_if_info_negotiated_port_speed extracted_source=\"$tk_fw$\" earliest=-15m BY interface_name negotiated_port_speed "
+                            "| append [| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=mdt_panos_if_info_negotiated_duplex_mode extracted_source=\"$tk_fw$\" earliest=-15m BY interface_name negotiated_duplex_mode] "
+                            "| append [| mstats latest(_value) as a WHERE `mdt_metrics_index` metric_name=mdt_panos_if_info_auto_negotiate extracted_source=\"$tk_fw$\" earliest=-15m BY interface_name | eval auto=if(a==1, \"yes\", \"no\")] "
+                            "| stats values(negotiated_port_speed) as speed values(negotiated_duplex_mode) as duplex values(auto) as auto by interface_name "
+                            "| eval speed=replace(replace(speed, \"^.*SPEED_(.*?)B?$\", \"\\1\"), \"UNKNOWN\", \"unknown\"), duplex=lower(duplex) | rename interface_name as interface] "
                             "| sort 0 - in_max "
-                            "| rename interface as Interface, in_now as \"In now (Mb/s)\", out_now as \"Out now (Mb/s)\", "
+                            "| rename interface as Interface, speed as Speed, duplex as Duplex, auto as \"Auto-neg\", in_now as \"In now (Mb/s)\", out_now as \"Out now (Mb/s)\", "
                             "in_avg as \"In avg (Mb/s)\", out_avg as \"Out avg (Mb/s)\", in_max as \"In peak (Mb/s)\", "
                             "out_max as \"Out peak (Mb/s)\", in_errs as \"Errors in\", out_errs as \"Errors out\" "
-                            "| table Interface \"In now (Mb/s)\" \"Out now (Mb/s)\" \"In avg (Mb/s)\" \"Out avg (Mb/s)\" "
+                            "| table Interface Speed Duplex \"Auto-neg\" \"In now (Mb/s)\" \"Out now (Mb/s)\" \"In avg (Mb/s)\" \"Out avg (Mb/s)\" "
                             "\"In peak (Mb/s)\" \"Out peak (Mb/s)\" \"Errors in\" \"Errors out\""),
 }
 
