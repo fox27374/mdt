@@ -315,6 +315,11 @@ subscriptions:
       - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/admin-status"
       - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/oper-status"
       - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/last-change"
+      # Duplex, auto-negotiation and MTU (Switch Details, Interface Details). The dial-out entry (57003) carries the same
+      # leaves: keep the two in step (otel.yaml, filter/cisco and transform/cisco).
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/ether-state/negotiated-duplex-mode"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/ether-state/auto-negotiate"
+      - "rfc7951:/Cisco-IOS-XE-interfaces-oper:interfaces/interface/mtu"
     mode: stream
     stream-mode: sample
     sample-interval: 300s
@@ -440,7 +445,11 @@ subscriptions:
       - "openconfig:/interfaces/interface/state/admin-status"
       - "openconfig:/interfaces/interface/state/oper-status"
       - "openconfig:/interfaces/interface/state/last-change"
-      - "openconfig:/interfaces/interface/oc-eth:ethernet/oc-eth:state/port-speed"
+      # port-speed, duplex (FULL/HALF, absent when the port is down) and auto-negotiation: NX-OS sends
+      # negotiated-duplex-mode only for the whole ethernet/state container (a single leaf path gets nothing), so the
+      # container is subscribed and nx-normalize-interfaces keeps just these three leaves of it. MTU as the XE leaf above.
+      - "openconfig:/interfaces/interface/ethernet/state"
+      - "openconfig:/interfaces/interface/state/mtu"
     mode: stream
     encoding: json
     stream-mode: sample
@@ -618,6 +627,7 @@ subscriptions:
       - "oc-if:/interfaces/interface/ethernet/state/negotiated-port-speed"
       - "oc-if:/interfaces/interface/ethernet/state/negotiated-duplex-mode"
       - "oc-if:/interfaces/interface/ethernet/state/auto-negotiate"
+      - "oc-if:/interfaces/interface/state/mtu"
     mode: stream
     stream-mode: sample
     sample-interval: 300s
@@ -775,7 +785,11 @@ processors:
             | group_by(.key | capture("interface\\.(?P<idx>[0-9]+)/") | .idx)
             | map({
                 interface_name: (map(select(.key | test("/name$"))) | first | .value),
-                counters: map(select(.key | test("/name$") | not))
+                # nx_if_info subscribes to the whole ethernet/state container (for duplex): keep port-speed,
+                # negotiated-duplex-mode and auto-negotiate of it.
+                counters: map(select(.key | test("/name$") | not)
+                  | select($ev.tags["subscription-name"] != "nx_if_info"
+                      or (.key | test("ethernet/state/(duplex-mode|negotiated-port-speed|enable-flow-control|hw-mac-address|mac-address|counters/.*)$") | not)))
               })
             | map(
                 . as $grp |

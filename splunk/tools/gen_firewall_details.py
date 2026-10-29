@@ -44,18 +44,19 @@ chains = {  # name: (base, post-process)
                             "| stats max(in_now) as in_now max(out_now) as out_now avg(in_bps) as in_avg avg(out_bps) as out_avg "
                             "max(in_bps) as in_max max(out_bps) as out_max sum(in_errs) as in_errs sum(out_errs) as out_errs by interface "
                             "| foreach in_* out_* [eval <<FIELD>>=if(match(\"<<FIELD>>\", \"errs$\"), <<FIELD>>, round(<<FIELD>> / 1000000, 2))] "
-                            # Negotiated speed / duplex (panos_if_info, 300s): one value-1 series per leaf with the value as label.
+                            # Negotiated speed / duplex and MTU (panos_if_info, 300s): one value-1 series per leaf with the value as label; MTU a number.
                             # One mstats per leaf: mstats BY drops series that lack a BY dimension.
                             "| join type=left interface [| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=mdt_panos_if_info_negotiated_port_speed extracted_source=\"$tk_fw$\" earliest=-15m BY interface_name negotiated_port_speed "
                             "| append [| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=mdt_panos_if_info_negotiated_duplex_mode extracted_source=\"$tk_fw$\" earliest=-15m BY interface_name negotiated_duplex_mode] "
                             "| append [| mstats latest(_value) as a WHERE `mdt_metrics_index` metric_name=mdt_panos_if_info_auto_negotiate extracted_source=\"$tk_fw$\" earliest=-15m BY interface_name | eval auto=if(a==1, \"yes\", \"no\")] "
-                            "| stats values(negotiated_port_speed) as speed values(negotiated_duplex_mode) as duplex values(auto) as auto by interface_name "
-                            "| eval speed=replace(replace(speed, \"^.*SPEED_(.*?)B?$\", \"\\1\"), \"UNKNOWN\", \"unknown\"), duplex=lower(duplex) | rename interface_name as interface] "
+                            "| append [| mstats latest(_value) as mtu WHERE `mdt_metrics_index` metric_name=mdt_panos_if_info_mtu extracted_source=\"$tk_fw$\" earliest=-15m BY interface_name] "
+                            "| stats values(negotiated_port_speed) as speed values(negotiated_duplex_mode) as duplex values(auto) as auto max(mtu) as mtu by interface_name "
+                            "| eval speed=replace(replace(speed, \"^.*SPEED_(.*?)B?$\", \"\\1\"), \"UNKNOWN\", \"unknown\"), duplex=if(match(lower(duplex), \"^(full|half)$\"), lower(duplex), null()) | rename interface_name as interface] "
                             "| sort 0 - in_max "
-                            "| rename interface as Interface, speed as Speed, duplex as Duplex, auto as \"Auto-neg\", in_now as \"In now (Mb/s)\", out_now as \"Out now (Mb/s)\", "
+                            "| rename interface as Interface, speed as Speed, duplex as Duplex, auto as \"Auto-neg\", mtu as MTU, in_now as \"In now (Mb/s)\", out_now as \"Out now (Mb/s)\", "
                             "in_avg as \"In avg (Mb/s)\", out_avg as \"Out avg (Mb/s)\", in_max as \"In peak (Mb/s)\", "
                             "out_max as \"Out peak (Mb/s)\", in_errs as \"Errors in\", out_errs as \"Errors out\" "
-                            "| table Interface Speed Duplex \"Auto-neg\" \"In now (Mb/s)\" \"Out now (Mb/s)\" \"In avg (Mb/s)\" \"Out avg (Mb/s)\" "
+                            "| table Interface Speed Duplex \"Auto-neg\" MTU \"In now (Mb/s)\" \"Out now (Mb/s)\" \"In avg (Mb/s)\" \"Out avg (Mb/s)\" "
                             "\"In peak (Mb/s)\" \"Out peak (Mb/s)\" \"Errors in\" \"Errors out\""),
 }
 

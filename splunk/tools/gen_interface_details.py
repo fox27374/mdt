@@ -116,6 +116,10 @@ chains = {  # name: (base, post-process)
                        "| eval \"Last change\"=case(isnull(last_change), \"-\", oper_up==0, \"down for \".trim(if(dd > 0, dd.\"d \", \"\").if(dh > 0, dh.\"h \", \"\").if(dm > 0 OR d < 3600, dm.\"m\", \"\")), "
                        "true(), strftime(last_change, \"%Y-%m-%d %H:%M\")) | fields \"Last change\""),
     "ds_hdr_macs": ("ds_macs", "| stats dc(MAC) as \"Learned MACs\""),
+    # Duplex, auto-negotiation and MTU of the port (mdt_if_status); blank when no source reports them.
+    "ds_hdr_duplex": ("ds_status", "| eval Duplex=coalesce(duplex, \"\") | fields Duplex"),
+    "ds_hdr_autoneg": ("ds_status", "| eval \"Auto-neg\"=coalesce(autoneg, \"\") | fields \"Auto-neg\""),
+    "ds_hdr_mtu": ("ds_status", "| eval MTU=if(isnull(mtu), \"\", tostring(mtu)) | fields MTU"),
     "ds_throughput": ("ds_flow", f"{THIS} | eval \"In (Mb/s)\"=round(in_bps / 1000000, 2), \"Out (Mb/s)\"=round(out_bps / 1000000, 2) "
                       "| table _time \"In (Mb/s)\" \"Out (Mb/s)\""),
     # Oversize frames are only errors where the MTU is smaller (a jumbo port receives them fine), so Oversize is capped at the
@@ -147,6 +151,9 @@ viz = {
     # A link to the neighbour's port when there is one, plain "none" otherwise.
     "viz_neighbour": {"type": "splunk.markdown",
                       "options": {"markdown": "**CDP neighbour**\n\n## $status:result.neighbour_md$"}},
+    "viz_duplex": tile("Duplex", "ds_hdr_duplex"),
+    "viz_autoneg": tile("Auto-negotiation", "ds_hdr_autoneg"),
+    "viz_mtu": tile("MTU", "ds_hdr_mtu"),
     "viz_macs": tile("Learned MACs", "ds_hdr_macs"),
     "viz_peak": tile("Peak utilization %", "ds_peak"),
     "viz_throughput": chart("splunk.line", "Throughput (5 min average)", "ds_throughput"),
@@ -175,15 +182,17 @@ inputs = {
 rows = [  # (item, x, y, w, h)
     ("viz_status", 0, 0, 240, 110), ("viz_speed", 240, 0, 200, 110), ("viz_changed", 440, 0, 300, 110),
     ("viz_neighbour", 740, 0, 400, 110), ("viz_macs", 1140, 0, 150, 110), ("viz_peak", 1290, 0, 150, 110),
-    ("viz_throughput", 0, 110, 720, 320), ("viz_errors", 720, 110, 720, 320),
-    ("viz_compare", 0, 430, 1440, 420),
+    # Second header row: the port's duplex, auto-negotiation and MTU.
+    ("viz_duplex", 0, 110, 480, 90), ("viz_autoneg", 480, 110, 480, 90), ("viz_mtu", 960, 110, 480, 90),
+    ("viz_throughput", 0, 200, 720, 320), ("viz_errors", 720, 200, 720, 320),
+    ("viz_compare", 0, 520, 1440, 420),
     # Last row, side by side: both hide when empty and the grid keeps their space, so it is one row at the bottom.
-    ("viz_macs_table", 0, 850, 480, 400), ("viz_logs", 480, 850, 960, 400),
+    ("viz_macs_table", 0, 940, 480, 400), ("viz_logs", 480, 940, 960, 400),
 ]
 layout = {
     "type": "grid",
     "globalInputs": ["input_time", "input_node", "input_interface"],
-    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1250},
+    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1340},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Interface", "layoutId": "layout_1"}]},
 }

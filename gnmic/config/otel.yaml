@@ -113,7 +113,7 @@ processors:
     error_mode: ignore
     metrics:
       metric:
-        - 'not IsMatch(name, "^(cisco\\.)?(in-octets|out-octets|in-errors|out-errors|speed|one-minute|used-memory|total-memory|power-allocated|power-budget|power-consumption|consumed-poe-power|available-power|device-name_info|port_info|in-crc-errors|ether-stats\\.in-(oversize|undersize|fragment|jabber)-frames|part-no_info|hardware_info|interface_info|mode_info|openconfig-if-aggregate:aggregate-id_info|interface-mode_info|access-vlan|trunk-vlans_info)$")'
+        - 'not IsMatch(name, "^(cisco\\.)?(in-octets|out-octets|in-errors|out-errors|speed|mtu|ether-state\\.auto-negotiate|one-minute|used-memory|total-memory|power-allocated|power-budget|power-consumption|consumed-poe-power|available-power|device-name_info|port_info|in-crc-errors|ether-stats\\.in-(oversize|undersize|fragment|jabber)-frames|part-no_info|hardware_info|interface_info|mode_info|openconfig-if-aggregate:aggregate-id_info|interface-mode_info|access-vlan|trunk-vlans_info)$")'
       # The switch's own MACs (port CPU) are not learned addresses.
       datapoint:
         - 'metric.name == "cisco.port_info" and attributes["port"] == "CPU"'
@@ -141,7 +141,12 @@ processors:
           - set(datapoint.attributes["pool"], datapoint.attributes["name"]) where IsMatch(metric.name, "memory$")
           - set(datapoint.value_int, UnixSeconds(Time(Substring(datapoint.attributes["last-change"], 0, 19), "%Y-%m-%dT%H:%M:%S"))) where metric.name == "cisco.last-change"
           - keep_keys(datapoint.attributes, ["source", "interface_name"]) where IsMatch(metric.name, "^cisco\\.((in|out)-(octets|errors)|last-change|in-crc-errors|ether-stats\\..*)$")
-          - keep_keys(datapoint.attributes, ["source", "interface_name", "oper-status", "admin-status"]) where metric.name == "cisco.speed"
+          # Duplex (ether-state string leaf): the receiver puts every string leaf of the entry on every metric, keyed by the
+          # bare leaf name (negotiated-duplex-mode). Renamed to the dial-in label name (mdt_xe_if_info_negotiated_duplex_mode).
+          - set(datapoint.attributes["negotiated_duplex_mode"], datapoint.attributes["negotiated-duplex-mode"]) where metric.name == "cisco.speed"
+          - keep_keys(datapoint.attributes, ["source", "interface_name", "oper-status", "admin-status", "negotiated_duplex_mode"]) where metric.name == "cisco.speed"
+          # MTU and auto-negotiation (one metric each, value only): the same labels as the other interface metrics.
+          - keep_keys(datapoint.attributes, ["source", "interface_name"]) where IsMatch(metric.name, "^cisco\\.(mtu|ether-state\\.auto-negotiate)$")
           # Per-port PoE (poe-port-detail entries, keyed by intf-name): the port as interface_name, state and class as labels.
           - set(datapoint.attributes["interface_name"], datapoint.attributes["intf-name"]) where metric.name == "cisco.power-consumption"
           - keep_keys(datapoint.attributes, ["source", "interface_name", "oper-state", "pd-class"]) where metric.name == "cisco.power-consumption"
