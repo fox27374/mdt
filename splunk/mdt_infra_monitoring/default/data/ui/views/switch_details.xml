@@ -357,7 +357,7 @@
    "type": "ds.search",
    "name": "ip",
    "options": {
-    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=* extracted_source=\"$tk_node$\" mgmt_ip=* earliest=-1h BY mgmt_ip | fields mgmt_ip | head 1"
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=* extracted_source=\"$tk_node$\" mgmt_ip=* earliest=-1h BY mgmt_ip | fields mgmt_ip | append [| `mdt_cdp(*)` | where neighbour=lower(\"$tk_node$\") AND ip!=\"\" | eval mgmt_ip=ip | fields mgmt_ip] | head 1"
    }
   },
   "ds_cpu": {
