@@ -171,6 +171,12 @@ processors:
           - keep_keys(datapoint.attributes, ["source", "interface_name", "interface_mode"]) where metric.name == "cisco.interface-mode_info"
           - keep_keys(datapoint.attributes, ["source", "interface_name", "trunk_vlans"]) where metric.name == "cisco.trunk-vlans_info"
           - keep_keys(datapoint.attributes, ["source", "interface_name", "access_vlan"]) where metric.name == "cisco.access-vlan"
+          # Management IP (Switch Details), like the gnmic event-tags mgmt_ip: the receiver never exposes the sender
+          # address, so it is repeated from dialout-iosxe.yaml. On the CPU series only (one per switch, no new series).
+          - set(datapoint.attributes["mgmt_ip"], "172.24.80.243") where metric.name == "cisco.one-minute" and datapoint.attributes["source"] == "ibk-lab-sw11"
+          - set(datapoint.attributes["mgmt_ip"], "172.24.80.242") where metric.name == "cisco.one-minute" and datapoint.attributes["source"] == "ibk-lab-sw12"
+          - set(datapoint.attributes["mgmt_ip"], "172.24.80.241") where metric.name == "cisco.one-minute" and datapoint.attributes["source"] == "ibk-lab-sw13"
+          - set(datapoint.attributes["mgmt_ip"], "172.24.80.238") where metric.name == "cisco.one-minute" and datapoint.attributes["source"] == "ibk-lab-seminar"
       # Last: the renames above match on the cisco.* names.
       - context: metric
         statements:
