@@ -74,7 +74,7 @@
      "type": "drilldown.customUrl",
      "options": {
       "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$click.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
-      "newTab": true
+      "newTab": false
      }
     }
    ]
@@ -240,7 +240,7 @@
      "type": "drilldown.customUrl",
      "options": {
       "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
-      "newTab": true
+      "newTab": false
      }
     }
    ]
@@ -261,7 +261,7 @@
      "type": "drilldown.customUrl",
      "options": {
       "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
-      "newTab": true
+      "newTab": false
      }
     }
    ]
@@ -281,7 +281,7 @@
      "type": "drilldown.customUrl",
      "options": {
       "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.Interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
-      "newTab": true
+      "newTab": false
      }
     }
    ]
@@ -307,7 +307,7 @@
      "type": "drilldown.customUrl",
      "options": {
       "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row._port.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
-      "newTab": true
+      "newTab": false
      }
     }
    ]

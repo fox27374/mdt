@@ -101,7 +101,7 @@ viz = {
                     "options": {"count": 100, "showInternalFields": False},
                     "eventHandlers": [{"type": "drilldown.customUrl", "options": {
                         "url": "/app/mdt_infra_monitoring/$row._view.value$?form.wlc=$row._wlc.value$&form.tk_client=$row.MAC.value$&form.tk_node=$row._node.value$&form.tk_interface=$row._port.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$row._site.value$",
-                        "newTab": True}}],
+                        "newTab": False}}],
                     "showProgressBar": True},
 }
 
