@@ -4,7 +4,7 @@
     <definition><![CDATA[
 {
  "title": "Wireless Overview",
- "description": "One WLC: clients and APs, SSIDs and PHY types, access points with their radios, per-band utilization, noise and interference of the busiest AP, CPU and memory.",
+ "description": "One WLC: clients and APs, every client (click for its details), SSIDs and PHY types, access points with their radios, per-band utilization, noise and interference of the busiest AP, CPU and memory.",
  "inputs": {
   "input_time": {
    "type": "input.timerange",
@@ -170,6 +170,26 @@
     ]
    }
   },
+  "viz_client_list": {
+   "type": "splunk.table",
+   "title": "Clients (last 15 min). Click a client to open its details",
+   "dataSources": {
+    "primary": "ds_client_list"
+   },
+   "options": {
+    "count": 20
+   },
+   "showProgressBar": true,
+   "eventHandlers": [
+    {
+     "type": "drilldown.customUrl",
+     "options": {
+      "url": "/app/mdt_infra_monitoring/wireless_client_details?form.site=$site$&form.wlc=$wlc$&form.tk_client=$row.MAC.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "newTab": true
+     }
+    }
+   ]
+  },
   "viz_clients": {
    "type": "splunk.area",
    "title": "Clients by band",
@@ -316,6 +336,17 @@
     }
    }
   },
+  "ds_client_list": {
+   "type": "ds.search",
+   "name": "client_list",
+   "options": {
+    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" BY traffic_stats_ms_mac_address | rename traffic_stats_ms_mac_address as mac | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname] | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ip_addr BY sisf_db_mac_mac_addr ip_addr | sort 0 - t | dedup sisf_db_mac_mac_addr | rename sisf_db_mac_mac_addr as mac | fields mac ip_addr] | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid BY dot11_oper_data_ms_mac_address vap_ssid | sort 0 - t | dedup dot11_oper_data_ms_mac_address | rename dot11_oper_data_ms_mac_address as mac | fields mac vap_ssid] | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address BY dot11_oper_data_ms_mac_address ap_mac_address | sort 0 - t | dedup dot11_oper_data_ms_mac_address | rename dot11_oper_data_ms_mac_address as mac | fields mac ap_mac_address] | join type=left ap_mac_address [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name | rename eth_mac as ap_mac_address | fields ap_mac_address ap_name_mac_map_wtp_name] | join type=left mac [| mstats latest(mdt_wl_info_current_channel) as ch latest(mdt_wl_info_ms_ap_slot_id) as slot WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" BY dot11_oper_data_ms_mac_address | rename dot11_oper_data_ms_mac_address as mac] | eval Band=case(slot==2, \"6 GHz\", ch <= 14, \"2.4 GHz\", ch > 14, \"5 GHz\") | rename device_hostname as Name, mac as MAC, ip_addr as IP, vap_ssid as SSID, ap_name_mac_map_wtp_name as AP, ch as Channel, rssi as \"RSSI (dBm)\", snr as \"SNR (dB)\", speed as \"Speed (Mbps)\" | sort 0 Name MAC | table Name MAC IP SSID AP Band Channel \"RSSI (dBm)\" \"SNR (dB)\" \"Speed (Mbps)\"",
+    "queryParameters": {
+     "earliest": "-15m",
+     "latest": "now"
+    }
+   }
+  },
   "ds_ssids": {
    "type": "ds.search",
    "name": "ssids",
@@ -436,7 +467,7 @@
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 1550
+     "height": 1850
     },
     "structure": [
      {
@@ -520,11 +551,21 @@
       }
      },
      {
-      "item": "viz_tx",
+      "item": "viz_client_list",
       "type": "block",
       "position": {
        "x": 0,
        "y": 690,
+       "w": 1440,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_tx",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 990,
        "w": 720,
        "h": 300
       }
@@ -534,7 +575,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 690,
+       "y": 990,
        "w": 720,
        "h": 300
       }
@@ -544,7 +585,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 990,
+       "y": 1290,
        "w": 720,
        "h": 300
       }
@@ -554,7 +595,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 990,
+       "y": 1290,
        "w": 720,
        "h": 300
       }
@@ -564,7 +605,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1290,
+       "y": 1590,
        "w": 1440,
        "h": 260
       }
