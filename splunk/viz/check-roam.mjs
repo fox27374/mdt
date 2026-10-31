@@ -17,6 +17,14 @@ const NOW = TO;
   assert.equal(m.stays[0].end, T0 + 1200);
   assert.equal(m.stays[0].endReason, 'next');
   assert.equal(m.stays[1].start, T0 + 1200);
+  assert.deepEqual(m.moves, [{ t: T0 + 1200, fromLane: 0, toLane: 1 }], 'AP change: path line');
+}
+
+// No path line across an offline gap, nor for a reassociation on the same AP.
+{
+  const rows = [assoc(T0 + 600, 'AP1'), seen(T0 + 600), seen(T0 + 900), assoc(T0 + 1500, 'AP2'),
+    assoc(T0 + 1800, 'AP2'), ...minutes(T0 + 1500, T0 + 2000)];
+  assert.deepEqual(buildTimeline(rows, NOW).moves, []);
 }
 
 // A presence gap over 5 minutes cuts the stay at the last seen minute; the gap is drawn after it.

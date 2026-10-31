@@ -143,6 +143,11 @@ function renderChart(m) {
         const w = Math.max(1.5, Number(x(s.barEnd)) - Number(x(s.barStart)));
         return `<rect data-h="s${i}" x="${x(s.barStart)}" y="${laneY(s.lane) + (LANE - BAR_H) / 2}" width="${w.toFixed(2)}" height="${BAR_H}" rx="2" fill="${BAND[s.band] || c.muted}"/>`;
     }).join('');
+    // Path lines between lanes where the client changed AP, under the ticks.
+    const mid = (lane) => laneY(lane) + LANE / 2;
+    const moves = (m.moves || []).map((mv) =>
+        `<line x1="${x(mv.t)}" y1="${mid(mv.fromLane)}" x2="${x(mv.t)}" y2="${mid(mv.toLane)}" stroke="${c.muted}" stroke-width="1.5" pointer-events="none"/>`
+    ).join('');
     // Ticks last, each with a wider hit rect drawn after the visible tick, so a tick wins over the bar under it.
     const ticks = m.stays.map((s, i) => {
         if (!s.inRange) return '';
@@ -161,7 +166,7 @@ function renderChart(m) {
         }).join('');
 
     const legend = legendHtml(c);
-    body.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" style="color:${c.text}">${gaps}${lanes}${bars}${ticks}${axis}</svg>${legend}`;
+    body.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" style="color:${c.text}">${gaps}${lanes}${bars}${moves}${ticks}${axis}</svg>${legend}`;
 }
 
 function legendHtml(c) {

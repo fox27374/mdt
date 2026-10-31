@@ -71,6 +71,14 @@ export function buildTimeline(rows, nowSec) {
   });
   stays.forEach((s) => { s.lane = laneOf.get(s.ap); });
 
+  // AP changes: a stay that runs into the next association on another AP. Drawn as a vertical line between the
+  // lanes, so the bars read as one path. None across an offline gap (the stay ended at last seen).
+  const moves = [];
+  for (let k = 1; k < stays.length; k++) {
+    const a = stays[k - 1], b = stays[k];
+    if (a.endReason === 'next' && a.lane !== b.lane && b.inRange) moves.push({ t: b.start, fromLane: a.lane, toLane: b.lane });
+  }
+
   // Offline: silence between two presence rows longer than GAP_SECONDS.
   const gaps = [];
   for (let k = 1; k < seen.length; k++) {
@@ -79,7 +87,7 @@ export function buildTimeline(rows, nowSec) {
     const end = Math.min(seen[k], to);
     if (end > start) gaps.push({ start, end });
   }
-  return { empty: false, from, to, lanes, stays, gaps };
+  return { empty: false, from, to, lanes, stays, gaps, moves };
 }
 
 // Colour class of a roam tick: category from the search (Join, Good < 100 ms, Slow 100-500 ms, Bad > 500 ms).
