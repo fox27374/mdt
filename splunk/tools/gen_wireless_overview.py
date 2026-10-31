@@ -18,12 +18,14 @@ SYS = (f"| mstats latest(mdt_xe_mem_stats_used_memory) as used latest(mdt_xe_mem
        "| where _time + 60 <= now() | eval \"CPU %\"=round(cpu, 0), \"Memory %\"=round(used / total * 100, 1) | fields _time \"CPU %\" \"Memory %\"")
 
 # Radios as "Radio <slot>" columns: slot is not the band on every AP (XOR radios), so no band names.
+# A slot without a channel is no radio (2-slot APs report a slot 2 with channel 0): left out.
 # ponytail: TX power from the band entry numbered like the slot; an XOR radio serving another band shows that entry's power.
 RK = "radio_oper_data_wtp_mac radio_oper_data_radio_slot_id"
 RADIOS = (f"| mstats latest(mdt_wl_radio_info_curr_freq) as ch latest(mdt_wl_radio_info_chan_width) as w WHERE {W} BY {RK} "
           f"| join type=left {RK} [| mstats latest(mdt_wl_radio_info_curr_tx_power_in_dbm) as p WHERE {W} BY {RK} radio_band_info_band_id "
           "| where radio_band_info_band_id=radio_oper_data_radio_slot_id | fields - radio_band_info_band_id] "
-          f"| join type=left {RK} [| mstats latest(_value) WHERE {W} metric_name=mdt_wl_radio_info_oper_state BY {RK} oper_state | fields - latest*] "
+          f"| join type=left {RK} [| mstats latest_time(_value) as t WHERE {W} metric_name=mdt_wl_radio_info_oper_state BY {RK} oper_state | sort 0 - t | dedup {RK} | fields - t] "
+          "| where ch > 0 "
           "| eval cell=if(isnotnull(oper_state) AND oper_state!=\"radio-up\", \"down\", \"ch \".ch.\" / \".w.\" MHz\".if(isnotnull(p), \" / \".p.\" dBm\", \"\")), "
           "col=\"Radio \".radio_oper_data_radio_slot_id | xyseries radio_oper_data_wtp_mac col cell | rename radio_oper_data_wtp_mac as wtp_mac")
 # Every AP the WLC knows (name map), joined or not (an AP downloading an image is missing from the join state).
