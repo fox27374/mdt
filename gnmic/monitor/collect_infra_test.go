@@ -437,3 +437,119 @@ func TestDoGetContextCancelled(t *testing.T) {
 		t.Errorf("expected error due to context timeout")
 	}
 }
+
+// Test parseLocks with the live Consul KV response (14 held locks, values are base64 instance names)
+func TestParseLocksLiveFixture(t *testing.T) {
+	body, err := os.ReadFile("testdata/consul_kv_targets.json")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	locks, err := parseLocks(body, "gnmic/mdt/targets/")
+	if err != nil {
+		t.Fatalf("parseLocks: %v", err)
+	}
+	if len(locks) != 14 {
+		t.Fatalf("got %d locks, want 14", len(locks))
+	}
+	if locks["ibk-lab-border01"] != "gnmic-1" {
+		t.Errorf("ibk-lab-border01 holder = %q, want gnmic-1", locks["ibk-lab-border01"])
+	}
+	if locks["ibk-lab-sw98"] != "gnmic-2" {
+		t.Errorf("ibk-lab-sw98 holder = %q, want gnmic-2", locks["ibk-lab-sw98"])
+	}
+}
+
+func TestParseLocks(t *testing.T) {
+	const prefix = "gnmic/mdt/targets/"
+	tests := []struct {
+		name    string
+		body    string
+		want    map[string]string
+		wantErr bool
+	}{
+		{
+			name: "held lock",
+			body: `[{"Key":"gnmic/mdt/targets/t1","Value":"Z25taWMtMQ==","Session":"s1"}]`,
+			want: map[string]string{"t1": "gnmic-1"},
+		},
+		{
+			name: "released lock without session is ignored",
+			body: `[{"Key":"gnmic/mdt/targets/t1","Value":"Z25taWMtMQ==","Session":""}]`,
+			want: map[string]string{},
+		},
+		{
+			name: "key outside prefix is ignored",
+			body: `[{"Key":"gnmic/mdt/leader","Value":"Z25taWMtMQ==","Session":"s1"}]`,
+			want: map[string]string{},
+		},
+		{
+			name: "empty value is ignored",
+			body: `[{"Key":"gnmic/mdt/targets/t1","Value":"","Session":"s1"}]`,
+			want: map[string]string{},
+		},
+		{
+			name: "null value is ignored",
+			body: `[{"Key":"gnmic/mdt/targets/t1","Value":null,"Session":"s1"}]`,
+			want: map[string]string{},
+		},
+		{
+			name: "empty response",
+			body: `[]`,
+			want: map[string]string{},
+		},
+		{
+			name:    "bad base64",
+			body:    `[{"Key":"gnmic/mdt/targets/t1","Value":"!!!","Session":"s1"}]`,
+			wantErr: true,
+		},
+		{
+			name:    "not json",
+			body:    `<html>`,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseLocks([]byte(tt.body), prefix)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %v, want %v", got, tt.want)
+			}
+			for k, v := range tt.want {
+				if got[k] != v {
+					t.Errorf("%s = %q, want %q", k, got[k], v)
+				}
+			}
+		})
+	}
+}
+
+func TestFetchLocksQueriesRecurse(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.RequestURI() != "/v1/kv/gnmic/mdt/targets/?recurse" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Write([]byte(`[{"Key":"gnmic/mdt/targets/t1","Value":"Z25taWMtMg==","Session":"s1"}]`))
+	}))
+	defer srv.Close()
+
+	locks, err := fetchLocks(context.Background(), &http.Client{Timeout: 5 * time.Second}, srv.URL, "gnmic/mdt/targets/")
+	if err != nil {
+		t.Fatalf("fetchLocks: %v", err)
+	}
+	if locks["t1"] != "gnmic-2" {
+		t.Errorf("t1 holder = %q, want gnmic-2", locks["t1"])
+	}
+
+	// Unreachable Consul: nil, no error needed by the caller beyond falling back
+	locks, err = fetchLocks(context.Background(), &http.Client{Timeout: time.Second}, "http://127.0.0.1:1", "gnmic/mdt/targets/")
+	if err == nil || locks != nil {
+		t.Errorf("unreachable: locks = %v, err = %v; want nil and an error", locks, err)
+	}
+}

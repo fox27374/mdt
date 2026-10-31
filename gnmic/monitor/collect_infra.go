@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ type InfraConfig struct {
 	NATSMonURL string      // "http://nats:8222"
 	OutputURL  string      // "http://gnmic-output:9273/metrics"
 	Collectors []Collector // expected collector instances, e.g. gnmic-1, gnmic-2
+	LockPrefix string      // Consul KV prefix of the target locks, e.g. "gnmic/mdt/targets/"
 }
 
 // natsPrev remembers the previous /varz sample to compute a message rate.
@@ -315,6 +317,10 @@ func runInfraChecks(ctx context.Context, st *Store, hc *http.Client, cfg InfraCo
 	consulResult := checkConsul(ctx, hc, cfg.ConsulURL, cfg.Collectors)
 	st.SetComponent(consulResult)
 
+	// Lock holders decide each target's owner (Store.Snapshot)
+	locks, _ := fetchLocks(ctx, hc, cfg.ConsulURL, cfg.LockPrefix)
+	st.SetLocks(locks)
+
 	// Check NATS
 	natsResult := checkNATS(ctx, hc, cfg.NATSMonURL, natsPrevState, now)
 	st.SetComponent(natsResult)
@@ -322,6 +328,57 @@ func runInfraChecks(ctx context.Context, st *Store, hc *http.Client, cfg InfraCo
 	// Check Output
 	outputResult := checkOutput(ctx, hc, cfg.OutputURL)
 	st.SetComponent(outputResult)
+}
+
+// fetchLocks reads the Consul KV lock keys under prefix and returns target name -> lock holder
+// (see parseLocks). Any error returns nil, so owners fall back to the latest SetConfig.
+func fetchLocks(ctx context.Context, hc *http.Client, base, prefix string) (map[string]string, error) {
+	resp, err := doGet(ctx, hc, base+"/v1/kv/"+prefix+"?recurse")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read kv: %w", err)
+	}
+	return parseLocks(body, prefix)
+}
+
+// parseLocks turns the body of GET /v1/kv/<prefix>?recurse into target name -> lock holder.
+// Each entry is {"Key": "<prefix><target>", "Value": base64(<instance>), "Session": "<id>"}.
+// Only entries with a Session are held: a released lock keeps its key and value without one.
+// Entries outside prefix, without a Session or with an empty holder are skipped.
+func parseLocks(body []byte, prefix string) (map[string]string, error) {
+	var entries []struct {
+		Key     string
+		Value   string
+		Session string
+	}
+	if err := json.Unmarshal(body, &entries); err != nil {
+		return nil, fmt.Errorf("parse kv: %w", err)
+	}
+
+	locks := make(map[string]string)
+	for _, e := range entries {
+		target, ok := strings.CutPrefix(e.Key, prefix)
+		if !ok || target == "" || e.Session == "" {
+			continue
+		}
+		holder, err := base64.StdEncoding.DecodeString(e.Value)
+		if err != nil {
+			return nil, fmt.Errorf("decode lock %s: %w", e.Key, err)
+		}
+		if len(holder) > 0 {
+			locks[target] = string(holder)
+		}
+	}
+	return locks, nil
 }
 
 // doGet performs an HTTP GET request with the given context

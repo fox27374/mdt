@@ -71,6 +71,7 @@ func main() {
 	natsSubject := env("NATS_SUBJECT", "mdt")
 	natsMonURL := env("NATS_MON_URL", "http://nats:8222")
 	consulURL := env("CONSUL_URL", "http://consul:8500")
+	clusterName := env("CLUSTER_NAME", "mdt")
 	outputURL := env("OUTPUT_URL", "http://gnmic-output:9273/metrics")
 	mdtConfig := env("MDT_CONFIG", "/app/config/mdt.yaml")
 	pollIntervalStr := env("POLL_INTERVAL", "15s")
@@ -144,6 +145,7 @@ func main() {
 		NATSMonURL: natsMonURL,
 		OutputURL:  outputURL,
 		Collectors: cols,
+		LockPrefix: "gnmic/" + clusterName + "/targets/",
 	}, poll)
 	if otelHealthURL != "" || otelMetricsURL != "" {
 		go RunOtel(ctx, st, OtelConfig{

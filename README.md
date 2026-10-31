@@ -286,7 +286,7 @@ The `monitor` service provides a web UI and JSON API for inspecting the health a
 The UI and API display:
 
 - **Component health** — live status of Consul, NATS server, NATS consumer, gnmic-output, each gnmic collector (gnmic-1, gnmic-2), and the `otel-collector` (see [OpenTelemetry collector check](#opentelemetry-collector-check)).
-- **Target list** — all targets from the configuration with their owner collector and current status.
+- **Target list** — all targets from the configuration with their owner collector and current status. The owner is the Consul lock holder of the target (`gnmic/<cluster>/targets/<name>`); when no lock is found, the collector that most recently set the target's config.
 - **Subscription status** — each target's subscriptions with their last-seen timestamp and data-point count.
 
 Status values are:
@@ -310,6 +310,7 @@ The monitor reads these environment variables; defaults shown are used if unset:
 | `NATS_SUBJECT` | `mdt` | NATS subject being consumed |
 | `NATS_MON_URL` | `http://nats:8222` | NATS monitoring API URL |
 | `CONSUL_URL` | `http://consul:8500` | Consul HTTP API URL |
+| `CLUSTER_NAME` | `mdt` | gnmic cluster name; the target locks are read from Consul KV `gnmic/<CLUSTER_NAME>/targets/` |
 | `OUTPUT_URL` | `http://gnmic-output:9273/metrics` | gnmic-output metrics endpoint |
 | `MDT_CONFIG` | `/app/config/mdt.yaml` | Path to gnmic collector configuration |
 | `POLL_INTERVAL` | `15s` | How often to query components for status updates |
