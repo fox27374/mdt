@@ -6,6 +6,22 @@
  "title": "Interface Details",
  "description": "One port: status, speed, traffic and error kinds, the far end of its CDP link, learned MACs and syslog.",
  "inputs": {
+  "input_site": {
+   "type": "input.dropdown",
+   "title": "Site",
+   "dataSources": {
+    "primary": "ds_sites"
+   },
+   "options": {
+    "token": "site",
+    "defaultValue": "ibk-lab",
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"
+   }
+  },
   "input_time": {
    "type": "input.timerange",
    "title": "Time range",
@@ -198,25 +214,32 @@
   }
  },
  "dataSources": {
+  "ds_sites": {
+   "type": "ds.search",
+   "name": "sites",
+   "options": {
+    "query": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label"
+   }
+  },
   "ds_nodes": {
    "type": "ds.search",
    "name": "nodes",
    "options": {
-    "query": "| `mdt_nodes($global_time.earliest$)`"
+    "query": "| `mdt_nodes($global_time.earliest$, $site$)`"
    }
   },
   "ds_ifaces": {
    "type": "ds.search",
    "name": "ifaces",
    "options": {
-    "query": "| `mdt_if_status($tk_node$)` | `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | fields interface | append [| `mdt_if_status($tk_node$)` | where match(interface, \"(?i)^(port-channel|po[0-9])\") | fields interface]"
+    "query": "| `mdt_if_status($tk_node$, $site$)` | `mdt_physical_ports` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 - oper_up - speed | dedup keepempty=true node path | sort 0 interface | fields - path | fields interface | append [| `mdt_if_status($tk_node$, $site$)` | where match(interface, \"(?i)^(port-channel|po[0-9])\") | fields interface]"
    }
   },
   "ds_status": {
    "type": "ds.search",
    "name": "status",
    "options": {
-    "query": "| `mdt_if_status($tk_node$)` | where (`mdt_is_physical` OR match(interface, \"(?i)^(port-channel|po[0-9])\")) | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | where node=\"$tk_node$\" AND (interface=\"$tk_interface$\" OR path=\"$tk_interface$\") | sort 0 - oper_up - speed | dedup keepempty=true node path | eval inorm=`mdt_ifkey(interface)` | join type=left node inorm [| `mdt_links`] | join type=left far_node far_inorm [| `mdt_if_status(*)` | `mdt_physical_ports` | eval inorm=`mdt_ifkey(interface)` | rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] | eval neighbour_md=case(isnull(far_node), \"none\", isnull(far_interface), far_node, true(), \"[\".far_node.\" \".far_interface.\"](/app/mdt_infra_monitoring/interface_details?form.tk_node=\".far_node.\"&form.tk_interface=\".far_interface.\"&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$)\") | eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")",
+    "query": "| `mdt_if_status($tk_node$, $site$)` | where (`mdt_is_physical` OR match(interface, \"(?i)^(port-channel|po[0-9])\")) | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | where node=\"$tk_node$\" AND (interface=\"$tk_interface$\" OR path=\"$tk_interface$\") | sort 0 - oper_up - speed | dedup keepempty=true node path | eval inorm=`mdt_ifkey(interface)` | join type=left node inorm [| `mdt_links($site$)`] | join type=left far_node far_inorm [| `mdt_if_status(*, $site$)` | `mdt_physical_ports` | eval inorm=`mdt_ifkey(interface)` | rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] | eval neighbour_md=case(isnull(far_node), \"none\", isnull(far_interface), far_node, true(), \"[\".far_node.\" \".far_interface.\"](/app/mdt_infra_monitoring/interface_details?form.tk_node=\".far_node.\"&form.tk_interface=\".far_interface.\"&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$)\") | eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")",
     "enableSmartSources": true
    }
   },
@@ -238,7 +261,7 @@
    "type": "ds.search",
    "name": "flow",
    "options": {
-    "query": "| `mdt_if_counters($status:result.node$,$status:result.interface$)` | append [| `mdt_if_detail($status:result.node$,$status:result.interface$)`] | append [| `mdt_if_counters($status:result.far_node$,$status:result.far_interface$)`] | append [| `mdt_if_detail($status:result.far_node$,$status:result.far_interface$)`] | stats max(in_octets) as in_octets max(out_octets) as out_octets max(in_errors) as in_errors max(out_errors) as out_errors max(crc) as crc max(oversize_rx) as oversize_rx max(undersize_rx) as undersize_rx max(fragment_rx) as fragment_rx max(jabber_rx) as jabber_rx max(tx_errors) as tx_errors max(oversize_tx) as oversize_tx by _time node interface | sort 0 node interface _time | streamstats current=f window=1 last(_time) as p_t last(in_octets) as p_in_octets last(out_octets) as p_out_octets last(in_errors) as p_in_errors last(out_errors) as p_out_errors last(crc) as p_crc last(oversize_rx) as p_oversize_rx last(undersize_rx) as p_undersize_rx last(fragment_rx) as p_fragment_rx last(jabber_rx) as p_jabber_rx last(tx_errors) as p_tx_errors last(oversize_tx) as p_oversize_tx by node interface | eval dt=_time - p_t | where dt > 0 | eval in_oct=if(in_octets >= p_in_octets, in_octets - p_in_octets, null()), out_oct=if(out_octets >= p_out_octets, out_octets - p_out_octets, null()), in_err=if(in_errors >= p_in_errors, in_errors - p_in_errors, null()), out_err=if(out_errors >= p_out_errors, out_errors - p_out_errors, null()), crc=if(crc >= p_crc, crc - p_crc, null()), ov_rx=if(oversize_rx >= p_oversize_rx, oversize_rx - p_oversize_rx, null()), un_rx=if(undersize_rx >= p_undersize_rx, undersize_rx - p_undersize_rx, null()), frag_rx=if(fragment_rx >= p_fragment_rx, fragment_rx - p_fragment_rx, null()), jab_rx=if(jabber_rx >= p_jabber_rx, jabber_rx - p_jabber_rx, null()), tx_err=if(tx_errors >= p_tx_errors, tx_errors - p_tx_errors, null()), ov_tx=if(oversize_tx >= p_oversize_tx, oversize_tx - p_oversize_tx, null()) | eval in_bps=in_oct * 8 / dt, out_bps=out_oct * 8 / dt | bin _time span=5m | stats avg(in_bps) as in_bps avg(out_bps) as out_bps sum(in_oct) as in_oct count(in_oct) as in_oct_n sum(out_oct) as out_oct count(out_oct) as out_oct_n sum(in_err) as in_err count(in_err) as in_err_n sum(out_err) as out_err count(out_err) as out_err_n sum(crc) as crc count(crc) as crc_n sum(ov_rx) as ov_rx count(ov_rx) as ov_rx_n sum(un_rx) as un_rx count(un_rx) as un_rx_n sum(frag_rx) as frag_rx count(frag_rx) as frag_rx_n sum(jab_rx) as jab_rx count(jab_rx) as jab_rx_n sum(tx_err) as tx_err count(tx_err) as tx_err_n sum(ov_tx) as ov_tx count(ov_tx) as ov_tx_n by _time node interface | where _time + 300 <= now() | eval side=if(node=\"$status:result.node$\" AND interface=\"$status:result.interface$\", \"this\", \"far\")"
+    "query": "| `mdt_if_counters($status:result.node$,$status:result.interface$, $site$)` | append [| `mdt_if_detail($status:result.node$,$status:result.interface$)`] | append [| `mdt_if_counters($status:result.far_node$,$status:result.far_interface$, $site$)`] | append [| `mdt_if_detail($status:result.far_node$,$status:result.far_interface$)`] | stats max(in_octets) as in_octets max(out_octets) as out_octets max(in_errors) as in_errors max(out_errors) as out_errors max(crc) as crc max(oversize_rx) as oversize_rx max(undersize_rx) as undersize_rx max(fragment_rx) as fragment_rx max(jabber_rx) as jabber_rx max(tx_errors) as tx_errors max(oversize_tx) as oversize_tx by _time node interface | sort 0 node interface _time | streamstats current=f window=1 last(_time) as p_t last(in_octets) as p_in_octets last(out_octets) as p_out_octets last(in_errors) as p_in_errors last(out_errors) as p_out_errors last(crc) as p_crc last(oversize_rx) as p_oversize_rx last(undersize_rx) as p_undersize_rx last(fragment_rx) as p_fragment_rx last(jabber_rx) as p_jabber_rx last(tx_errors) as p_tx_errors last(oversize_tx) as p_oversize_tx by node interface | eval dt=_time - p_t | where dt > 0 | eval in_oct=if(in_octets >= p_in_octets, in_octets - p_in_octets, null()), out_oct=if(out_octets >= p_out_octets, out_octets - p_out_octets, null()), in_err=if(in_errors >= p_in_errors, in_errors - p_in_errors, null()), out_err=if(out_errors >= p_out_errors, out_errors - p_out_errors, null()), crc=if(crc >= p_crc, crc - p_crc, null()), ov_rx=if(oversize_rx >= p_oversize_rx, oversize_rx - p_oversize_rx, null()), un_rx=if(undersize_rx >= p_undersize_rx, undersize_rx - p_undersize_rx, null()), frag_rx=if(fragment_rx >= p_fragment_rx, fragment_rx - p_fragment_rx, null()), jab_rx=if(jabber_rx >= p_jabber_rx, jabber_rx - p_jabber_rx, null()), tx_err=if(tx_errors >= p_tx_errors, tx_errors - p_tx_errors, null()), ov_tx=if(oversize_tx >= p_oversize_tx, oversize_tx - p_oversize_tx, null()) | eval in_bps=in_oct * 8 / dt, out_bps=out_oct * 8 / dt | bin _time span=5m | stats avg(in_bps) as in_bps avg(out_bps) as out_bps sum(in_oct) as in_oct count(in_oct) as in_oct_n sum(out_oct) as out_oct count(out_oct) as out_oct_n sum(in_err) as in_err count(in_err) as in_err_n sum(out_err) as out_err count(out_err) as out_err_n sum(crc) as crc count(crc) as crc_n sum(ov_rx) as ov_rx count(ov_rx) as ov_rx_n sum(un_rx) as un_rx count(un_rx) as un_rx_n sum(frag_rx) as frag_rx count(frag_rx) as frag_rx_n sum(jab_rx) as jab_rx count(jab_rx) as jab_rx_n sum(tx_err) as tx_err count(tx_err) as tx_err_n sum(ov_tx) as ov_tx count(ov_tx) as ov_tx_n by _time node interface | where _time + 300 <= now() | eval side=if(node=\"$status:result.node$\" AND interface=\"$status:result.interface$\", \"this\", \"far\")"
    }
   },
   "ds_hdr_status": {
@@ -334,6 +357,7 @@
   "type": "grid",
   "globalInputs": [
    "input_time",
+   "input_site",
    "input_node",
    "input_interface"
   ],

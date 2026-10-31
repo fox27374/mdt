@@ -12,36 +12,36 @@ Q = "$q$"
 
 # Wireless clients: present in the range (rssi samples), latest WLC, hostname, SSID and AP (Ethernet MAC -> name).
 WIRELESS = (
-    "| mstats latest_time(_value) as t WHERE `mdt_metrics_index` metric_name=mdt_wl_client_stats_most_recent_rssi BY extracted_source traffic_stats_ms_mac_address "
+    "| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_client_stats_most_recent_rssi BY site extracted_source traffic_stats_ms_mac_address "
     "| rename extracted_source as wlc, traffic_stats_ms_mac_address as mac | eval mac=lower(mac), prio=0, type=\"Wireless\" "
     "| sort 0 - t | dedup mac "
     # Latest hostname per client (a client can rename itself); the WLC's name for it is the Name, reverse DNS when empty.
-    "| join type=left mac [| mstats latest_time(_value) as th WHERE `mdt_metrics_index` metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname "
+    "| join type=left mac [| mstats latest_time(_value) as th WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname "
     "| rename client_wsa_info_client_mac as mac, device_hostname as wl_name | eval mac=lower(mac) | sort 0 - th | dedup mac | fields mac wl_name] "
-    "| join type=left mac [| mstats latest_time(_value) as ts WHERE `mdt_metrics_index` metric_name=mdt_wl_info_vap_ssid BY vap_ssid dot11_oper_data_ms_mac_address "
+    "| join type=left mac [| mstats latest_time(_value) as ts WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_vap_ssid BY vap_ssid dot11_oper_data_ms_mac_address "
     "| rename dot11_oper_data_ms_mac_address as mac, vap_ssid as ssid | eval mac=lower(mac) | sort 0 - ts | dedup mac | fields mac ssid] "
-    "| join type=left mac [| mstats latest_time(_value) as ta WHERE `mdt_metrics_index` metric_name=mdt_wl_client_stats_ap_mac_address BY dot11_oper_data_ms_mac_address ap_mac_address "
+    "| join type=left mac [| mstats latest_time(_value) as ta WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_client_stats_ap_mac_address BY dot11_oper_data_ms_mac_address ap_mac_address "
     "| rename dot11_oper_data_ms_mac_address as mac, ap_mac_address as eth_mac | eval mac=lower(mac), eth_mac=lower(eth_mac) | sort 0 - ta | dedup mac | fields mac eth_mac] "
-    "| join type=left eth_mac [| mstats latest(_value) as x WHERE `mdt_metrics_index` metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name "
+    "| join type=left eth_mac [| mstats latest(_value) as x WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name "
     "| rename ap_name_mac_map_wtp_name as ap_name | eval eth_mac=lower(eth_mac) | dedup eth_mac | fields eth_mac ap_name]"
 )
 
 # Wired MAC table entries (IOS-XE dial-in and dial-out, NX-OS), the latest per switch, port, VLAN and MAC.
 # The CDP join marks ports with a neighbour (is_cdp=1). Ports are keyed like mdt_ifkey names them, so both sides match.
 WIRED = (
-    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` metric_name=mdt_xe_mac_info_port BY extracted_source port matm_mac_entry_mac matm_mac_entry_vlan_id_number "
+    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_xe_mac_info_port BY site extracted_source port matm_mac_entry_mac matm_mac_entry_vlan_id_number "
     "| rename extracted_source as node, matm_mac_entry_mac as mac, matm_mac_entry_vlan_id_number as vlan "
-    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` metric_name=mdt_nx_mac_info_age BY extracted_source port vlan mac type "
+    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_nx_mac_info_age BY site extracted_source port vlan mac type "
     "| rename extracted_source as node | where type!=\"gateway\" | eval vlan=replace(vlan, \"^vlan-\", \"\")] "
     # Dial-out has no VLAN (the yang_grpc receiver drops numeric keys, otel.yaml): the port's, from mdt_port_vlan.
-    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` metric_name=cisco.port_info BY extracted_source port mac "
+    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" metric_name=cisco.port_info BY site extracted_source port mac "
     "| rename extracted_source as node] "
     # FHRP virtual MACs (HSRP v1/v2, VRRP) are gateways, not clients.
     "| eval mac=lower(mac) | where NOT match(mac, \"^(00:00:0c:07:ac|00:00:0c:9f:f|00:00:5e:00:01)\") | where NOT match(port, \"(?i)^(sup|cpu|vl|lo|nve|tu|app|mgmt|drop)\") "
     "| eval ik=lower(node).\"|\".`mdt_ifkey(port)` "
-    "| join type=left ik [| `mdt_cdp(*)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)`, is_cdp=1 | dedup ik | fields ik is_cdp] "
+    "| join type=left ik [| `mdt_cdp(*, $site$)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)`, is_cdp=1 | dedup ik | fields ik is_cdp] "
     # MAC tables name ports short (Gi1/0/9); the Interface Details drilldown needs the telemetry name (GigabitEthernet1/0/9).
-    "| join type=left ik [| `mdt_if_status(*)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)` | dedup ik | rename interface as ifname | fields ik ifname] "
+    "| join type=left ik [| `mdt_if_status(*, $site$)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)` | dedup ik | rename interface as ifname | fields ik ifname] "
     "| join type=left ik [| `mdt_port_vlan(*)` | eval ik=lower(node).\"|\".ik | fields ik port_vlan] | eval vlan=coalesce(vlan, port_vlan) "
     "| eval prio=if(is_cdp=1, 2, 1), type=\"Wired\"]"
 )
@@ -83,27 +83,33 @@ ROWS = (
     "\"Last seen\"=strftime(t, \"%Y-%m-%d %H:%M\"), "
     # Drilldown parts (hidden: leading _). Studio URL-encodes a token, so the URL template holds the path and each part fills one slot.
     # Port-channels have no Interface Details (drop-if-stats-interfaces drops their stats): those open Switch Details.
-    "_view=case(type=\"Wireless\", \"wireless_client_details\", match(port, \"(?i)^po\"), \"switch_details\", true(), \"interface_details\"), _wlc=coalesce(wlc, \"-\"), _node=coalesce(node, \"-\"), _port=coalesce(ifname, port, \"-\") "
+    "_view=case(type=\"Wireless\", \"wireless_client_details\", match(port, \"(?i)^po\"), \"switch_details\", true(), \"interface_details\"), _wlc=coalesce(wlc, \"-\"), _node=coalesce(node, \"-\"), _port=coalesce(ifname, port, \"-\"), _site=coalesce(site, \"-\") "
     "| sort 0 - t "
-    "| table Type MAC IP Name Where \"Last seen\" _view _wlc _node _port"
+    "| table Type MAC IP Name Where \"Last seen\" _view _wlc _node _port _site"
 )
 
 SEARCH = (WIRELESS + " " + WIRED + " | sort 0 mac prio - t | dedup mac "
           "| join type=left mac [" + ARP_IPS + "] " + FILTER + " " + ROWS)
 
-dataSources = {"ds_clients": {"type": "ds.search", "name": "clients", "options": {"query": SEARCH}}}
+dataSources = {
+    "ds_sites": {"type": "ds.search", "name": "sites", "options": {"query": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label | append [| makeresults | eval label=\"All sites\", value=\"*\"] | fields label value"}},
+    "ds_clients": {"type": "ds.search", "name": "clients", "options": {"query": SEARCH}}}
 
 viz = {
     "viz_clients": {"type": "splunk.table", "title": "Clients: wired and wireless, latest sighting in range. Click a row to open its switch port (port-channel: the switch) or wireless client",
                     "dataSources": {"primary": "ds_clients"},
                     "options": {"count": 100, "showInternalFields": False},
                     "eventHandlers": [{"type": "drilldown.customUrl", "options": {
-                        "url": "/app/mdt_infra_monitoring/$row._view.value$?form.wlc=$row._wlc.value$&form.tk_client=$row.MAC.value$&form.tk_node=$row._node.value$&form.tk_interface=$row._port.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+                        "url": "/app/mdt_infra_monitoring/$row._view.value$?form.wlc=$row._wlc.value$&form.tk_client=$row.MAC.value$&form.tk_node=$row._node.value$&form.tk_interface=$row._port.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$row._site.value$",
                         "newTab": True}}],
                     "showProgressBar": True},
 }
 
 inputs = {
+    "input_site": {"type": "input.dropdown", "title": "Site", "dataSources": {"primary": "ds_sites"},
+                   "options": {"token": "site", "defaultValue": "ibk-lab", "items": ">frame(label, value) | objects()"},
+                   "context": {"label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+                               "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"}},
     "input_time": {"type": "input.timerange", "title": "Time range",
                    "options": {"token": "global_time", "defaultValue": "-24h@h,now"}},
     "input_q": {"type": "input.text", "title": "Search: MAC (any format), IP or name (* = all)",
@@ -112,7 +118,7 @@ inputs = {
 
 layout = {
     "type": "grid",
-    "globalInputs": ["input_time", "input_q"],
+    "globalInputs": ["input_time", "input_site", "input_q"],
     "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 700},
         "structure": [{"item": "viz_clients", "type": "block", "position": {"x": 0, "y": 0, "w": 1440, "h": 700}}]}},
     "tabs": {"items": [{"label": "Clients", "layoutId": "layout_1"}]},

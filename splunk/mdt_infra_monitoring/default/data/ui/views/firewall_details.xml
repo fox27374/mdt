@@ -6,6 +6,22 @@
  "title": "Firewall Details",
  "description": "One Palo Alto firewall: sessions, throughput and errors per interface.",
  "inputs": {
+  "input_site": {
+   "type": "input.dropdown",
+   "title": "Site",
+   "dataSources": {
+    "primary": "ds_sites"
+   },
+   "options": {
+    "token": "site",
+    "defaultValue": "ibk-lab",
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"
+   }
+  },
   "input_time": {
    "type": "input.timerange",
    "title": "Time range",
@@ -166,11 +182,18 @@
   }
  },
  "dataSources": {
+  "ds_sites": {
+   "type": "ds.search",
+   "name": "sites",
+   "options": {
+    "query": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label"
+   }
+  },
   "ds_fws": {
    "type": "ds.search",
    "name": "fws",
    "options": {
-    "query": "| mstats count(_value) WHERE `mdt_metrics_index` metric_name=mdt_panos_* BY extracted_source | rename extracted_source as node | fields node | sort node"
+    "query": "| mstats count(_value) WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_panos_* BY extracted_source | rename extracted_source as node | fields node | sort node"
    }
   },
   "ds_flow": {
@@ -264,6 +287,7 @@
   "type": "grid",
   "globalInputs": [
    "input_time",
+   "input_site",
    "input_fw"
   ],
   "layoutDefinitions": {

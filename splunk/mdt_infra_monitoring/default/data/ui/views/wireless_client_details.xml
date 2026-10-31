@@ -14,6 +14,22 @@
     "defaultValue": "-4h@m,now"
    }
   },
+  "input_site": {
+   "type": "input.dropdown",
+   "title": "Site",
+   "dataSources": {
+    "primary": "ds_sites"
+   },
+   "options": {
+    "token": "site",
+    "defaultValue": "ibk-lab",
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"
+   }
+  },
   "input_wlc": {
    "type": "input.dropdown",
    "title": "WLC",
@@ -278,25 +294,32 @@
   }
  },
  "dataSources": {
+  "ds_sites": {
+   "type": "ds.search",
+   "name": "sites",
+   "options": {
+    "query": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label"
+   }
+  },
   "ds_wlc": {
    "type": "ds.search",
    "name": "wlc",
    "options": {
-    "query": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc"
+    "query": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc"
    }
   },
   "ds_clients": {
    "type": "ds.search",
    "name": "clients",
    "options": {
-    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_most_recent_rssi BY traffic_stats_ms_mac_address | rename traffic_stats_ms_mac_address as mac | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname] | eval label=if(isnotnull(device_hostname), device_hostname.\" (\".mac.\")\", mac) | sort label | table label mac"
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_most_recent_rssi BY traffic_stats_ms_mac_address | rename traffic_stats_ms_mac_address as mac | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname] | eval label=if(isnotnull(device_hostname), device_hostname.\" (\".mac.\")\", mac) | sort label | table label mac"
    }
   },
   "ds_now": {
    "type": "ds.search",
    "name": "now",
    "options": {
-    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" traffic_stats_ms_mac_address=\"$tk_client$\" | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname | where mac=\"$tk_client$\" | fields device_hostname] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ip_addr sisf_db_mac_mac_addr=\"$tk_client$\" BY ip_addr | sort - t | head 1 | fields ip_addr] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid dot11_oper_data_ms_mac_address=\"$tk_client$\" BY vap_ssid | sort - t | head 1 | fields vap_ssid] | appendcols [| mstats latest(mdt_wl_info_current_channel) as ch latest(mdt_wl_info_ms_ap_slot_id) as slot WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" dot11_oper_data_ms_mac_address=\"$tk_client$\"] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ewlc_ms_phy_type dot11_oper_data_ms_mac_address=\"$tk_client$\" BY ewlc_ms_phy_type | sort - t | head 1 | eval phy=replace(ewlc_ms_phy_type, \"^client-dot11([a-z]+).*\", \"802.11\\\\1\") | fields phy] | eval device_hostname=coalesce(device_hostname, \"(none)\"), band=case(slot==2, \"6 GHz\", ch <= 14, \"2.4 GHz\", ch > 14, \"5 GHz\"), radio=if(isnotnull(ch), band.\" ch \".ch.if(isnotnull(phy), \", \".phy, \"\"), null())",
+    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" traffic_stats_ms_mac_address=\"$tk_client$\" | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname | where mac=\"$tk_client$\" | fields device_hostname] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ip_addr sisf_db_mac_mac_addr=\"$tk_client$\" BY ip_addr | sort - t | head 1 | fields ip_addr] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid dot11_oper_data_ms_mac_address=\"$tk_client$\" BY vap_ssid | sort - t | head 1 | fields vap_ssid] | appendcols [| mstats latest(mdt_wl_info_current_channel) as ch latest(mdt_wl_info_ms_ap_slot_id) as slot WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" dot11_oper_data_ms_mac_address=\"$tk_client$\"] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ewlc_ms_phy_type dot11_oper_data_ms_mac_address=\"$tk_client$\" BY ewlc_ms_phy_type | sort - t | head 1 | eval phy=replace(ewlc_ms_phy_type, \"^client-dot11([a-z]+).*\", \"802.11\\\\1\") | fields phy] | eval device_hostname=coalesce(device_hostname, \"(none)\"), band=case(slot==2, \"6 GHz\", ch <= 14, \"2.4 GHz\", ch > 14, \"5 GHz\"), radio=if(isnotnull(ch), band.\" ch \".ch.if(isnotnull(phy), \", \".phy, \"\"), null())",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -307,21 +330,21 @@
    "type": "ds.search",
    "name": "metrics",
    "options": {
-    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed max(mdt_wl_client_stats_data_retries) as retries max(mdt_wl_client_stats_pkts_tx) as ptx max(mdt_wl_client_stats_bytes_tx) as btx max(mdt_wl_client_stats_bytes_rx) as brx WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" traffic_stats_ms_mac_address=\"$tk_client$\" span=1m | sort 0 _time | streamstats current=f last(retries) as pr last(ptx) as pp last(btx) as pbt last(brx) as pbr last(_time) as pt | eval dr=if(retries >= pr, retries - pr, null()), dp=if(ptx >= pp, ptx - pp, null()), dt=_time - pt | eval tx_kbps=if(btx >= pbt, round((btx - pbt) * 8 / dt / 1000, 1), null()), rx_kbps=if(brx >= pbr, round((brx - pbr) * 8 / dt / 1000, 1), null())"
+    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed max(mdt_wl_client_stats_data_retries) as retries max(mdt_wl_client_stats_pkts_tx) as ptx max(mdt_wl_client_stats_bytes_tx) as btx max(mdt_wl_client_stats_bytes_rx) as brx WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" traffic_stats_ms_mac_address=\"$tk_client$\" span=1m | sort 0 _time | streamstats current=f last(retries) as pr last(ptx) as pp last(btx) as pbt last(brx) as pbr last(_time) as pt | eval dr=if(retries >= pr, retries - pr, null()), dp=if(ptx >= pp, ptx - pp, null()), dt=_time - pt | eval tx_kbps=if(btx >= pbt, round((btx - pbt) * 8 / dt / 1000, 1), null()), rx_kbps=if(brx >= pbr, round((brx - pbr) * 8 / dt / 1000, 1), null())"
    }
   },
   "ds_roam": {
    "type": "ds.search",
    "name": "roam",
    "options": {
-    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address dot11_oper_data_ms_mac_address=\"$tk_client$\" span=1m BY ap_mac_address | rename ap_mac_address as eth_mac | sort 0 _time | streamstats current=f last(eth_mac) as prev last(_time) as pt | eval new=if(isnull(prev) OR prev!=eth_mac OR _time - pt > 300, 1, 0) | streamstats sum(new) as stay | stats min(_time) as first max(_time) as last first(eth_mac) as eth_mac by stay | join type=left eth_mac [| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name | join type=left eth_mac [| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_wtp_mac BY ethernet_mac_wtp_mac_map_ethernet_mac wtp_mac | rename ethernet_mac_wtp_mac_map_ethernet_mac as eth_mac] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ap_ip_addr BY oper_data_wtp_mac ap_ip_addr | where ap_ip_addr!=\"0.0.0.0\" | rename oper_data_wtp_mac as wtp_mac] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_location BY capwap_data_wtp_mac location | where location!=\"default location\" | rename capwap_data_wtp_mac as wtp_mac | fields wtp_mac location] | rename ap_name_mac_map_wtp_name as ap_name | fields eth_mac ap_name ap_ip_addr location] | sort - last"
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address dot11_oper_data_ms_mac_address=\"$tk_client$\" span=1m BY ap_mac_address | rename ap_mac_address as eth_mac | sort 0 _time | streamstats current=f last(eth_mac) as prev last(_time) as pt | eval new=if(isnull(prev) OR prev!=eth_mac OR _time - pt > 300, 1, 0) | streamstats sum(new) as stay | stats min(_time) as first max(_time) as last first(eth_mac) as eth_mac by stay | join type=left eth_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name | join type=left eth_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_wtp_mac BY ethernet_mac_wtp_mac_map_ethernet_mac wtp_mac | rename ethernet_mac_wtp_mac_map_ethernet_mac as eth_mac] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ap_ip_addr BY oper_data_wtp_mac ap_ip_addr | where ap_ip_addr!=\"0.0.0.0\" | rename oper_data_wtp_mac as wtp_mac] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_location BY capwap_data_wtp_mac location | where location!=\"default location\" | rename capwap_data_wtp_mac as wtp_mac | fields wtp_mac location] | rename ap_name_mac_map_wtp_name as ap_name | fields eth_mac ap_name ap_ip_addr location] | sort - last"
    }
   },
   "ds_roam_timeline": {
    "type": "ds.search",
    "name": "roam_timeline",
    "options": {
-    "query": "| mstats latest(_value) as run_latency WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_client_roam_run_latency client_mac=\"$tk_client$\" BY ap_name bssid roam_type slot assoc_time | dedup assoc_time | addinfo | eval start=strptime(substr(assoc_time, 1, 19).\" +0000\", \"%Y-%m-%dT%H:%M:%S %z\") | sort 0 - start | streamstats current=f last(start) as next_start | eval stop=coalesce(next_start, min(now(), info_max_time)), bar_start=max(start, info_min_time), ap=coalesce(ap_name, bssid), slot_n=tonumber(slot) | eval band=case(slot_n==0, \"2.4 GHz\", slot_n==1, \"5 GHz\", slot_n==2, \"6 GHz\", true(), \"slot \".slot) | eval roam=case(match(roam_type, \"11r\"), \"802.11r\", match(roam_type, \"okc\"), \"OKC\", match(roam_type, \"none\"), \"none\", true(), replace(roam_type, \"^dot11-roam-type-\", \"\")) | eval category_dot=case(match(roam_type, \"none\"), \"Join\", run_latency < 100, \"Good\", run_latency <= 500, \"Slow\", true(), \"Bad\") | eval kind=if(start >= info_min_time, mvappend(\"bar\", \"dot\"), \"bar\") | mvexpand kind | eval _time=if(kind==\"bar\", bar_start, start), duration=if(kind==\"bar\", stop - bar_start, null()), category=if(kind==\"bar\", \"Connected\", category_dot) | where kind==\"dot\" OR duration > 0 | rename roam as \"Roam type\", band as Band, bssid as BSSID, run_latency as \"Roam time (ms)\" | fields _time ap duration category \"Roam type\" Band BSSID \"Roam time (ms)\" | sort 0 _time"
+    "query": "| mstats latest(_value) as run_latency WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_roam_run_latency client_mac=\"$tk_client$\" BY ap_name bssid roam_type slot assoc_time | dedup assoc_time | addinfo | eval start=strptime(substr(assoc_time, 1, 19).\" +0000\", \"%Y-%m-%dT%H:%M:%S %z\") | sort 0 - start | streamstats current=f last(start) as next_start | eval stop=coalesce(next_start, min(now(), info_max_time)), bar_start=max(start, info_min_time), ap=coalesce(ap_name, bssid), slot_n=tonumber(slot) | eval band=case(slot_n==0, \"2.4 GHz\", slot_n==1, \"5 GHz\", slot_n==2, \"6 GHz\", true(), \"slot \".slot) | eval roam=case(match(roam_type, \"11r\"), \"802.11r\", match(roam_type, \"okc\"), \"OKC\", match(roam_type, \"none\"), \"none\", true(), replace(roam_type, \"^dot11-roam-type-\", \"\")) | eval category_dot=case(match(roam_type, \"none\"), \"Join\", run_latency < 100, \"Good\", run_latency <= 500, \"Slow\", true(), \"Bad\") | eval kind=if(start >= info_min_time, mvappend(\"bar\", \"dot\"), \"bar\") | mvexpand kind | eval _time=if(kind==\"bar\", bar_start, start), duration=if(kind==\"bar\", stop - bar_start, null()), category=if(kind==\"bar\", \"Connected\", category_dot) | where kind==\"dot\" OR duration > 0 | rename roam as \"Roam type\", band as Band, bssid as BSSID, run_latency as \"Roam time (ms)\" | fields _time ap duration category \"Roam type\" Band BSSID \"Roam time (ms)\" | sort 0 _time"
    }
   },
   "ds_rssi": {
@@ -385,6 +408,7 @@
   "type": "grid",
   "globalInputs": [
    "input_time",
+   "input_site",
    "input_wlc",
    "input_client"
   ],

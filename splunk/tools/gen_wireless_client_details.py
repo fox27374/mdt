@@ -4,7 +4,7 @@ import json, os, sys
 
 OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data", "ui", "views", "wireless_client_details.xml")
 
-W = '`mdt_metrics_index` extracted_source="$wlc$"'
+W = '`mdt_metrics_index` site="$site$" extracted_source="$wlc$"'
 C = "$tk_client$"
 # Latest hostname per client MAC (a client can rename itself).
 HOSTNAMES = (f"| mstats latest_time(_value) as t WHERE {W} metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname "
@@ -35,7 +35,8 @@ ROAM_ROWS = ("| addinfo | eval start=strptime(substr(assoc_time, 1, 19).\" +0000
              "| fields _time ap duration category \"Roam type\" Band BSSID \"Roam time (ms)\" | sort 0 _time")
 
 bases = {
-    "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
+    "ds_sites": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label",
+    "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
     "ds_clients": (f"| mstats latest(_value) WHERE {W} metric_name=mdt_wl_client_stats_most_recent_rssi BY traffic_stats_ms_mac_address "
                    f"| rename traffic_stats_ms_mac_address as mac | join type=left mac [{HOSTNAMES}] "
                    "| eval label=if(isnotnull(device_hostname), device_hostname.\" (\".mac.\")\", mac) | sort label | table label mac"),
@@ -127,6 +128,10 @@ viz = {
 inputs = {
     "input_time": {"type": "input.timerange", "title": "Time range",
                    "options": {"token": "global_time", "defaultValue": "-4h@m,now"}},
+    "input_site": {"type": "input.dropdown", "title": "Site", "dataSources": {"primary": "ds_sites"},
+                   "options": {"token": "site", "defaultValue": "ibk-lab", "items": ">frame(label, value) | objects()"},
+                   "context": {"label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+                               "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"}},
     "input_wlc": {"type": "input.dropdown", "title": "WLC", "dataSources": {"primary": "ds_wlc"},
                   "options": {"token": "wlc", "selectFirstSearchResult": True, "items": ">frame(label, value) | objects()"},
                   "context": {"label": ">primary | seriesByName(\"wlc\") | renameSeries(\"label\")",
@@ -152,7 +157,7 @@ rows = [(t, sum(TW[:i]), 0, w, 110) for i, (t, w) in enumerate(zip(tiles, TW))] 
 ]
 layout = {
     "type": "grid",
-    "globalInputs": ["input_time", "input_wlc", "input_client"],
+    "globalInputs": ["input_time", "input_site", "input_wlc", "input_client"],
     "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1570},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Client", "layoutId": "layout_1"}]},

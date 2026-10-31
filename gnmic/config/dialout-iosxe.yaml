@@ -8,7 +8,7 @@ receiver:
   address: 172.24.89.69
   port: 57000
 
-switches:  # name: address (gNMI, insecure, port 57400). Also in otel.yaml transform/cisco (mgmt_ip): keep in step.
+switches:  # name: address (gNMI, insecure, port 57400). Also in otel.yaml transform/cisco (mgmt_ip, site): keep in step.
   ibk-lab-sw11: 172.24.80.243
   ibk-lab-sw12: 172.24.80.242
   ibk-lab-sw13: 172.24.80.241

@@ -2,6 +2,19 @@
   <label>Network Overview</label>
   <!-- Tabs: a link input shows either the overview rows or the topology settings row -->
   <fieldset submitButton="false">
+    <!-- Site: one telemetry site (no All). Every search below filters on it, and the drilldowns pass it on. -->
+    <input type="dropdown" token="site" searchWhenChanged="true">
+      <label>Site</label>
+      <search>
+        <query>| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | sort site | fields site</query>
+        <earliest>-7d</earliest>
+        <latest>now</latest>
+      </search>
+      <fieldForLabel>site</fieldForLabel>
+      <fieldForValue>site</fieldForValue>
+      <default>ibk-lab</default>
+      <initialValue>ibk-lab</initialValue>
+    </input>
     <input type="link" token="tab">
       <label></label>
       <choice value="overview">Overview</choice>
@@ -36,7 +49,7 @@
   <!-- Switch health runs once: the health table post-processes it, the diagram loads it with loadjob. The diagram's CDP part
        (topo_base) runs at the same time, so the page waits for the slower of the two, not both in a row. -->
   <search id="sh_base">
-    <query>| `mdt_switch_health`</query>
+    <query>| `mdt_switch_health($site$)`</query>
     <earliest>-15m</earliest>
     <latest>now</latest>
     <refresh>1m</refresh>
@@ -46,22 +59,22 @@
     </done>
   </search>
   <search id="topo_base">
-    <query>| `mdt_cdp(*)`
+    <query>| `mdt_cdp(*, $site$)`
 | where NOT match(interface, "(?i)^(mgmt|e0m)") AND NOT match(coalesce(remote_interface, ""), "(?i)^(mgmt|e0m)")
 | eval from=node, to=neighbour, nk=lower(neighbour)
-| join type=left nk [| mstats count(_value) WHERE `mdt_metrics_index` metric_name=mdt_panos_* BY extracted_source | eval nk=lower(extracted_source), fw=extracted_source | fields nk fw]
+| join type=left nk [| mstats count(_value) WHERE `mdt_metrics_index` site="$site$" metric_name=mdt_panos_* BY extracted_source | eval nk=lower(extracted_source), fw=extracted_source | fields nk fw]
 | eval to=coalesce(fw, to)
-| append [| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_name BY ap_name cdp_cache_data_cdp_cache_device_id
+| append [| mstats latest(_value) WHERE `mdt_metrics_index` site="$site$" metric_name=mdt_wl_info_ap_name BY ap_name cdp_cache_data_cdp_cache_device_id
   | eval from=ap_name, to=replace(cdp_cache_data_cdp_cache_device_id, "\..*$", ""), interface="uplink" | fields from to interface]
 | where from!=to
 | eval node1=if(from&lt;to, from, to), node2=if(from&lt;to, to, from)
 | stats count by node1 node2
 | eval from=node1, to=node2, linkwidth=2
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
-| append [| `mdt_cdp(*)` | eval kind=case(match(platform, "^(C9[2-6]\d\d|WS-C|N\dK-|IE-)"), "switch", match(platform, "^(AIR-[A-Z]*AP|C91\d\dAX|CW91\d\d)"), "ap") | where isnotnull(kind) | stats count by neighbour kind
+| append [| `mdt_cdp(*, $site$)` | eval kind=case(match(platform, "^(C9[2-6]\d\d|WS-C|N\dK-|IE-)"), "switch", match(platform, "^(AIR-[A-Z]*AP|C91\d\dAX|CW91\d\d)"), "ap") | where isnotnull(kind) | stats count by neighbour kind
   | eval color="#7b8794", type=if(kind=="ap", "wifi", "customimage"), customurl=if(kind=="ap", null(), "/static/app/mdt_infra_monitoring/icons/switch-unmonitored.svg") | rename neighbour as from | fields from color type customurl]
-| append [| `mdt_ap_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="wifi" | rename ap as from | fields from color type]
-| append [| `mdt_firewall_health` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/firewall-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg", from=node | fields from color type customurl]</query>
+| append [| `mdt_ap_health($site$)` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="wifi" | rename ap as from | fields from color type]
+| append [| `mdt_firewall_health($site$)` | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/firewall-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg", from=node | fields from color type customurl]</query>
     <earliest>-15m</earliest>
     <latest>now</latest>
     <refresh>1m</refresh>
@@ -122,13 +135,13 @@
           <!-- Click fields are eval names in single quotes ($tokens$ are not substituted here). row.type is wifi for APs (icon type);
                row.value is the node's role (tooltip), firewall for firewalls. Viz drilldownClick=single fires on double click only (see report). -->
           <condition match="'row.type'=&quot;wifi&quot; OR 'row.value'=&quot;wlc&quot;">
-            <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+            <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
           </condition>
           <condition match="'row.value'=&quot;firewall&quot;">
-            <link target="_blank">/app/mdt_infra_monitoring/firewall_details?form.tk_fw=$nd_node_token|u$</link>
+            <link target="_blank">/app/mdt_infra_monitoring/firewall_details?form.tk_fw=$nd_node_token|u$&amp;form.site=$site|u$</link>
           </condition>
           <condition>
-            <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$</link>
+            <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$&amp;form.site=$site|u$</link>
           </condition>
         </drilldown>
       </viz>
@@ -175,7 +188,7 @@
           <scale type="threshold">1</scale>
         </format>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$row.Switch|u$</link>
+          <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$row.Switch|u$&amp;form.site=$site|u$</link>
         </drilldown>
       </table>
     </panel>
@@ -185,7 +198,7 @@
       <title>Wireless clients, last 15 minutes, all WLCs. Click for Wireless Overview</title>
       <single>
         <search>
-          <query>| mstats latest(mdt_wl_ap_stats_num_assoc_clients) as c WHERE `mdt_metrics_index` span=1m BY extracted_source ssid_counters_wtp_mac ssid_counters_slot_id ssid_counters_wlan_id
+          <query>| mstats latest(mdt_wl_ap_stats_num_assoc_clients) as c WHERE `mdt_metrics_index` site="$site$" span=1m BY extracted_source ssid_counters_wtp_mac ssid_counters_slot_id ssid_counters_wlan_id
 | where _time + 60 &lt;= now()
 | stats sum(c) as c by _time
 | stats latest(c) as clients</query>
@@ -197,7 +210,7 @@
         <option name="drilldown">all</option>
         <option name="refresh.display">progressbar</option>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
         </drilldown>
       </single>
     </panel>
@@ -205,7 +218,7 @@
       <title>APs joined, all WLCs</title>
       <single>
         <search>
-          <query>| `mdt_ap_health`
+          <query>| `mdt_ap_health($site$)`
 | stats count as total count(eval(state=="joined")) as joined
 | eval aps=joined." / ".total
 | fields aps</query>
@@ -217,7 +230,7 @@
         <option name="drilldown">all</option>
         <option name="refresh.display">progressbar</option>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
         </drilldown>
       </single>
     </panel>
@@ -225,7 +238,7 @@
       <title>WLC CPU %, highest WLC. Warning from 70, critical from 90</title>
       <single>
         <search>
-          <query>| mstats latest(mdt_xe_cpu_stats_one_minute) as cpu WHERE `mdt_metrics_index` [| mcatalog values(extracted_source) as extracted_source WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_ip_addr | mvexpand extracted_source] BY extracted_source
+          <query>| mstats latest(mdt_xe_cpu_stats_one_minute) as cpu WHERE `mdt_metrics_index` site="$site$" [| mcatalog values(extracted_source) as extracted_source WHERE `mdt_metrics_index` site="$site$" metric_name=mdt_wl_info_ap_ip_addr | mvexpand extracted_source] BY extracted_source
 | stats max(cpu) as cpu
 | eval cpu=round(cpu, 0)</query>
           <earliest>-15m</earliest>
@@ -240,7 +253,7 @@
         <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
         <option name="unit">%</option>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
         </drilldown>
       </single>
     </panel>
@@ -248,7 +261,7 @@
       <title>WLC memory %, highest WLC. Warning from 70, critical from 90</title>
       <single>
         <search>
-          <query>| mstats latest(mdt_xe_mem_stats_used_memory) as used latest(mdt_xe_mem_stats_total_memory) as total WHERE `mdt_metrics_index` [| mcatalog values(extracted_source) as extracted_source WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_ip_addr | mvexpand extracted_source] BY extracted_source memory_statistic_name
+          <query>| mstats latest(mdt_xe_mem_stats_used_memory) as used latest(mdt_xe_mem_stats_total_memory) as total WHERE `mdt_metrics_index` site="$site$" [| mcatalog values(extracted_source) as extracted_source WHERE `mdt_metrics_index` site="$site$" metric_name=mdt_wl_info_ap_ip_addr | mvexpand extracted_source] BY extracted_source memory_statistic_name
 | stats sum(used) as used sum(total) as total by extracted_source
 | eval mem=used / total * 100
 | stats max(mem) as mem
@@ -265,7 +278,7 @@
         <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
         <option name="unit">%</option>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview</link>
+          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
         </drilldown>
       </single>
     </panel>
@@ -275,7 +288,7 @@
       <title>AP health, last 15 minutes. Channel busy % (rx + tx + noise, worst radio) warns from 50 and is critical from 75; interference warns from 25 and is critical from 50; an AP not joined or an enabled radio down is critical. Click for Wireless Overview</title>
       <table>
         <search>
-          <query>| `mdt_ap_health`
+          <query>| `mdt_ap_health($site$)`
 | eval order=case(health=="Critical", 0, health=="Warning", 1, health=="No data", 2, true(), 3)
 | sort order ap
 | eval busy=if(isnotnull(busy), busy." % (".busy_band.")", null())
@@ -304,7 +317,7 @@
           <scale type="threshold">1</scale>
         </format>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.wlc=$row.WLC|u$</link>
+          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.wlc=$row.WLC|u$&amp;form.site=$site|u$</link>
         </drilldown>
       </table>
     </panel>

@@ -183,6 +183,9 @@ processors:
           - set(datapoint.attributes["mgmt_ip"], "172.24.80.242") where metric.name == "cisco.one-minute" and datapoint.attributes["source"] == "ibk-lab-sw12"
           - set(datapoint.attributes["mgmt_ip"], "172.24.80.241") where metric.name == "cisco.one-minute" and datapoint.attributes["source"] == "ibk-lab-sw13"
           - set(datapoint.attributes["mgmt_ip"], "172.24.80.238") where metric.name == "cisco.one-minute" and datapoint.attributes["source"] == "ibk-lab-seminar"
+          # Site (Splunk Site dropdown): every datapoint of the dial-out switches, after the keep_keys above so none drops it.
+          # Keep the names in step with the switches in dialout-iosxe.yaml. gnmic targets carry it in mdt.yaml event-tags.
+          - set(datapoint.attributes["site"], "ibk-lab") where datapoint.attributes["source"] == "ibk-lab-sw11" or datapoint.attributes["source"] == "ibk-lab-sw12" or datapoint.attributes["source"] == "ibk-lab-sw13" or datapoint.attributes["source"] == "ibk-lab-seminar"
       # Last: the renames above match on the cisco.* names.
       - context: metric
         statements:

@@ -17,7 +17,8 @@ FLOW = ("| mstats latest(mdt_panos_if_stats_in_octets) as in_octets latest(mdt_p
         "| where _time + 300 <= now()")
 
 bases = {
-    "ds_fws": "| mstats count(_value) WHERE `mdt_metrics_index` metric_name=mdt_panos_* BY extracted_source "
+    "ds_sites": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label",
+    "ds_fws": "| mstats count(_value) WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_panos_* BY extracted_source "
               "| rename extracted_source as node | fields node | sort node",
     "ds_flow": FLOW,
     "ds_sessions": "| mstats latest(mdt_panos_session_stats_active) as active latest(mdt_panos_session_stats_max) as max "
@@ -86,6 +87,10 @@ viz = {
 }
 
 inputs = {
+    "input_site": {"type": "input.dropdown", "title": "Site", "dataSources": {"primary": "ds_sites"},
+                   "options": {"token": "site", "defaultValue": "ibk-lab", "items": ">frame(label, value) | objects()"},
+                   "context": {"label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+                               "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"}},
     "input_time": {"type": "input.timerange", "title": "Time range",
                    "options": {"token": "global_time", "defaultValue": "-4h@m,now"}},
     "input_fw": {"type": "input.dropdown", "title": "Firewall", "dataSources": {"primary": "ds_fws"},
@@ -103,7 +108,7 @@ rows = [  # (item, x, y, w, h)
 ]
 layout = {
     "type": "grid",
-    "globalInputs": ["input_time", "input_fw"],
+    "globalInputs": ["input_time", "input_site", "input_fw"],
     "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1150},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Firewall", "layoutId": "layout_1"}]},

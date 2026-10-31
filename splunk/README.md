@@ -41,6 +41,20 @@ To use other index names, do not edit the app. Override the macros in `local/mac
 The licence and storage panels of Telemetry Ingest read the index names from these two macros over REST, so they
 follow an override too.
 
+## Sites
+
+Every metric has a `site` dimension (set in `gnmic/config/mdt.yaml` and `gnmic/config/otel.yaml`, see the root README). The
+**Site** dropdown on each dashboard picks the site, and the searches on that dashboard read only that site:
+
+- The default is `ibk-lab`. The list comes from `mcatalog values(site)` over the metrics index.
+- Network Overview has no All choice: its topology and health panels show one site.
+- Client Search and Telemetry Ingest have an **All sites** choice (`*`).
+- Wireless Overview, Wireless Client Details, Switch Details, Interface Details and Firewall Details show one site. Their device dropdown lists the devices of that site.
+- Drilldowns pass the site on (`form.site`), so a link from one site lands on that site.
+- Syslog has no site: the syslog panels show the events of the device, whatever its site.
+- Data from before the `site` tag was deployed has no site and shows under no choice. Charts start at the deploy.
+- Telemetry Ingest's licence and index storage panels are per index, not per site.
+
 ## Data contract
 
 The dashboards expect these series. Device name is the `extracted_source` dimension (gnmic and OTel).

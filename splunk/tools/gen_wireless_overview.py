@@ -4,7 +4,7 @@ import json, os, sys
 
 OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data", "ui", "views", "wireless_overview.xml")
 
-W = '`mdt_metrics_index` extracted_source="$wlc$"'
+W = '`mdt_metrics_index` site="$site$" extracted_source="$wlc$"'
 BAND = lambda f: f'band=case({f}=0, "2.4 GHz", {f}=1, "5 GHz", {f}=2, "6 GHz")'
 COLORS = {"2.4 GHz": "#1e93c6", "5 GHz": "#f2b827", "6 GHz": "#d6563c"}
 # gnmic samples every 30s: take the latest value per series and minute, then add up across APs (summing raw samples counts each twice).
@@ -44,7 +44,8 @@ APS = (f"| mstats latest(_value) WHERE {W} metric_name=mdt_wl_info_eth_mac BY et
        "| eval State=coalesce(ap_operation_state, \"not joined\")")
 
 bases = {
-    "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
+    "ds_sites": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label",
+    "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
     "ds_clients_now": CLIENTS + "| stats sum(c) as c by _time | stats latest(c) as clients",
     "ds_aps": APS,
     "ds_sys_now": SYS,
@@ -114,6 +115,10 @@ viz = {
 inputs = {
     "input_time": {"type": "input.timerange", "title": "Time range",
                    "options": {"token": "global_time", "defaultValue": "-4h@m,now"}},
+    "input_site": {"type": "input.dropdown", "title": "Site", "dataSources": {"primary": "ds_sites"},
+                   "options": {"token": "site", "defaultValue": "ibk-lab", "items": ">frame(label, value) | objects()"},
+                   "context": {"label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+                               "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"}},
     "input_wlc": {"type": "input.dropdown", "title": "WLC", "dataSources": {"primary": "ds_wlc"},
                   "options": {"token": "wlc", "selectFirstSearchResult": True, "items": ">frame(label, value) | objects()"},
                   "context": {"label": ">primary | seriesByName(\"wlc\") | renameSeries(\"label\")",
@@ -133,7 +138,7 @@ rows = [  # (item, x, y, w, h)
 ]
 layout = {
     "type": "grid",
-    "globalInputs": ["input_time", "input_wlc"],
+    "globalInputs": ["input_time", "input_site", "input_wlc"],
     "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1550},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "WLC", "layoutId": "layout_1"}]},
