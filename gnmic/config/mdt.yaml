@@ -237,6 +237,21 @@ targets:
       - wl_radio_info
       - wl_client_roam
 
+  # nk-home WLC (C9800-CL 17.18, hostname C9800-CL-161). bssid-stats is on in ap profile AP_JOIN_NK_Home.
+  172.24.88.161:57400:
+    name: "nk-home-ewlc01"
+    event-tags:
+      site: "nk-home"
+      mgmt_ip: "172.24.88.161"
+    subscriptions:
+      - xe_cpu_stats
+      - xe_mem_stats
+      - wl_client_stats
+      - wl_ap_stats
+      - wl_info
+      - wl_radio_info
+      - wl_client_roam
+
   # PaloAlto Firewalls
   172.24.88.156:9339:
     name: "Lab-IBK-PA560-1"
