@@ -19,8 +19,8 @@ type failTracker struct {
 }
 
 type counterRecord struct {
-	value         uint64
-	lastIncrease  time.Time
+	value        uint64
+	lastIncrease time.Time
 }
 
 func newFailTracker() *failTracker {
@@ -40,20 +40,24 @@ func newFailTracker() *failTracker {
 //     If the value increased compared with the stored one, record `now` as the last increase time.
 //     While now - lastIncrease < 10 minutes return Issue{Collector: collector, Target: <source label>,
 //     Sub: <subscription label>, Reason: "subscribe request failed (<value> total)"} (value as an integer).
+//
+// The second result is the received-subscribe-response counter per source and subscription
+// (responses[source][subscription]), i.e. the device answered the subscription.
 // A body that cannot be parsed returns an error.
-func parseMetrics(collector string, body io.Reader, now time.Time, tr *failTracker) ([]Issue, error) {
+func parseMetrics(collector string, body io.Reader, now time.Time, tr *failTracker) ([]Issue, map[string]map[string]uint64, error) {
 	parser := expfmt.NewTextParser(model.UTF8Validation)
 	families, err := parser.TextToMetricFamilies(body)
 	if err != nil {
-		return nil, fmt.Errorf("parse metrics: %w", err)
+		return nil, nil, fmt.Errorf("parse metrics: %w", err)
 	}
 
 	var issues []Issue
+	responses := make(map[string]map[string]uint64)
 
 	// Build lookup maps for the metrics
-	targetUpMap := make(map[string]uint64)          // name -> value (0 or 1)
-	connectionStateMap := make(map[string]uint64)   // name -> state value
-	failedCounters := make(map[string]uint64)       // source:subscription -> value
+	targetUpMap := make(map[string]uint64)        // name -> value (0 or 1)
+	connectionStateMap := make(map[string]uint64) // name -> state value
+	failedCounters := make(map[string]uint64)     // source:subscription -> value
 
 	for _, family := range families {
 		if family == nil || family.Name == nil {
@@ -84,6 +88,21 @@ func parseMetrics(collector string, body io.Reader, now time.Time, tr *failTrack
 				name := getLabelValue(metric, "name")
 				if name != "" {
 					connectionStateMap[name] = uint64(metric.Gauge.GetValue())
+				}
+			}
+
+		case "gnmic_subscribe_number_of_received_subscribe_response_messages_total":
+			for _, metric := range family.Metric {
+				if metric == nil || metric.Counter == nil {
+					continue
+				}
+				source := getLabelValue(metric, "source")
+				subscription := getLabelValue(metric, "subscription")
+				if source != "" && subscription != "" {
+					if responses[source] == nil {
+						responses[source] = make(map[string]uint64)
+					}
+					responses[source][subscription] = uint64(metric.Counter.GetValue())
 				}
 			}
 
@@ -170,7 +189,7 @@ func parseMetrics(collector string, body io.Reader, now time.Time, tr *failTrack
 		}
 	}
 
-	return issues, nil
+	return issues, responses, nil
 }
 
 // getConnectionStateName returns the name of the connection state
@@ -260,24 +279,28 @@ func scrapeMetrics(st *Store, cols []Collector, tr *failTracker) {
 		url := col.URL + "/metrics"
 		resp, err := client.Get(url)
 		if err != nil {
-			// Failed to scrape, contribute no issues
+			// Failed to scrape, contribute no issues and no responses
+			st.SetResponses(col.Name, nil)
 			continue
 		}
 		defer resp.Body.Close()
 
 		// Check for non-200 status
 		if resp.StatusCode != http.StatusOK {
+			st.SetResponses(col.Name, nil)
 			continue
 		}
 
 		// Parse the metrics
-		issues, err := parseMetrics(col.Name, resp.Body, now, tr)
+		issues, responses, err := parseMetrics(col.Name, resp.Body, now, tr)
 		if err != nil {
-			// Failed to parse, contribute no issues
+			// Failed to parse, contribute no issues and no responses
+			st.SetResponses(col.Name, nil)
 			continue
 		}
 
 		allIssues = append(allIssues, issues...)
+		st.SetResponses(col.Name, responses)
 	}
 
 	// Update the store with all issues from successful scrapes

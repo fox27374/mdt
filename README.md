@@ -294,7 +294,8 @@ Status values are:
 - **OK** — healthy, receiving data at the expected rate.
 - **WAITING** — component or subscription starting up.
 - **STALE** — no new data received for 3 × the subscription's sample interval (minimum 2 minutes).
-- **NO_DATA** — subscription configured but never received a data point.
+- **EMPTY** — the device answers the subscription but nothing reaches NATS, so the monitor never sees a data point (for example `xe_lag_info` on a switch without port-channels). Neutral: it does not degrade the target, which shows `OK (N empty)`.
+- **NO_DATA** — subscription configured, never received a data point, and the device does not answer it (no subscribe responses counted by any gnmic collector). The target is NO_DATA.
 - **ERROR** — configuration error or communication failure.
 
 ### Environment variables

@@ -16,6 +16,7 @@ func TestEvalSub(t *testing.T) {
 		lastSeen  time.Time
 		interval  time.Duration
 		errReason string
+		answered  bool
 		want      Status
 	}{
 		{
@@ -44,6 +45,26 @@ func TestEvalSub(t *testing.T) {
 			interval:  30 * time.Second,
 			errReason: "",
 			want:      StatusNoData,
+		},
+		{
+			name:      "never seen, within window, device answers",
+			now:       now,
+			started:   now.Add(-1 * time.Minute),
+			lastSeen:  time.Time{},
+			interval:  30 * time.Second,
+			errReason: "",
+			answered:  true,
+			want:      StatusWaiting,
+		},
+		{
+			name:      "never seen and past window, device answers",
+			now:       now,
+			started:   now.Add(-5 * time.Minute),
+			lastSeen:  time.Time{},
+			interval:  30 * time.Second,
+			errReason: "",
+			answered:  true,
+			want:      StatusEmpty,
 		},
 		{
 			name:      "seen 10s ago with 30s interval",
@@ -85,7 +106,7 @@ func TestEvalSub(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := EvalSub(tt.now, tt.started, tt.lastSeen, tt.interval, tt.errReason)
+			got := EvalSub(tt.now, tt.started, tt.lastSeen, tt.interval, tt.errReason, tt.answered)
 			if got != tt.want {
 				t.Errorf("EvalSub() = %v, want %v", got, tt.want)
 			}
@@ -135,6 +156,24 @@ func TestWorse(t *testing.T) {
 			a:    StatusError,
 			b:    StatusOK,
 			want: StatusError,
+		},
+		{
+			name: "OK vs EMPTY keeps OK",
+			a:    StatusOK,
+			b:    StatusEmpty,
+			want: StatusOK,
+		},
+		{
+			name: "EMPTY vs WAITING",
+			a:    StatusEmpty,
+			b:    StatusWaiting,
+			want: StatusWaiting,
+		},
+		{
+			name: "EMPTY vs NO_DATA",
+			a:    StatusEmpty,
+			b:    StatusNoData,
+			want: StatusNoData,
 		},
 	}
 
@@ -250,10 +289,12 @@ func TestSettlePartial(t *testing.T) {
 	}{
 		{"ok+waiting", StatusWaiting, subs(StatusOK, StatusWaiting, StatusWaiting), StatusOK, 2, 0},
 		{"all waiting", StatusWaiting, subs(StatusWaiting, StatusWaiting), StatusWaiting, 0, 0},
-		{"ok+empty", StatusNoData, subs(StatusOK, StatusNoData), StatusOK, 0, 1},
-		{"ok+waiting+empty", StatusNoData, subs(StatusOK, StatusWaiting, StatusNoData), StatusOK, 1, 1},
-		{"all empty", StatusNoData, subs(StatusNoData, StatusNoData), StatusNoData, 0, 0},
-		{"worse status untouched", StatusStale, subs(StatusOK, StatusStale, StatusNoData), StatusStale, 0, 0},
+		{"ok+empty", StatusOK, subs(StatusOK, StatusEmpty), StatusOK, 0, 1},
+		{"ok+waiting+empty", StatusWaiting, subs(StatusOK, StatusWaiting, StatusEmpty), StatusOK, 1, 1},
+		{"all empty", StatusOK, subs(StatusEmpty, StatusEmpty), StatusOK, 0, 2},
+		{"waiting+empty no ok", StatusWaiting, subs(StatusWaiting, StatusEmpty), StatusWaiting, 0, 0},
+		{"no data never settled", StatusNoData, subs(StatusOK, StatusNoData), StatusNoData, 0, 0},
+		{"worse status untouched", StatusStale, subs(StatusOK, StatusStale, StatusEmpty), StatusStale, 0, 0},
 		{"all ok", StatusOK, subs(StatusOK), StatusOK, 0, 0},
 	}
 	for _, c := range cases {
