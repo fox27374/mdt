@@ -246,16 +246,20 @@ func TestSettlePartial(t *testing.T) {
 		subs   []SubState
 		want   Status
 		waits  int
+		empty  int
 	}{
-		{"ok+waiting", StatusWaiting, subs(StatusOK, StatusWaiting, StatusWaiting), StatusOK, 2},
-		{"all waiting", StatusWaiting, subs(StatusWaiting, StatusWaiting), StatusWaiting, 0},
-		{"worse status untouched", StatusStale, subs(StatusOK, StatusStale), StatusStale, 0},
-		{"all ok", StatusOK, subs(StatusOK), StatusOK, 0},
+		{"ok+waiting", StatusWaiting, subs(StatusOK, StatusWaiting, StatusWaiting), StatusOK, 2, 0},
+		{"all waiting", StatusWaiting, subs(StatusWaiting, StatusWaiting), StatusWaiting, 0, 0},
+		{"ok+empty", StatusNoData, subs(StatusOK, StatusNoData), StatusOK, 0, 1},
+		{"ok+waiting+empty", StatusNoData, subs(StatusOK, StatusWaiting, StatusNoData), StatusOK, 1, 1},
+		{"all empty", StatusNoData, subs(StatusNoData, StatusNoData), StatusNoData, 0, 0},
+		{"worse status untouched", StatusStale, subs(StatusOK, StatusStale, StatusNoData), StatusStale, 0, 0},
+		{"all ok", StatusOK, subs(StatusOK), StatusOK, 0, 0},
 	}
 	for _, c := range cases {
-		got, w := settlePartial(c.status, c.subs)
-		if got != c.want || w != c.waits {
-			t.Errorf("%s: got (%v,%d), want (%v,%d)", c.name, got, w, c.want, c.waits)
+		got, w, e := settlePartial(c.status, c.subs)
+		if got != c.want || w != c.waits || e != c.empty {
+			t.Errorf("%s: got (%v,%d,%d), want (%v,%d,%d)", c.name, got, w, e, c.want, c.waits, c.empty)
 		}
 	}
 }

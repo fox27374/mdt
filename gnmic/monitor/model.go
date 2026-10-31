@@ -70,26 +70,29 @@ func EvalSub(now, started, lastSeen time.Time, interval time.Duration, errReason
 	return StatusOK
 }
 
-// settlePartial turns a WAITING target into OK when at least one subscription is
-// OK and every other one is only WAITING (e.g. hourly subscriptions that have not
-// reported yet). It returns the resulting status and how many subs are still waiting.
-func settlePartial(status Status, subs []SubState) (Status, int) {
-	if status != StatusWaiting {
-		return status, 0
+// settlePartial turns a WAITING or NO_DATA target into OK when at least one subscription is
+// OK and every other one is only WAITING (e.g. hourly subscriptions that have not reported yet)
+// or NO_DATA (empty: the device has nothing on those paths, e.g. xe_lag_info without port-channels).
+// It returns the resulting status and how many subs are still waiting and empty.
+func settlePartial(status Status, subs []SubState) (Status, int, int) {
+	if status != StatusWaiting && status != StatusNoData {
+		return status, 0, 0
 	}
-	ok, waiting := 0, 0
+	ok, waiting, empty := 0, 0, 0
 	for _, s := range subs {
 		switch s.Status {
 		case StatusOK:
 			ok++
 		case StatusWaiting:
 			waiting++
+		case StatusNoData:
+			empty++
 		}
 	}
 	if ok == 0 {
-		return status, 0
+		return status, 0, 0
 	}
-	return StatusOK, waiting
+	return StatusOK, waiting, empty
 }
 
 // Input types (filled by the collectors).
@@ -180,6 +183,7 @@ type TargetState struct {
 	Status  Status     `json:"status"`
 	Reason  string     `json:"reason,omitempty"`
 	Waiting int        `json:"waiting,omitempty"` // subs still WAITING on an otherwise OK target
+	Empty   int        `json:"empty,omitempty"`   // subs that never delivered (NO_DATA) on an otherwise OK target
 	Subs    []SubState `json:"subs"`
 }
 
