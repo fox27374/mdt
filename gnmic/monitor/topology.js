@@ -139,6 +139,8 @@ function buildTopology(data) {
           target: target.name,
           lastSeen: getLatestLastSeen(target.subs),
           waiting: target.waiting || 0,
+        empty: target.empty || 0,
+          empty: target.empty || 0,
           partial: (target.waiting || 0) > 0,
           notMonitored: false
         };
@@ -169,6 +171,7 @@ function buildTopology(data) {
         target: target.name,
         lastSeen: getLatestLastSeen(target.subs),
         waiting: target.waiting || 0,
+        empty: target.empty || 0,
         partial: (target.waiting || 0) > 0,
         notMonitored: false
       };

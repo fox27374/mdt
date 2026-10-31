@@ -1298,7 +1298,7 @@
 				const statusCell = document.createElement("td");
 				const badge = document.createElement("span");
 				badge.className = `badge ${statusClass(target.status)}`;
-				badge.textContent = target.status + (target.waiting > 0 ? ` (${target.waiting} waiting)` : "");
+				badge.textContent = target.status + (target.waiting > 0 ? ` (${target.waiting} waiting)` : "") + (target.empty > 0 ? ` (${target.empty} empty)` : "");
 				statusCell.appendChild(badge);
 
 				const reasonCell = document.createElement("td");
@@ -1816,6 +1816,7 @@
 			let statusText = node.notMonitored ? "Not monitored" : node.status;
 			if (node.waiting > 0) statusText += " (" + node.waiting + " waiting)";
 			else if (node.partial) statusText += " (targets partly waiting)";
+			if (node.empty > 0) statusText += " (" + node.empty + " empty)";
 			statusLine.textContent = "Status: " + statusText;
 			topologyTooltip.appendChild(statusLine);
 
