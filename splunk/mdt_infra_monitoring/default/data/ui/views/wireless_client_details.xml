@@ -235,51 +235,12 @@
    "showProgressBar": true
   },
   "viz_roam_timeline": {
-   "type": "splunk.timeline",
-   "title": "Roaming timeline: one lane per AP; bars = time on the AP, dots = associations coloured by roam time (green < 100 ms, yellow 100-500 ms, red > 500 ms, grey first join)",
+   "type": "mdt_infra_monitoring.roam_timeline",
+   "title": "Roaming timeline",
    "dataSources": {
     "primary": "ds_roam_timeline"
    },
-   "options": {
-    "x": "> primary | seriesByName(\"_time\")",
-    "y": "> primary | seriesByName(\"ap\")",
-    "duration": "> primary | seriesByName(\"duration\")",
-    "durationUnit": "seconds",
-    "category": "> primary | seriesByName(\"category\")",
-    "dataColors": "> primary | seriesByName(\"category\") | matchValue(categoryColors)",
-    "additionalTooltipFields": [
-     "Roam type",
-     "Band",
-     "BSSID",
-     "Roam time (ms)"
-    ],
-    "legendDisplay": "bottom"
-   },
-   "showProgressBar": true,
-   "context": {
-    "categoryColors": [
-     {
-      "match": "Connected",
-      "value": "#5C6773"
-     },
-     {
-      "match": "Join",
-      "value": "#C9D1D9"
-     },
-     {
-      "match": "Good",
-      "value": "#118832"
-     },
-     {
-      "match": "Slow",
-      "value": "#CBA700"
-     },
-     {
-      "match": "Bad",
-      "value": "#D41F1F"
-     }
-    ]
-   }
+   "options": {}
   },
   "viz_roam": {
    "type": "splunk.table",
@@ -344,7 +305,7 @@
    "type": "ds.search",
    "name": "roam_timeline",
    "options": {
-    "query": "| mstats latest(_value) as run_latency WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_roam_run_latency client_mac=\"$tk_client$\" BY ap_name bssid roam_type slot assoc_time | dedup assoc_time | addinfo | eval start=strptime(substr(assoc_time, 1, 19).\" +0000\", \"%Y-%m-%dT%H:%M:%S %z\") | sort 0 - start | streamstats current=f last(start) as next_start | eval stop=coalesce(next_start, min(now(), info_max_time)), bar_start=max(start, info_min_time), ap=coalesce(ap_name, bssid), slot_n=tonumber(slot) | eval band=case(slot_n==0, \"2.4 GHz\", slot_n==1, \"5 GHz\", slot_n==2, \"6 GHz\", true(), \"slot \".slot) | eval roam=case(match(roam_type, \"11r\"), \"802.11r\", match(roam_type, \"okc\"), \"OKC\", match(roam_type, \"none\"), \"none\", true(), replace(roam_type, \"^dot11-roam-type-\", \"\")) | eval category_dot=case(match(roam_type, \"none\"), \"Join\", run_latency < 100, \"Good\", run_latency <= 500, \"Slow\", true(), \"Bad\") | eval kind=if(start >= info_min_time, mvappend(\"bar\", \"dot\"), \"bar\") | mvexpand kind | eval _time=if(kind==\"bar\", bar_start, start), duration=if(kind==\"bar\", stop - bar_start, null()), category=if(kind==\"bar\", \"Connected\", category_dot) | where kind==\"dot\" OR duration > 0 | rename roam as \"Roam type\", band as Band, bssid as BSSID, run_latency as \"Roam time (ms)\" | fields _time ap duration category \"Roam type\" Band BSSID \"Roam time (ms)\" | sort 0 _time"
+    "query": "| mstats latest(_value) as run_latency WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_roam_run_latency client_mac=\"$tk_client$\" BY ap_name bssid roam_type slot assoc_time | dedup assoc_time | eval kind=\"assoc\", t=strptime(substr(assoc_time, 1, 19).\" +0000\", \"%Y-%m-%dT%H:%M:%S %z\"), ap=coalesce(ap_name, bssid), slot_n=tonumber(slot) | eval band=case(slot_n==0, \"2.4 GHz\", slot_n==1, \"5 GHz\", slot_n==2, \"6 GHz\", true(), \"slot \".slot) | eval roam=case(match(roam_type, \"11r\"), \"802.11r\", match(roam_type, \"okc\"), \"OKC\", match(roam_type, \"none\"), \"none\", true(), replace(roam_type, \"^dot11-roam-type-\", \"\")) | eval category=case(match(roam_type, \"none\"), \"Join\", run_latency < 100, \"Good\", run_latency <= 500, \"Slow\", true(), \"Bad\") | fields kind t ap band roam run_latency category bssid | append [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address dot11_oper_data_ms_mac_address=\"$tk_client$\" span=1m BY ap_mac_address | stats count by _time | eval kind=\"seen\", t=_time | fields kind t] | addinfo | eval tz_offset=strftime(now(), \"%z\") | sort 0 t"
    }
   },
   "ds_rssi": {
@@ -557,7 +518,7 @@
        "x": 0,
        "y": 950,
        "w": 1440,
-       "h": 320
+       "h": 160
       }
      },
      {
@@ -565,7 +526,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1270,
+       "y": 1110,
        "w": 1440,
        "h": 300
       }
