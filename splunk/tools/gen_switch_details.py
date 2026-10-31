@@ -12,9 +12,10 @@ slots = (f"{phys} | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" "
 
 # Base searches run once; chains post-process their results.
 bases = {
-    "ds_nodes": "`mdt_nodes($global_time.earliest$)`",
+    "ds_sites": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label",
+    "ds_nodes": "`mdt_nodes($global_time.earliest$, $site$)`",
     # Every interface with state, CDP neighbour and learned MACs; chains filter to front-panel ports.
-    "ds_status": f"`mdt_if_status({N})` | join type=left node interface [`mdt_cdp({N})` "
+    "ds_status": f"`mdt_if_status({N}, $site$)` | join type=left node interface [`mdt_cdp({N}, $site$)` "
                  f"| stats values(neighbour) as neighbour by node interface] "
                  f"| join type=left node interface [`mdt_mac({N},*)` | eval entry=mac.if(vlan==\"-\", \"\", \" (VLAN \".vlan.\")\") "
                  f"| stats dc(mac) as macs values(entry) as mac_list by node interface] "
@@ -24,20 +25,20 @@ bases = {
                  # Port-channel a member port belongs to (port-channel103, the key the port-channel rows use).
                  f"| join type=left node inorm [`mdt_lag_members({N})` | rename member as inorm, po as port_channel | fields node inorm port_channel] "
                  # Errors in the time range, for the red frame on the faceplate.
-                 f"| join type=left node interface [`mdt_if_counters({N},*)` | `mdt_if_rates` "
+                 f"| join type=left node interface [`mdt_if_counters({N},*, $site$)` | `mdt_if_rates` "
                  f"| stats sum(in_errs) as in_errs sum(out_errs) as out_errs by node interface | where in_errs + out_errs > 0]",
     # Per-minute rates of front-panel ports (no double counting via port-channels or VLANs), with link speed.
-    "ds_rates": f"`mdt_if_counters({N},*)` {phys} | `mdt_if_rates` "
-                f"| join type=left node interface [`mdt_if_status({N})` | fields node interface speed] "
+    "ds_rates": f"`mdt_if_counters({N},*, $site$)` {phys} | `mdt_if_rates` "
+                f"| join type=left node interface [`mdt_if_status({N}, $site$)` | fields node interface speed] "
                 f"| eval util=round(max(in_bps, out_bps) / speed * 100, 4)",
     "ds_poe": f"`mdt_poe({N})`",
     # Address the switch is polled on (gnmic event-tags / otel.yaml mgmt_ip label), latest value in the last hour.
     # Fallback: the address its CDP neighbours report, for a switch that sends no telemetry (sw03).
     "ds_ip": f"| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=* extracted_source=\"{N}\" mgmt_ip=* earliest=-1h BY mgmt_ip "
-             f"| fields mgmt_ip | append [`mdt_cdp(*)` | where neighbour=lower(\"{N}\") AND ip!=\"\" | eval mgmt_ip=ip | fields mgmt_ip] "
+             f"| fields mgmt_ip | append [`mdt_cdp(*, $site$)` | where neighbour=lower(\"{N}\") AND ip!=\"\" | eval mgmt_ip=ip | fields mgmt_ip] "
              "| head 1",
-    "ds_cpu": f"`mdt_cpu({N})` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)",
-    "ds_mem": f"`mdt_mem({N})` | stats latest(mem) as mem | eval mem=round(mem, 0)",
+    "ds_cpu": f"`mdt_cpu({N}, $site$)` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)",
+    "ds_mem": f"`mdt_mem({N}, $site$)` | stats latest(mem) as mem | eval mem=round(mem, 0)",
     # MACs on port-channels and VLANs; the Interfaces table shows those on front-panel ports.
     "ds_mac": f"`mdt_mac({N},*)` | where NOT (`mdt_is_physical`) | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node",
     "ds_logs": f"`mdt_syslog_index` host=\"{N}\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) "
@@ -80,7 +81,7 @@ chains = {  # name: (base, post-process)
     "ds_pc": ("ds_status", "| eval st=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
               "| eval is_po=if(match(interface, \"(?i)^(po[0-9]|port-channel[0-9])\"), 1, 0), pc=if(is_po=1, inorm, port_channel) "
               "| where isnotnull(pc) "
-              f"| join type=left node interface [`mdt_cdp({N})` | eval cn=neighbour.if(coalesce(remote_interface, \"\")=\"\", \"\", \" (\".remote_interface.\")\") "
+              f"| join type=left node interface [`mdt_cdp({N}, $site$)` | eval cn=neighbour.if(coalesce(remote_interface, \"\")=\"\", \"\", \" (\".remote_interface.\")\") "
               "| stats values(cn) as cn by node interface] "
               f"| join type=left node pc [`mdt_lag_vlans({N})` | rename po as pc | fields node pc vlans] "
               # NX-OS port-channels have no speed in mdt_if_status: the bundle speed the device reports.
@@ -127,7 +128,7 @@ def chart(kind, title, d, **opts):
 # Clicking a port opens its Interface Details in a new tab, with the device and time range.
 def open_port(port):
     return [{"type": "drilldown.customUrl", "options": {"url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=" + N
-             + "&form.tk_interface=" + port + "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+             + "&form.tk_interface=" + port + "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
              "newTab": True}}]
 viz = {
     # Custom visualization (splunk/viz, built into the app): the type is <app id>.<visualization name>.
@@ -160,6 +161,10 @@ viz = {
 }
 
 inputs = {
+    "input_site": {"type": "input.dropdown", "title": "Site", "dataSources": {"primary": "ds_sites"},
+                   "options": {"token": "site", "defaultValue": "ibk-lab", "items": ">frame(label, value) | objects()"},
+                   "context": {"label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+                               "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"}},
     "input_time": {"type": "input.timerange", "title": "Time range",
                    "options": {"token": "global_time", "defaultValue": "-4h@m,now"}},
     "input_node": {"type": "input.dropdown", "title": "Device", "dataSources": {"primary": "ds_nodes"},
@@ -183,7 +188,7 @@ rows = [  # (item, x, y, w, h)
 ]
 layout = {
     "type": "grid",
-    "globalInputs": ["input_time", "input_node"],
+    "globalInputs": ["input_time", "input_site", "input_node"],
     "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 2260},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Switch", "layoutId": "layout_1"}]},

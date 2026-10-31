@@ -6,6 +6,22 @@
  "title": "Switch Details",
  "description": "One switch: ports, CPU, memory, PoE, traffic, errors, CDP neighbours, MAC table and syslog. Covers gnmic (IOS-XE, NX-OS) and OTel dial-out (IOS-XE) telemetry.",
  "inputs": {
+  "input_site": {
+   "type": "input.dropdown",
+   "title": "Site",
+   "dataSources": {
+    "primary": "ds_sites"
+   },
+   "options": {
+    "token": "site",
+    "defaultValue": "ibk-lab",
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"
+   }
+  },
   "input_time": {
    "type": "input.timerange",
    "title": "Time range",
@@ -57,7 +73,7 @@
     {
      "type": "drilldown.customUrl",
      "options": {
-      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$click.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$click.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
       "newTab": true
      }
     }
@@ -223,7 +239,7 @@
     {
      "type": "drilldown.customUrl",
      "options": {
-      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
       "newTab": true
      }
     }
@@ -244,7 +260,7 @@
     {
      "type": "drilldown.customUrl",
      "options": {
-      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
       "newTab": true
      }
     }
@@ -264,7 +280,7 @@
     {
      "type": "drilldown.customUrl",
      "options": {
-      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.Interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row.Interface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
       "newTab": true
      }
     }
@@ -290,7 +306,7 @@
     {
      "type": "drilldown.customUrl",
      "options": {
-      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row._port.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$tk_node$&form.tk_interface=$row._port.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
       "newTab": true
      }
     }
@@ -325,25 +341,32 @@
   }
  },
  "dataSources": {
+  "ds_sites": {
+   "type": "ds.search",
+   "name": "sites",
+   "options": {
+    "query": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label"
+   }
+  },
   "ds_nodes": {
    "type": "ds.search",
    "name": "nodes",
    "options": {
-    "query": "| `mdt_nodes($global_time.earliest$)`"
+    "query": "| `mdt_nodes($global_time.earliest$, $site$)`"
    }
   },
   "ds_status": {
    "type": "ds.search",
    "name": "status",
    "options": {
-    "query": "| `mdt_if_status($tk_node$)` | join type=left node interface [| `mdt_cdp($tk_node$)` | stats values(neighbour) as neighbour by node interface] | join type=left node interface [| `mdt_mac($tk_node$,*)` | eval entry=mac.if(vlan==\"-\", \"\", \" (VLAN \".vlan.\")\") | stats dc(mac) as macs values(entry) as mac_list by node interface] | eval inorm=`mdt_ifkey(interface)` | join type=left node inorm [| `mdt_poe_port($tk_node$)` | eval inorm=`mdt_ifkey(interface)` | fields node inorm poe_w poe_state pd_class] | join type=left node inorm [| `mdt_lag_members($tk_node$)` | rename member as inorm, po as port_channel | fields node inorm port_channel] | join type=left node interface [| `mdt_if_counters($tk_node$,*)` | `mdt_if_rates` | stats sum(in_errs) as in_errs sum(out_errs) as out_errs by node interface | where in_errs + out_errs > 0]"
+    "query": "| `mdt_if_status($tk_node$, $site$)` | join type=left node interface [| `mdt_cdp($tk_node$, $site$)` | stats values(neighbour) as neighbour by node interface] | join type=left node interface [| `mdt_mac($tk_node$,*)` | eval entry=mac.if(vlan==\"-\", \"\", \" (VLAN \".vlan.\")\") | stats dc(mac) as macs values(entry) as mac_list by node interface] | eval inorm=`mdt_ifkey(interface)` | join type=left node inorm [| `mdt_poe_port($tk_node$)` | eval inorm=`mdt_ifkey(interface)` | fields node inorm poe_w poe_state pd_class] | join type=left node inorm [| `mdt_lag_members($tk_node$)` | rename member as inorm, po as port_channel | fields node inorm port_channel] | join type=left node interface [| `mdt_if_counters($tk_node$,*, $site$)` | `mdt_if_rates` | stats sum(in_errs) as in_errs sum(out_errs) as out_errs by node interface | where in_errs + out_errs > 0]"
    }
   },
   "ds_rates": {
    "type": "ds.search",
    "name": "rates",
    "options": {
-    "query": "| `mdt_if_counters($tk_node$,*)` | `mdt_physical_ports` | `mdt_if_rates` | join type=left node interface [| `mdt_if_status($tk_node$)` | fields node interface speed] | eval util=round(max(in_bps, out_bps) / speed * 100, 4)"
+    "query": "| `mdt_if_counters($tk_node$,*, $site$)` | `mdt_physical_ports` | `mdt_if_rates` | join type=left node interface [| `mdt_if_status($tk_node$, $site$)` | fields node interface speed] | eval util=round(max(in_bps, out_bps) / speed * 100, 4)"
    }
   },
   "ds_poe": {
@@ -357,21 +380,21 @@
    "type": "ds.search",
    "name": "ip",
    "options": {
-    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=* extracted_source=\"$tk_node$\" mgmt_ip=* earliest=-1h BY mgmt_ip | fields mgmt_ip | append [| `mdt_cdp(*)` | where neighbour=lower(\"$tk_node$\") AND ip!=\"\" | eval mgmt_ip=ip | fields mgmt_ip] | head 1"
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=* extracted_source=\"$tk_node$\" mgmt_ip=* earliest=-1h BY mgmt_ip | fields mgmt_ip | append [| `mdt_cdp(*, $site$)` | where neighbour=lower(\"$tk_node$\") AND ip!=\"\" | eval mgmt_ip=ip | fields mgmt_ip] | head 1"
    }
   },
   "ds_cpu": {
    "type": "ds.search",
    "name": "cpu",
    "options": {
-    "query": "| `mdt_cpu($tk_node$)` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)"
+    "query": "| `mdt_cpu($tk_node$, $site$)` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)"
    }
   },
   "ds_mem": {
    "type": "ds.search",
    "name": "mem",
    "options": {
-    "query": "| `mdt_mem($tk_node$)` | stats latest(mem) as mem | eval mem=round(mem, 0)"
+    "query": "| `mdt_mem($tk_node$, $site$)` | stats latest(mem) as mem | eval mem=round(mem, 0)"
    }
   },
   "ds_mac": {
@@ -425,7 +448,7 @@
    "name": "pc",
    "options": {
     "extend": "ds_status",
-    "query": "| eval st=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval is_po=if(match(interface, \"(?i)^(po[0-9]|port-channel[0-9])\"), 1, 0), pc=if(is_po=1, inorm, port_channel) | where isnotnull(pc) | join type=left node interface [`mdt_cdp($tk_node$)` | eval cn=neighbour.if(coalesce(remote_interface, \"\")=\"\", \"\", \" (\".remote_interface.\")\") | stats values(cn) as cn by node interface] | join type=left node pc [`mdt_lag_vlans($tk_node$)` | rename po as pc | fields node pc vlans] | join type=left node pc [`mdt_lag_speed($tk_node$)` | rename po as pc, speed as lag_speed | fields node pc lag_speed] | eval speed=coalesce(speed, lag_speed) | eval mtxt=if(is_po=0, interface.\" (\".st.\")\", null()) | stats values(eval(if(is_po=1, interface, null()))) as po_raw values(eval(if(is_po=1, st, null()))) as pst max(eval(if(is_po=1, speed, null()))) as speed values(eval(if(is_po=1, vlans, null()))) as vlans values(mtxt) as members values(cn) as cdp by node pc | where isnotnull(po_raw) | eval \"Port-channel\"=\"Po\".replace(pc, \"^port-channel\", \"\"), Status=mvindex(pst, 0), Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\"), Members=mvjoin(members, \", \"), VLANs=mvindex(vlans, 0), \"CDP neighbours\"=mvjoin(cdp, \", \"), _port=mvindex(po_raw, 0) | fillnull value=\"\" VLANs \"CDP neighbours\" Members | eval n=tonumber(replace(pc, \"^port-channel\", \"\")) | sort 0 n | table \"Port-channel\" Status Speed Members VLANs \"CDP neighbours\" _port"
+    "query": "| eval st=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | eval is_po=if(match(interface, \"(?i)^(po[0-9]|port-channel[0-9])\"), 1, 0), pc=if(is_po=1, inorm, port_channel) | where isnotnull(pc) | join type=left node interface [`mdt_cdp($tk_node$, $site$)` | eval cn=neighbour.if(coalesce(remote_interface, \"\")=\"\", \"\", \" (\".remote_interface.\")\") | stats values(cn) as cn by node interface] | join type=left node pc [`mdt_lag_vlans($tk_node$)` | rename po as pc | fields node pc vlans] | join type=left node pc [`mdt_lag_speed($tk_node$)` | rename po as pc, speed as lag_speed | fields node pc lag_speed] | eval speed=coalesce(speed, lag_speed) | eval mtxt=if(is_po=0, interface.\" (\".st.\")\", null()) | stats values(eval(if(is_po=1, interface, null()))) as po_raw values(eval(if(is_po=1, st, null()))) as pst max(eval(if(is_po=1, speed, null()))) as speed values(eval(if(is_po=1, vlans, null()))) as vlans values(mtxt) as members values(cn) as cdp by node pc | where isnotnull(po_raw) | eval \"Port-channel\"=\"Po\".replace(pc, \"^port-channel\", \"\"), Status=mvindex(pst, 0), Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\"), Members=mvjoin(members, \", \"), VLANs=mvindex(vlans, 0), \"CDP neighbours\"=mvjoin(cdp, \", \"), _port=mvindex(po_raw, 0) | fillnull value=\"\" VLANs \"CDP neighbours\" Members | eval n=tonumber(replace(pc, \"^port-channel\", \"\")) | sort 0 n | table \"Port-channel\" Status Speed Members VLANs \"CDP neighbours\" _port"
    }
   },
   "ds_poe_gauge": {
@@ -473,6 +496,7 @@
   "type": "grid",
   "globalInputs": [
    "input_time",
+   "input_site",
    "input_node"
   ],
   "layoutDefinitions": {

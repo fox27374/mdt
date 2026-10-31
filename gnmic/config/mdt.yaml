@@ -28,11 +28,13 @@ clustering:
 ###################################
 
 targets:
-  # event-tags mgmt_ip: the address gnmic polls, as a label on every series (Switch Details shows it). gnmic has no
-  # label for the target address, so it is repeated here: keep it in step with the key.
+  # event-tags on every target: site (the Splunk Site dropdown; "ibk-lab" for all targets here) and mgmt_ip, the address
+  # gnmic polls, as labels on every series (Switch Details shows it). gnmic has no label for the target address, so
+  # mgmt_ip is repeated here: keep it in step with the key.
   172.24.80.240:57400:
     name: "ibk-lab-sw98"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "172.24.80.240"
     subscriptions:
       - xe_if_stats
@@ -49,6 +51,7 @@ targets:
   172.24.80.244:57400:
     name: "ibk-lab-sw99"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "172.24.80.244"
     subscriptions:
       - xe_if_stats
@@ -65,6 +68,7 @@ targets:
   172.24.80.251:57400:
     name: "ibk-lab-sw03"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "172.24.80.251"
     subscriptions:
       - xe_if_stats
@@ -85,6 +89,7 @@ targets:
   172.24.80.231:57400:
     name: "ibk-lab-border01"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "172.24.80.231"
     subscriptions:
       - xe_if_stats
@@ -100,6 +105,7 @@ targets:
   172.24.80.232:57400:
     name: "ibk-lab-border02"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "172.24.80.232"
     subscriptions:
       - xe_if_stats
@@ -115,6 +121,7 @@ targets:
   10.20.0.40:57400:
     name: "ibk-lab-edge01"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "10.20.0.40"
     subscriptions:
       - xe_if_stats
@@ -131,6 +138,7 @@ targets:
   10.20.0.35:57400:
     name: "ibk-lab-edge02"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "10.20.0.35"
     subscriptions:
       - xe_if_stats
@@ -147,6 +155,7 @@ targets:
   10.20.0.7:57400:
     name: "ibk-lab-edge03"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "10.20.0.7"
     subscriptions:
       - xe_if_stats
@@ -177,6 +186,7 @@ targets:
   172.24.80.195:57400:
     name: "ntsnxsw01"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "172.24.80.195"
     skip-verify: false
     tls-ca: /app/config/ca.pem
@@ -195,6 +205,7 @@ targets:
   172.24.80.196:57400:
     name: "ntsnxsw02"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "172.24.80.196"
     skip-verify: false
     tls-ca: /app/config/ca.pem
@@ -215,6 +226,7 @@ targets:
   172.24.89.147:57400:
     name: "ibk-lab-ewlc01"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "172.24.89.147"
     subscriptions:
       - xe_cpu_stats
@@ -229,6 +241,7 @@ targets:
   172.24.88.156:9339:
     name: "Lab-IBK-PA560-1"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "172.24.88.156"
     username: "${FW_USERNAME}"
     password: "${FW_PASSWORD}"
@@ -240,6 +253,7 @@ targets:
   172.24.88.157:9339:
     name: "Lab-IBK-PA560-2"
     event-tags:
+      site: "ibk-lab"
       mgmt_ip: "172.24.88.157"
     username: "${FW_USERNAME}"
     password: "${FW_PASSWORD}"

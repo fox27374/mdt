@@ -32,8 +32,8 @@ F_NODE, F_IF = "$status:result.far_node$", "$status:result.far_interface$"
 
 # Per-minute deltas of both ports, bucketed to 5 minutes. side: this or far.
 FLOW = (
-    f"| `mdt_if_counters({T_NODE},{T_IF})` | append [| `mdt_if_detail({T_NODE},{T_IF})`] "
-    f"| append [| `mdt_if_counters({F_NODE},{F_IF})`] | append [| `mdt_if_detail({F_NODE},{F_IF})`] "
+    f"| `mdt_if_counters({T_NODE},{T_IF}, $site$)` | append [| `mdt_if_detail({T_NODE},{T_IF})`] "
+    f"| append [| `mdt_if_counters({F_NODE},{F_IF}, $site$)`] | append [| `mdt_if_detail({F_NODE},{F_IF})`] "
     "| stats max(in_octets) as in_octets max(out_octets) as out_octets max(in_errors) as in_errors max(out_errors) as out_errors "
     + " ".join(f"max({r}) as {r}" for r in DETAIL_RAW) + " by _time node interface "
     "| sort 0 node interface _time "
@@ -50,13 +50,13 @@ THIS = "| where side=\"this\""
 # Device status of the port (one row), with its CDP neighbour and far-end port.
 # Front-panel ports and port-channels (a port-channel's counters and status are not physical-only, but its ports are the front-panel ones).
 PO_OR_PHYS = "| where (`mdt_is_physical` OR match(interface, \"(?i)^(port-channel|po[0-9])\"))"
-STATUS = (f"| `mdt_if_status({N})` {PO_OR_PHYS} {PICK_ONE} | eval inorm=`mdt_ifkey(interface)` "
-          "| join type=left node inorm [| `mdt_links`] "
-          "| join type=left far_node far_inorm [| `mdt_if_status(*)` " + phys + " | eval inorm=`mdt_ifkey(interface)` "
+STATUS = (f"| `mdt_if_status({N}, $site$)` {PO_OR_PHYS} {PICK_ONE} | eval inorm=`mdt_ifkey(interface)` "
+          "| join type=left node inorm [| `mdt_links($site$)`] "
+          "| join type=left far_node far_inorm [| `mdt_if_status(*, $site$)` " + phys + " | eval inorm=`mdt_ifkey(interface)` "
           "| rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] "
           # A neighbour without telemetry (an AP, a phone) has no telemetry port: its CDP name only, no link.
           "| eval neighbour_md=case(isnull(far_node), \"none\", isnull(far_interface), far_node, true(), \"[\".far_node.\" \".far_interface.\"](/app/mdt_infra_monitoring/interface_details?form.tk_node=\".far_node.\"&form.tk_interface=\".far_interface"
-          ".\"&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$)\") "
+          ".\"&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$)\") "
           "| eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")")
 
 # Learned MACs on the port (one row per MAC and VLAN). The mac macro names ports in full, the slot rule picks the port.
@@ -99,10 +99,11 @@ COMPARE = (
 )
 
 bases = {
-    "ds_nodes": "| `mdt_nodes($global_time.earliest$)`",
+    "ds_sites": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label",
+    "ds_nodes": "| `mdt_nodes($global_time.earliest$, $site$)`",
     # Port-channels are listed after the front-panel ports, so a port-channel opened from Switch Details is in the dropdown.
-    "ds_ifaces": f"| `mdt_if_status({N})` {slots} | fields interface "
-                 f"| append [| `mdt_if_status({N})` | where match(interface, \"(?i)^(port-channel|po[0-9])\") | fields interface]",
+    "ds_ifaces": f"| `mdt_if_status({N}, $site$)` {slots} | fields interface "
+                 f"| append [| `mdt_if_status({N}, $site$)` | where match(interface, \"(?i)^(port-channel|po[0-9])\") | fields interface]",
     "ds_status": STATUS,
     "ds_macs": MACS,
     "ds_logs": LOGS,
@@ -165,6 +166,10 @@ viz = {
 }
 
 inputs = {
+    "input_site": {"type": "input.dropdown", "title": "Site", "dataSources": {"primary": "ds_sites"},
+                   "options": {"token": "site", "defaultValue": "ibk-lab", "items": ">frame(label, value) | objects()"},
+                   "context": {"label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+                               "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"}},
     "input_time": {"type": "input.timerange", "title": "Time range",
                    "options": {"token": "global_time", "defaultValue": "-4h@m,now"}},
     "input_node": {"type": "input.dropdown", "title": "Device", "dataSources": {"primary": "ds_nodes"},
@@ -191,7 +196,7 @@ rows = [  # (item, x, y, w, h)
 ]
 layout = {
     "type": "grid",
-    "globalInputs": ["input_time", "input_node", "input_interface"],
+    "globalInputs": ["input_time", "input_site", "input_node", "input_interface"],
     "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1340},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Interface", "layoutId": "layout_1"}]},

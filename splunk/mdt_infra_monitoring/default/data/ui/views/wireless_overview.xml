@@ -14,6 +14,22 @@
     "defaultValue": "-4h@m,now"
    }
   },
+  "input_site": {
+   "type": "input.dropdown",
+   "title": "Site",
+   "dataSources": {
+    "primary": "ds_sites"
+   },
+   "options": {
+    "token": "site",
+    "defaultValue": "ibk-lab",
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"
+   }
+  },
   "input_wlc": {
    "type": "input.dropdown",
    "title": "WLC",
@@ -253,18 +269,25 @@
   }
  },
  "dataSources": {
+  "ds_sites": {
+   "type": "ds.search",
+   "name": "sites",
+   "options": {
+    "query": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label"
+   }
+  },
   "ds_wlc": {
    "type": "ds.search",
    "name": "wlc",
    "options": {
-    "query": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc"
+    "query": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc"
    }
   },
   "ds_clients_now": {
    "type": "ds.search",
    "name": "clients_now",
    "options": {
-    "query": "| mstats latest(mdt_wl_ap_stats_num_assoc_clients) as c WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" span=1m BY ssid_counters_wtp_mac ssid_counters_slot_id ssid_counters_wlan_id | where _time + 60 <= now() | stats sum(c) as c by _time | stats latest(c) as clients",
+    "query": "| mstats latest(mdt_wl_ap_stats_num_assoc_clients) as c WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" span=1m BY ssid_counters_wtp_mac ssid_counters_slot_id ssid_counters_wlan_id | where _time + 60 <= now() | stats sum(c) as c by _time | stats latest(c) as clients",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -275,7 +298,7 @@
    "type": "ds.search",
    "name": "aps",
    "options": {
-    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name | join type=left eth_mac [| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_wtp_mac BY ethernet_mac_wtp_mac_map_ethernet_mac wtp_mac | rename ethernet_mac_wtp_mac_map_ethernet_mac as eth_mac | fields eth_mac wtp_mac] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ap_ip_addr BY oper_data_wtp_mac ap_ip_addr | where ap_ip_addr!=\"0.0.0.0\" | rename oper_data_wtp_mac as wtp_mac | fields wtp_mac ap_ip_addr] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ap_operation_state BY capwap_data_wtp_mac ap_operation_state | rename capwap_data_wtp_mac as wtp_mac | fields wtp_mac ap_operation_state] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_location BY capwap_data_wtp_mac location | where location!=\"default location\" | rename capwap_data_wtp_mac as wtp_mac | fields wtp_mac location] | join type=left eth_mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address BY dot11_oper_data_ms_mac_address ap_mac_address | sort 0 - t | dedup dot11_oper_data_ms_mac_address | stats count as clients by ap_mac_address | rename ap_mac_address as eth_mac] | join type=left wtp_mac [| mstats latest(mdt_wl_radio_info_curr_freq) as ch latest(mdt_wl_radio_info_chan_width) as w WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" BY radio_oper_data_wtp_mac radio_oper_data_radio_slot_id | join type=left radio_oper_data_wtp_mac radio_oper_data_radio_slot_id [| mstats latest(mdt_wl_radio_info_curr_tx_power_in_dbm) as p WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" BY radio_oper_data_wtp_mac radio_oper_data_radio_slot_id radio_band_info_band_id | where radio_band_info_band_id=radio_oper_data_radio_slot_id | fields - radio_band_info_band_id] | join type=left radio_oper_data_wtp_mac radio_oper_data_radio_slot_id [| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_radio_info_oper_state BY radio_oper_data_wtp_mac radio_oper_data_radio_slot_id oper_state | fields - latest*] | eval cell=if(isnotnull(oper_state) AND oper_state!=\"radio-up\", \"down\", \"ch \".ch.\" / \".w.\" MHz\".if(isnotnull(p), \" / \".p.\" dBm\", \"\")), col=\"Radio \".radio_oper_data_radio_slot_id | xyseries radio_oper_data_wtp_mac col cell | rename radio_oper_data_wtp_mac as wtp_mac] | eval State=coalesce(ap_operation_state, \"not joined\")",
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name | join type=left eth_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_wtp_mac BY ethernet_mac_wtp_mac_map_ethernet_mac wtp_mac | rename ethernet_mac_wtp_mac_map_ethernet_mac as eth_mac | fields eth_mac wtp_mac] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ap_ip_addr BY oper_data_wtp_mac ap_ip_addr | where ap_ip_addr!=\"0.0.0.0\" | rename oper_data_wtp_mac as wtp_mac | fields wtp_mac ap_ip_addr] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ap_operation_state BY capwap_data_wtp_mac ap_operation_state | rename capwap_data_wtp_mac as wtp_mac | fields wtp_mac ap_operation_state] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_location BY capwap_data_wtp_mac location | where location!=\"default location\" | rename capwap_data_wtp_mac as wtp_mac | fields wtp_mac location] | join type=left eth_mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address BY dot11_oper_data_ms_mac_address ap_mac_address | sort 0 - t | dedup dot11_oper_data_ms_mac_address | stats count as clients by ap_mac_address | rename ap_mac_address as eth_mac] | join type=left wtp_mac [| mstats latest(mdt_wl_radio_info_curr_freq) as ch latest(mdt_wl_radio_info_chan_width) as w WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" BY radio_oper_data_wtp_mac radio_oper_data_radio_slot_id | join type=left radio_oper_data_wtp_mac radio_oper_data_radio_slot_id [| mstats latest(mdt_wl_radio_info_curr_tx_power_in_dbm) as p WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" BY radio_oper_data_wtp_mac radio_oper_data_radio_slot_id radio_band_info_band_id | where radio_band_info_band_id=radio_oper_data_radio_slot_id | fields - radio_band_info_band_id] | join type=left radio_oper_data_wtp_mac radio_oper_data_radio_slot_id [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_radio_info_oper_state BY radio_oper_data_wtp_mac radio_oper_data_radio_slot_id oper_state | fields - latest*] | eval cell=if(isnotnull(oper_state) AND oper_state!=\"radio-up\", \"down\", \"ch \".ch.\" / \".w.\" MHz\".if(isnotnull(p), \" / \".p.\" dBm\", \"\")), col=\"Radio \".radio_oper_data_radio_slot_id | xyseries radio_oper_data_wtp_mac col cell | rename radio_oper_data_wtp_mac as wtp_mac] | eval State=coalesce(ap_operation_state, \"not joined\")",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -286,7 +309,7 @@
    "type": "ds.search",
    "name": "sys_now",
    "options": {
-    "query": "| mstats latest(mdt_xe_mem_stats_used_memory) as used latest(mdt_xe_mem_stats_total_memory) as total WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" span=1m BY memory_statistic_name | stats sum(used) as used sum(total) as total by _time | join type=left _time [| mstats avg(mdt_xe_cpu_stats_one_minute) as cpu WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" span=1m] | where _time + 60 <= now() | eval \"CPU %\"=round(cpu, 0), \"Memory %\"=round(used / total * 100, 1) | fields _time \"CPU %\" \"Memory %\"",
+    "query": "| mstats latest(mdt_xe_mem_stats_used_memory) as used latest(mdt_xe_mem_stats_total_memory) as total WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" span=1m BY memory_statistic_name | stats sum(used) as used sum(total) as total by _time | join type=left _time [| mstats avg(mdt_xe_cpu_stats_one_minute) as cpu WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" span=1m] | where _time + 60 <= now() | eval \"CPU %\"=round(cpu, 0), \"Memory %\"=round(used / total * 100, 1) | fields _time \"CPU %\" \"Memory %\"",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -297,7 +320,7 @@
    "type": "ds.search",
    "name": "ssids",
    "options": {
-    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ssid BY ssid | eval Clients=0 | append [| mstats latest(_value) WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid BY vap_ssid dot11_oper_data_ms_mac_address | stats dc(dot11_oper_data_ms_mac_address) as Clients by vap_ssid | rename vap_ssid as ssid] | stats max(Clients) as Clients by ssid | rename ssid as SSID | sort 0 - Clients SSID",
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ssid BY ssid | eval Clients=0 | append [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid BY vap_ssid dot11_oper_data_ms_mac_address | stats dc(dot11_oper_data_ms_mac_address) as Clients by vap_ssid | rename vap_ssid as ssid] | stats max(Clients) as Clients by ssid | rename ssid as SSID | sort 0 - Clients SSID",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -308,7 +331,7 @@
    "type": "ds.search",
    "name": "phy",
    "options": {
-    "query": "| mstats latest_time(_value) as t WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ewlc_ms_phy_type BY dot11_oper_data_ms_mac_address ewlc_ms_phy_type | sort 0 - t | dedup dot11_oper_data_ms_mac_address | eval PHY=replace(ewlc_ms_phy_type, \"^client-dot11([a-z]+).*\", \"802.11\\1\") | stats count as Clients by PHY | sort PHY",
+    "query": "| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ewlc_ms_phy_type BY dot11_oper_data_ms_mac_address ewlc_ms_phy_type | sort 0 - t | dedup dot11_oper_data_ms_mac_address | eval PHY=replace(ewlc_ms_phy_type, \"^client-dot11([a-z]+).*\", \"802.11\\1\") | stats count as Clients by PHY | sort PHY",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -319,21 +342,21 @@
    "type": "ds.search",
    "name": "clients",
    "options": {
-    "query": "| mstats latest(mdt_wl_ap_stats_num_assoc_clients) as c WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" span=1m BY ssid_counters_wtp_mac ssid_counters_slot_id ssid_counters_wlan_id | where _time + 60 <= now() | stats sum(c) as c by _time ssid_counters_slot_id | eval band=case(ssid_counters_slot_id=0, \"2.4 GHz\", ssid_counters_slot_id=1, \"5 GHz\", ssid_counters_slot_id=2, \"6 GHz\") | timechart avg(c) as c by band | fillnull value=0"
+    "query": "| mstats latest(mdt_wl_ap_stats_num_assoc_clients) as c WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" span=1m BY ssid_counters_wtp_mac ssid_counters_slot_id ssid_counters_wlan_id | where _time + 60 <= now() | stats sum(c) as c by _time ssid_counters_slot_id | eval band=case(ssid_counters_slot_id=0, \"2.4 GHz\", ssid_counters_slot_id=1, \"5 GHz\", ssid_counters_slot_id=2, \"6 GHz\") | timechart avg(c) as c by band | fillnull value=0"
    }
   },
   "ds_sys": {
    "type": "ds.search",
    "name": "sys",
    "options": {
-    "query": "| mstats latest(mdt_xe_mem_stats_used_memory) as used latest(mdt_xe_mem_stats_total_memory) as total WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" span=1m BY memory_statistic_name | stats sum(used) as used sum(total) as total by _time | join type=left _time [| mstats avg(mdt_xe_cpu_stats_one_minute) as cpu WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" span=1m] | where _time + 60 <= now() | eval \"CPU %\"=round(cpu, 0), \"Memory %\"=round(used / total * 100, 1) | fields _time \"CPU %\" \"Memory %\""
+    "query": "| mstats latest(mdt_xe_mem_stats_used_memory) as used latest(mdt_xe_mem_stats_total_memory) as total WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" span=1m BY memory_statistic_name | stats sum(used) as used sum(total) as total by _time | join type=left _time [| mstats avg(mdt_xe_cpu_stats_one_minute) as cpu WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" span=1m] | where _time + 60 <= now() | eval \"CPU %\"=round(cpu, 0), \"Memory %\"=round(used / total * 100, 1) | fields _time \"CPU %\" \"Memory %\""
    }
   },
   "ds_rf": {
    "type": "ds.search",
    "name": "rf",
    "options": {
-    "query": "| mstats max(mdt_wl_ap_stats_tx_util_percentage) as tx max(mdt_wl_ap_stats_rx_util_percentage) as rx max(mdt_wl_ap_stats_rx_noise_channel_utilization) as noise max(mdt_wl_ap_stats_non_wifi_inter) as nonwifi WHERE `mdt_metrics_index` extracted_source=\"$wlc$\" span=1m BY rrm_measurement_radio_slot_id | where _time + 60 <= now() | eval band=case(rrm_measurement_radio_slot_id=0, \"2.4 GHz\", rrm_measurement_radio_slot_id=1, \"5 GHz\", rrm_measurement_radio_slot_id=2, \"6 GHz\")"
+    "query": "| mstats max(mdt_wl_ap_stats_tx_util_percentage) as tx max(mdt_wl_ap_stats_rx_util_percentage) as rx max(mdt_wl_ap_stats_rx_noise_channel_utilization) as noise max(mdt_wl_ap_stats_non_wifi_inter) as nonwifi WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" span=1m BY rrm_measurement_radio_slot_id | where _time + 60 <= now() | eval band=case(rrm_measurement_radio_slot_id=0, \"2.4 GHz\", rrm_measurement_radio_slot_id=1, \"5 GHz\", rrm_measurement_radio_slot_id=2, \"6 GHz\")"
    }
   },
   "ds_cpu_now": {
@@ -405,6 +428,7 @@
   "type": "grid",
   "globalInputs": [
    "input_time",
+   "input_site",
    "input_wlc"
   ],
   "layoutDefinitions": {

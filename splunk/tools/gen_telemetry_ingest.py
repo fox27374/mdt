@@ -20,14 +20,14 @@ POOL = ('| appendcols [| rest /services/licenser/pools splunk_server=local | sea
 # Devices: data points and last time over the last 15 minutes, distinct gnmic subscriptions, and every device seen in the last 7 days
 # (expected devices: one that is silent in the picked range shows as silent, not missing). The 7-day subsearch has its own earliest.
 DEVICES = (
-    "| mstats count(_value) as n latest_time(_value) as t WHERE `mdt_metrics_index` metric_name=* earliest=-15m BY metric_name extracted_source "
+    "| mstats count(_value) as n latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" metric_name=* earliest=-15m BY metric_name extracted_source "
     f"| eval pipe={PIPE}, device=extracted_source "
     "| where pipe!=\"Collector host\" AND isnotnull(device) "
     "| stats sum(n) as n max(t) as seen values(pipe) as pipe by device "
-    "| append [| mstats count(_value) as n WHERE `mdt_metrics_index` metric_name=mdt_* earliest=-15m BY extracted_source subscription_name "
+    "| append [| mstats count(_value) as n WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_* earliest=-15m BY extracted_source subscription_name "
     "| stats dc(subscription_name) as subs by extracted_source | rename extracted_source as device] "
     "| stats sum(n) as n max(seen) as seen max(subs) as subs values(pipe) as pipe by device "
-    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` metric_name=* earliest=-7d BY metric_name extracted_source "
+    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" metric_name=* earliest=-7d BY metric_name extracted_source "
     f"| eval pipe={PIPE}, device=extracted_source "
     "| where pipe!=\"Collector host\" AND isnotnull(device) "
     "| stats max(t) as seen values(pipe) as pipe by device] "
@@ -39,10 +39,10 @@ DEVICES = (
 USAGE = f"index=_internal source=*license_usage.log type=Usage {LIC}"
 
 bases = {
-    "ds_tile_metrics": "| mstats count(_value) as n WHERE `mdt_metrics_index` metric_name=* earliest=-15m "
+    "ds_tile_metrics": "| mstats count(_value) as n WHERE `mdt_metrics_index` site=\"$site$\" metric_name=* earliest=-15m "
                        "| eval rate=round(n / 900, 0) | fields rate",
     "ds_devices": DEVICES,
-    "ds_subs": "| mstats count(_value) WHERE `mdt_metrics_index` metric_name=mdt_* earliest=-15m BY extracted_source subscription_name "
+    "ds_subs": "| mstats count(_value) WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_* earliest=-15m BY extracted_source subscription_name "
                "| stats count as subscriptions",
     "ds_lic_today": f"{USAGE} | stats sum(b) as bytes",
     "ds_lic_table": (f"{USAGE} "
@@ -55,7 +55,7 @@ bases = {
                      "| table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\""),
     "ds_lic_chart": f"{USAGE} | bin _time span=1d | stats sum(b) as bytes by _time idx "
                     "| eval MB=round(bytes / 1048576, 1) | xyseries _time idx MB | fillnull value=0",
-    "ds_ingest": "| mstats count(_value) as n WHERE `mdt_metrics_index` metric_name=* BY metric_name span=5m "
+    "ds_ingest": "| mstats count(_value) as n WHERE `mdt_metrics_index` site=\"$site$\" metric_name=* BY metric_name span=5m "
                  f"| eval pipe={PIPE} | stats sum(n) as n by _time pipe "
                  "| where _time + 300 <= now() | eval rate=round(n / 300, 1) | xyseries _time pipe rate | fillnull value=0",
     "ds_storage": "| rest /services/data/indexes datatype=all count=0 | search " + indexes("title") + " "
@@ -87,6 +87,7 @@ for k, q in bases.items():
     if k in SLOW:
         opts.update({"refresh": "5m", "refreshType": "delay"})
     dataSources[k] = {"type": "ds.search", "name": k[3:], "options": opts}
+dataSources["ds_sites"] = {"type": "ds.search", "name": "sites", "options": {"query": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label | append [| makeresults | eval label=\"All sites\", value=\"*\"] | fields label value"}}
 dataSources.update({k: {"type": "ds.chain", "name": k[3:], "options": {"extend": b, "query": q}} for k, (b, q) in chains.items()})
 
 def tile(title, d, **opts):
@@ -121,6 +122,10 @@ viz = {
 }
 
 inputs = {
+    "input_site": {"type": "input.dropdown", "title": "Site", "dataSources": {"primary": "ds_sites"},
+                   "options": {"token": "site", "defaultValue": "ibk-lab", "items": ">frame(label, value) | objects()"},
+                   "context": {"label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+                               "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"}},
     "input_time": {"type": "input.timerange", "title": "Time range",
                    "options": {"token": "global_time", "defaultValue": "-24h@h,now"}},
 }
@@ -135,7 +140,7 @@ rows = [  # (item, x, y, w, h)
 ]
 layout = {
     "type": "grid",
-    "globalInputs": ["input_time"],
+    "globalInputs": ["input_time", "input_site"],
     "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1440},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "Telemetry", "layoutId": "layout_1"}]},

@@ -122,6 +122,18 @@ event. The dial-out subscription is `57009` in `dialout-iosxe.yaml`.
   with client MAC, AP, BSSID, radio slot, roam type and association time as labels and `run-latency` (ms)
   as the only metric (`mdt_wl_client_roam_run_latency`). Identity is the association time, not the list index.
 
+## Sites
+
+The stack monitors several unrelated networks, called **sites**. Every metric carries a `site` label (a `site` dimension in
+Splunk), and the Splunk dashboards filter by it through the **Site** dropdown. Today there is one site, `ibk-lab`.
+
+- **Dial-in targets** (gnmic): set `site` in the target's `event-tags` in [config/mdt.yaml](gnmic/config/mdt.yaml), next to `mgmt_ip`.
+  Every target has `site: "ibk-lab"`.
+- **Dial-out switches** (OTel yang_grpc): set `site` on every datapoint in `transform/cisco` in [config/otel.yaml](gnmic/config/otel.yaml),
+  matched on the switch name. The switches are listed in [config/dialout-iosxe.yaml](gnmic/config/dialout-iosxe.yaml): keep the two in step.
+- **Syslog** has no site. The syslog panels are not filtered by site.
+- Data sent before the tag was added has no `site` and does not show under any site. There is no backfill, so charts start at the deploy.
+
 ## Switch configuration
 
 ### NX-OS: gRPC concurrent-call limit
