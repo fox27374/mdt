@@ -462,11 +462,21 @@
       }
      },
      {
-      "item": "viz_rssi",
+      "item": "viz_roam_timeline",
       "type": "block",
       "position": {
        "x": 0,
        "y": 110,
+       "w": 1440,
+       "h": 160
+      }
+     },
+     {
+      "item": "viz_rssi",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 270,
        "w": 720,
        "h": 280
       }
@@ -476,7 +486,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 110,
+       "y": 270,
        "w": 720,
        "h": 280
       }
@@ -486,7 +496,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 390,
+       "y": 550,
        "w": 720,
        "h": 280
       }
@@ -496,7 +506,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 390,
+       "y": 550,
        "w": 720,
        "h": 280
       }
@@ -506,19 +516,9 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 670,
+       "y": 830,
        "w": 1440,
        "h": 280
-      }
-     },
-     {
-      "item": "viz_roam_timeline",
-      "type": "block",
-      "position": {
-       "x": 0,
-       "y": 950,
-       "w": 1440,
-       "h": 160
       }
      },
      {

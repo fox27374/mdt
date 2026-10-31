@@ -142,10 +142,10 @@ inputs = {
 tiles = ["viz_name", "viz_ip", "viz_ssid", "viz_ap", "viz_radio", "viz_rssi_now", "viz_snr_now", "viz_speed_now"]
 TW = [220, 160, 160, 180, 260, 150, 150, 160]  # widths add up to 1440
 rows = [(t, sum(TW[:i]), 0, w, 110) for i, (t, w) in enumerate(zip(tiles, TW))] + [  # (item, x, y, w, h)
-    ("viz_rssi", 0, 110, 720, 280), ("viz_snr", 720, 110, 720, 280),
-    ("viz_speed", 0, 390, 720, 280), ("viz_retries", 720, 390, 720, 280),
-    ("viz_throughput", 0, 670, 1440, 280),
-    ("viz_roam_timeline", 0, 950, 1440, 160),
+    ("viz_roam_timeline", 0, 110, 1440, 160),
+    ("viz_rssi", 0, 270, 720, 280), ("viz_snr", 720, 270, 720, 280),
+    ("viz_speed", 0, 550, 720, 280), ("viz_retries", 720, 550, 720, 280),
+    ("viz_throughput", 0, 830, 1440, 280),
     ("viz_roam", 0, 1110, 1440, 300),
 ]
 layout = {
