@@ -559,11 +559,21 @@
       }
      },
      {
-      "item": "viz_ip",
+      "item": "viz_ports",
       "type": "block",
       "position": {
        "x": 0,
        "y": 80,
+       "w": 1440,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_ip",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 280,
        "w": 288,
        "h": 200
       }
@@ -573,7 +583,7 @@
       "type": "block",
       "position": {
        "x": 288,
-       "y": 80,
+       "y": 280,
        "w": 288,
        "h": 200
       }
@@ -583,7 +593,7 @@
       "type": "block",
       "position": {
        "x": 576,
-       "y": 80,
+       "y": 280,
        "w": 288,
        "h": 200
       }
@@ -593,7 +603,7 @@
       "type": "block",
       "position": {
        "x": 864,
-       "y": 80,
+       "y": 280,
        "w": 288,
        "h": 200
       }
@@ -603,18 +613,8 @@
       "type": "block",
       "position": {
        "x": 1152,
-       "y": 80,
-       "w": 288,
-       "h": 200
-      }
-     },
-     {
-      "item": "viz_ports",
-      "type": "block",
-      "position": {
-       "x": 0,
        "y": 280,
-       "w": 1440,
+       "w": 288,
        "h": 200
       }
      },
