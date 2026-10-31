@@ -31,14 +31,32 @@ bases = {
     "ds_rates": f"`mdt_if_counters({N},*, $site$)` {phys} | `mdt_if_rates` "
                 f"| join type=left node interface [`mdt_if_status({N}, $site$)` | fields node interface speed] "
                 f"| eval util=round(max(in_bps, out_bps) / speed * 100, 4)",
-    "ds_poe": f"`mdt_poe({N})`",
     # Address the switch is polled on (gnmic event-tags / otel.yaml mgmt_ip label), latest value in the last hour.
     # Fallback: the address its CDP neighbours report, for a switch that sends no telemetry (sw03).
     "ds_ip": f"| mstats latest(_value) WHERE `mdt_metrics_index` metric_name=* extracted_source=\"{N}\" mgmt_ip=* earliest=-1h BY mgmt_ip "
              f"| fields mgmt_ip | append [`mdt_cdp(*, $site$)` | where neighbour=lower(\"{N}\") AND ip!=\"\" | eval mgmt_ip=ip | fields mgmt_ip] "
              "| head 1",
-    "ds_cpu": f"`mdt_cpu({N}, $site$)` | stats latest(cpu) as cpu | eval cpu=round(cpu, 0)",
-    "ds_mem": f"`mdt_mem({N}, $site$)` | stats latest(mem) as mem | eval mem=round(mem, 0)",
+    # Tiles: one value per 5 minutes over the range; the tile shows the last one big, the rest as a sparkline.
+    "ds_cpu": f"`mdt_cpu({N}, $site$)` | timechart span=5m avg(cpu) as cpu | where isnotnull(cpu) | eval cpu=round(cpu, 0)",
+    "ds_mem": f"`mdt_mem({N}, $site$)` | timechart span=5m avg(mem) as mem | where isnotnull(mem) | eval mem=round(mem, 0)",
+    # PoE drawn as percent of PoE capacity (drawn + free), per stack member added up. XE dial-in and dial-out.
+    "ds_poe_pct": (f"| mstats avg(mdt_xe_poe_stats_consumed_poe_power) as used avg(mdt_xe_poe_stats_available_power) as free "
+                   f"WHERE `mdt_metrics_index` extracted_source=\"{N}\" span=5m BY poe_switch_switch_num "
+                   f"| append [| mstats avg(\"cisco.consumed-poe-power\") as used avg(\"cisco.available-power\") as free "
+                   f"WHERE `mdt_metrics_index` extracted_source=\"{N}\" span=5m BY power-stack-name] "
+                   "| stats sum(used) as used sum(free) as free by _time | where used + free > 0 "
+                   "| eval pct=round(used / (used + free) * 100, 0) | fields _time pct"),
+    # Front-panel ports up, per 5 minutes: latest oper status per port in each bucket, one port per slot like the
+    # faceplate. XE / NX dial-in and dial-out. The current bucket is left out: not every port has reported in it yet.
+    "ds_ports_up": (f"| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" "
+                    f"(metric_name=\"mdt_xe_if_info_oper_status\" OR metric_name=\"mdt_nx_if_info_oper_status\") extracted_source=\"{N}\" "
+                    "span=5m BY interface_name oper_status | eval up=if(match(oper_status, \"(?i)^(up|if-oper-state-ready)\"), 1, 0) "
+                    f"| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" metric_name=\"cisco.speed\" extracted_source=\"{N}\" "
+                    "span=5m BY interface_name oper-status | eval up=if('oper-status'==\"if-oper-state-ready\", 1, 0)] "
+                    f"| sort 0 _time interface_name - t | dedup _time interface_name | rename interface_name as interface {phys} "
+                    "| rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | sort 0 _time - up | dedup keepempty=true _time path "
+                    "| where _time + 300 <= now() | stats count as total sum(up) as up by _time "
+                    "| eval pct=round(up / total * 100, 0) | fields _time pct"),
     # MACs on port-channels and VLANs; the Interfaces table shows those on front-panel ports.
     "ds_mac": f"`mdt_mac({N},*)` | where NOT (`mdt_is_physical`) | sort interface vlan mac | rename interface as Interface, vlan as VLAN, mac as MAC | fields - node",
     "ds_logs": f"`mdt_syslog_index` host=\"{N}\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) "
@@ -58,8 +76,6 @@ chains = {  # name: (base, post-process)
                  "| fields interface state speed neighbour macs mac_list poe_w poe_state pd_class in_errs out_errs model port_channel"),
     "ds_nodata": ("ds_status", f"| stats count | where count=0 "
                   f"| eval Note=\"No telemetry for {N}. Switch Details covers switches that stream interface data.\" | fields Note"),
-    "ds_ports_up": ("ds_status", f"{slots} | stats count as total sum(oper_up) as up "
-                    "| eval pct=round(up / total * 100, 0) | fields pct"),
     "ds_ifaces_table": ("ds_status", f"{slots} "
                         f"| eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") "
                         f"| eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") "
@@ -97,8 +113,6 @@ chains = {  # name: (base, post-process)
               "Members=mvjoin(members, \", \"), VLANs=mvindex(vlans, 0), \"CDP neighbours\"=mvjoin(cdp, \", \"), _port=mvindex(po_raw, 0) "
               "| fillnull value=\"\" VLANs \"CDP neighbours\" Members "
               "| eval n=tonumber(replace(pc, \"^port-channel\", \"\")) | sort 0 n | table \"Port-channel\" Status Speed Members VLANs \"CDP neighbours\" _port"),
-    # The gauge has a fixed 0-100 scale, so it shows percent of PoE capacity (drawn + free).
-    "ds_poe_gauge": ("ds_poe", "| eval pct=round(used / (used + free) * 100, 0) | fields pct"),
     "ds_throughput": ("ds_rates", "| bin _time span=5m | where _time + 300 <= now() | stats avg(in_bps) as in avg(out_bps) as out by _time interface "
                       "| stats sum(in) as in sum(out) as out by _time "
                       "| eval \"In (Mb/s)\"=round(in / 1000000, 2), \"Out (Mb/s)\"=round(out / 1000000, 2) | fields - in out"),
@@ -115,12 +129,17 @@ bases = {k: re.sub(r"(^|\[)`(" + GEN + ")", r"\1| `\2", q) for k, q in bases.ite
 dataSources = {k: {"type": "ds.search", "name": k[3:], "options": {"query": q}} for k, q in bases.items()}
 dataSources.update({k: {"type": "ds.chain", "name": k[3:], "options": {"extend": b, "query": q}} for k, (b, q) in chains.items()})
 
-# Marker gauge on a 0-100 scale; green / yellow / red bands from 70 and 90 % unless a fixed colour is given.
-def gauge(title, d, color=None):
-    ranges = ([{"from": 0, "to": 100, "value": color}] if color else
-              [{"from": 0, "to": 70, "value": "#53a051"}, {"from": 70, "to": 90, "value": "#f8be34"}, {"from": 90, "to": 100, "value": "#dc4e41"}])
-    return {"type": "splunk.markergauge", "title": title, "dataSources": {"primary": d},
-            "options": {"orientation": "horizontal", "gaugeRanges": ranges}}
+# Percent tile like the WLC ones: latest value big, the range as a sparkline below. Green / yellow / red from 70 and
+# 90 % unless a fixed colour is given.
+def pct_tile(title, d, field, color=None):
+    color_opt = color or "> majorValue | rangeValue(levels)"
+    return {"type": "splunk.singlevalue", "title": title, "dataSources": {"primary": d},
+            "options": {"sparklineValues": f"> primary | seriesByName(\"{field}\")", "majorValue": "> sparklineValues | lastPoint()",
+                        "sparklineDisplay": "below", "trendDisplay": "off", "unit": "%", "unitPosition": "after",
+                        "majorColor": color_opt, "sparklineStrokeColor": color_opt,
+                        # Fixed font size: the automatic one fills the tile and leaves the sparkline a 1 px strip.
+                        "majorFontSize": 44, "showSparklineAreaGraph": True, "showSparklineTooltip": True},
+            "context": {"levels": [{"to": 70, "value": "#53a051"}, {"from": 70, "to": 90, "value": "#f8be34"}, {"from": 90, "value": "#dc4e41"}]}}
 
 def chart(kind, title, d, **opts):
     return {"type": kind, "title": title, "dataSources": {"primary": d}, "options": opts, "showProgressBar": True}
@@ -141,10 +160,10 @@ viz = {
                    "containerOptions": {"visibility": {"hideWhenNoData": True}}},
     "viz_ip": {"type": "splunk.singlevalue", "title": "Management IP", "dataSources": {"primary": "ds_ip"},
                "options": {"majorColor": "#708794", "majorFontSize": 36}},
-    "viz_cpu": gauge("CPU %", "ds_cpu"),
-    "viz_mem": gauge("Memory %", "ds_mem"),
-    "viz_poe": {**gauge("PoE drawn (% of PoE capacity)", "ds_poe_gauge"), "containerOptions": {"visibility": {"hideWhenNoData": True}}},
-    "viz_ports_up": gauge("Ports up %", "ds_ports_up", "#708794"),
+    "viz_cpu": pct_tile("CPU", "ds_cpu", "cpu"),
+    "viz_mem": pct_tile("Memory", "ds_mem", "mem"),
+    "viz_poe": {**pct_tile("PoE drawn (of PoE capacity)", "ds_poe_pct", "pct"), "containerOptions": {"visibility": {"hideWhenNoData": True}}},
+    "viz_ports_up": pct_tile("Ports up", "ds_ports_up", "pct", "#708794"),
     "viz_throughput": chart("splunk.line", "Throughput, sum of all ports (5 min average)", "ds_throughput"),
     "viz_errors": chart("splunk.column", "Errors per 5 min (all ports)", "ds_errors", stackMode="stacked"),
     "viz_top_util": {**chart("splunk.bar", "Top 5 interfaces by peak utilization % (in or out); click to open", "ds_top_util", legendDisplay="off"),
@@ -176,9 +195,9 @@ inputs = {
 
 rows = [  # (item, x, y, w, h)
     ("viz_nodata", 0, 0, 1440, 80),
-    ("viz_ip", 0, 80, 288, 200), ("viz_cpu", 288, 80, 288, 200), ("viz_mem", 576, 80, 288, 200), ("viz_poe", 864, 80, 288, 200),
-    ("viz_ports_up", 1152, 80, 288, 200),
-    ("viz_ports", 0, 280, 1440, 200),
+    ("viz_ports", 0, 80, 1440, 200),
+    ("viz_ip", 0, 280, 288, 200), ("viz_cpu", 288, 280, 288, 200), ("viz_mem", 576, 280, 288, 200), ("viz_poe", 864, 280, 288, 200),
+    ("viz_ports_up", 1152, 280, 288, 200),
     ("viz_top_util", 0, 480, 720, 260), ("viz_top_errors", 720, 480, 720, 260),
     ("viz_throughput", 0, 740, 720, 320), ("viz_errors", 720, 740, 720, 320),
     ("viz_ifaces", 0, 1060, 940, 480), ("viz_mac", 940, 1060, 500, 480),
