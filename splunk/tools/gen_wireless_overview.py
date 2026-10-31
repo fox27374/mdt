@@ -45,6 +45,25 @@ APS = (f"| mstats latest(_value) WHERE {W} metric_name=mdt_wl_info_eth_mac BY et
        f"| join type=left wtp_mac [{RADIOS}] "
        "| eval State=coalesce(ap_operation_state, \"not joined\")")
 
+# Every client in the last 15 minutes, one row each: latest hostname, IP, SSID, AP and radio. All keys are the client MAC.
+def latest(metric, key, field):
+    return (f"| mstats latest_time(_value) as t WHERE {W} metric_name={metric} BY {key} {field} "
+            f"| sort 0 - t | dedup {key} | rename {key} as mac | fields mac {field}")
+CLIENT_LIST = (f"| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr "
+               f"latest(mdt_wl_client_stats_speed) as speed WHERE {W} BY traffic_stats_ms_mac_address | rename traffic_stats_ms_mac_address as mac "
+               f"| join type=left mac [{latest('mdt_wl_info_device_hostname', 'client_wsa_info_client_mac', 'device_hostname')}] "
+               f"| join type=left mac [{latest('mdt_wl_info_ip_addr', 'sisf_db_mac_mac_addr', 'ip_addr')}] "
+               f"| join type=left mac [{latest('mdt_wl_info_vap_ssid', 'dot11_oper_data_ms_mac_address', 'vap_ssid')}] "
+               f"| join type=left mac [{latest('mdt_wl_client_stats_ap_mac_address', 'dot11_oper_data_ms_mac_address', 'ap_mac_address')}] "
+               f"| join type=left ap_mac_address [| mstats latest(_value) WHERE {W} metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name "
+               "| rename eth_mac as ap_mac_address | fields ap_mac_address ap_name_mac_map_wtp_name] "
+               f"| join type=left mac [| mstats latest(mdt_wl_info_current_channel) as ch latest(mdt_wl_info_ms_ap_slot_id) as slot WHERE {W} "
+               "BY dot11_oper_data_ms_mac_address | rename dot11_oper_data_ms_mac_address as mac] "
+               "| eval Band=case(slot==2, \"6 GHz\", ch <= 14, \"2.4 GHz\", ch > 14, \"5 GHz\") "
+               "| rename device_hostname as Name, mac as MAC, ip_addr as IP, vap_ssid as SSID, ap_name_mac_map_wtp_name as AP, ch as Channel, "
+               "rssi as \"RSSI (dBm)\", snr as \"SNR (dB)\", speed as \"Speed (Mbps)\" "
+               "| sort 0 Name MAC | table Name MAC IP SSID AP Band Channel \"RSSI (dBm)\" \"SNR (dB)\" \"Speed (Mbps)\"")
+
 bases = {
     "ds_sites": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label",
     "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
@@ -52,6 +71,7 @@ bases = {
     "ds_aps": APS,
     "ds_sys_now": SYS,
     # Configured SSIDs (WLAN config), with their clients; 0 for an SSID nobody is on.
+    "ds_client_list": CLIENT_LIST,
     "ds_ssids": (f"| mstats latest(_value) WHERE {W} metric_name=mdt_wl_info_ssid BY ssid | eval Clients=0 "
                  f"| append [| mstats latest(_value) WHERE {W} metric_name=mdt_wl_info_vap_ssid BY vap_ssid dot11_oper_data_ms_mac_address "
                  "| stats dc(dot11_oper_data_ms_mac_address) as Clients by vap_ssid | rename vap_ssid as ssid] "
@@ -80,7 +100,7 @@ chains = {  # name: (base, post-process)
     **{f"ds_{k}": ("ds_rf", f"| timechart max({k}) by band") for k in ("tx", "rx", "noise", "nonwifi")},
 }
 LAST15 = {"earliest": "-15m", "latest": "now"}
-WINDOW = {k: LAST15 for k in ("ds_clients_now", "ds_aps", "ds_sys_now", "ds_ssids", "ds_phy")}
+WINDOW = {k: LAST15 for k in ("ds_clients_now", "ds_aps", "ds_client_list", "ds_sys_now", "ds_ssids", "ds_phy")}
 
 dataSources = {k: {"type": "ds.search", "name": k[3:], "options": {"query": q, **({"queryParameters": WINDOW[k]} if k in WINDOW else {})}}
                for k, q in bases.items()}
@@ -106,6 +126,11 @@ viz = {
     "viz_phy": chart("splunk.bar", "Clients by PHY (last 15 min)", "ds_phy", legendDisplay="off"),
     "viz_ap_table": {**chart("splunk.table", "Access points (last 15 min): radio = channel / width / TX power", "ds_ap_table", count=20),
                      "context": {"stateColors": [{"match": "registered", "value": "#53a051"}, {"match": "not joined", "value": "#dc4e41"}]}},
+    # Click a client: Wireless Client Details for it, same site, WLC and time range (new tab, like Client Search).
+    "viz_client_list": {**chart("splunk.table", "Clients (last 15 min). Click a client to open its details", "ds_client_list", count=20),
+                        "eventHandlers": [{"type": "drilldown.customUrl", "options": {
+                            "url": "/app/mdt_infra_monitoring/wireless_client_details?form.site=$site$&form.wlc=$wlc$&form.tk_client=$row.MAC.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+                            "newTab": True}}]},
     "viz_clients": chart("splunk.area", "Clients by band", "ds_clients", stackMode="stacked", seriesColorsByField=COLORS, legendDisplay="bottom"),
     "viz_sys": chart("splunk.line", "WLC CPU and memory %", "ds_sys", legendDisplay="bottom", yAxisMin=0),
     "viz_tx": band_chart("TX utilization by band, busiest AP", "ds_tx"),
@@ -134,21 +159,22 @@ rows = [  # (item, x, y, w, h)
     ("viz_clients_now", 0, 0, 360, 130), ("viz_aps", 360, 0, 360, 130), ("viz_cpu_now", 720, 0, 360, 130), ("viz_mem_now", 1080, 0, 360, 130),
     ("viz_clients", 0, 130, 720, 300), ("viz_ssids", 720, 130, 360, 300), ("viz_phy", 1080, 130, 360, 300),
     ("viz_ap_table", 0, 430, 1440, 260),
-    ("viz_tx", 0, 690, 720, 300), ("viz_rx", 720, 690, 720, 300),
-    ("viz_noise", 0, 990, 720, 300), ("viz_nonwifi", 720, 990, 720, 300),
-    ("viz_sys", 0, 1290, 1440, 260),
+    ("viz_client_list", 0, 690, 1440, 300),
+    ("viz_tx", 0, 990, 720, 300), ("viz_rx", 720, 990, 720, 300),
+    ("viz_noise", 0, 1290, 720, 300), ("viz_nonwifi", 720, 1290, 720, 300),
+    ("viz_sys", 0, 1590, 1440, 260),
 ]
 layout = {
     "type": "grid",
     "globalInputs": ["input_time", "input_site", "input_wlc"],
-    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1550},
+    "layoutDefinitions": {"layout_1": {"type": "grid", "options": {"width": 1440, "height": 1850},
         "structure": [{"item": i, "type": "block", "position": {"x": x, "y": y, "w": w, "h": h}} for i, x, y, w, h in rows]}},
     "tabs": {"items": [{"label": "WLC", "layoutId": "layout_1"}]},
 }
 
 definition = {
     "title": "Wireless Overview",
-    "description": "One WLC: clients and APs, SSIDs and PHY types, access points with their radios, per-band utilization, noise and interference of the busiest AP, CPU and memory.",
+    "description": "One WLC: clients and APs, every client (click for its details), SSIDs and PHY types, access points with their radios, per-band utilization, noise and interference of the busiest AP, CPU and memory.",
     "inputs": inputs,
     "defaults": {"dataSources": {"ds.search": {"options": {"queryParameters": {
         "earliest": "$global_time.earliest$", "latest": "$global_time.latest$"}, "refresh": "90s", "refreshType": "delay"}}}},
