@@ -32,7 +32,8 @@ ROAM_TIMELINE = (f"| mstats latest(_value) as run_latency WHERE {W} metric_name=
                  "| fields kind t ap band roam run_latency category bssid "
                  f"| append [| mstats latest(_value) WHERE {W} metric_name=mdt_wl_client_stats_ap_mac_address dot11_oper_data_ms_mac_address=\"{C}\" span=1m BY ap_mac_address "
                  "| stats count by _time | eval kind=\"seen\", t=_time | fields kind t] "
-                 "| addinfo | sort 0 t")
+                 # tz_offset: the viewer's Splunk time zone (strftime uses it), so the viz shows the same clock as the other panels.
+                 "| addinfo | eval tz_offset=strftime(now(), \"%z\") | sort 0 t")
 
 bases = {
     "ds_sites": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label",
@@ -144,8 +145,8 @@ rows = [(t, sum(TW[:i]), 0, w, 110) for i, (t, w) in enumerate(zip(tiles, TW))] 
     ("viz_rssi", 0, 110, 720, 280), ("viz_snr", 720, 110, 720, 280),
     ("viz_speed", 0, 390, 720, 280), ("viz_retries", 720, 390, 720, 280),
     ("viz_throughput", 0, 670, 1440, 280),
-    ("viz_roam_timeline", 0, 950, 1440, 320),
-    ("viz_roam", 0, 1270, 1440, 300),
+    ("viz_roam_timeline", 0, 950, 1440, 160),
+    ("viz_roam", 0, 1110, 1440, 300),
 ]
 layout = {
     "type": "grid",

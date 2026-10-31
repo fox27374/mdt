@@ -305,7 +305,7 @@
    "type": "ds.search",
    "name": "roam_timeline",
    "options": {
-    "query": "| mstats latest(_value) as run_latency WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_roam_run_latency client_mac=\"$tk_client$\" BY ap_name bssid roam_type slot assoc_time | dedup assoc_time | eval kind=\"assoc\", t=strptime(substr(assoc_time, 1, 19).\" +0000\", \"%Y-%m-%dT%H:%M:%S %z\"), ap=coalesce(ap_name, bssid), slot_n=tonumber(slot) | eval band=case(slot_n==0, \"2.4 GHz\", slot_n==1, \"5 GHz\", slot_n==2, \"6 GHz\", true(), \"slot \".slot) | eval roam=case(match(roam_type, \"11r\"), \"802.11r\", match(roam_type, \"okc\"), \"OKC\", match(roam_type, \"none\"), \"none\", true(), replace(roam_type, \"^dot11-roam-type-\", \"\")) | eval category=case(match(roam_type, \"none\"), \"Join\", run_latency < 100, \"Good\", run_latency <= 500, \"Slow\", true(), \"Bad\") | fields kind t ap band roam run_latency category bssid | append [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address dot11_oper_data_ms_mac_address=\"$tk_client$\" span=1m BY ap_mac_address | stats count by _time | eval kind=\"seen\", t=_time | fields kind t] | addinfo | sort 0 t"
+    "query": "| mstats latest(_value) as run_latency WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_roam_run_latency client_mac=\"$tk_client$\" BY ap_name bssid roam_type slot assoc_time | dedup assoc_time | eval kind=\"assoc\", t=strptime(substr(assoc_time, 1, 19).\" +0000\", \"%Y-%m-%dT%H:%M:%S %z\"), ap=coalesce(ap_name, bssid), slot_n=tonumber(slot) | eval band=case(slot_n==0, \"2.4 GHz\", slot_n==1, \"5 GHz\", slot_n==2, \"6 GHz\", true(), \"slot \".slot) | eval roam=case(match(roam_type, \"11r\"), \"802.11r\", match(roam_type, \"okc\"), \"OKC\", match(roam_type, \"none\"), \"none\", true(), replace(roam_type, \"^dot11-roam-type-\", \"\")) | eval category=case(match(roam_type, \"none\"), \"Join\", run_latency < 100, \"Good\", run_latency <= 500, \"Slow\", true(), \"Bad\") | fields kind t ap band roam run_latency category bssid | append [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address dot11_oper_data_ms_mac_address=\"$tk_client$\" span=1m BY ap_mac_address | stats count by _time | eval kind=\"seen\", t=_time | fields kind t] | addinfo | eval tz_offset=strftime(now(), \"%z\") | sort 0 t"
    }
   },
   "ds_rssi": {
@@ -518,7 +518,7 @@
        "x": 0,
        "y": 950,
        "w": 1440,
-       "h": 320
+       "h": 160
       }
      },
      {
@@ -526,7 +526,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1270,
+       "y": 1110,
        "w": 1440,
        "h": 300
       }

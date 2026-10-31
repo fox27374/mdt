@@ -84,6 +84,8 @@ assert.equal(buildTimeline([], NOW).empty, true);
 // 1 h span: 10 min step (5 min gives 12 labels, over 8); T0 is not on a step.
 assert.deepEqual(axisTicks(T0, T0 + 3600, 8), [1000200, 1000800, 1001400, 1002000, 1002600, 1003200]);
 assert.ok(axisTicks(T0, T0 + 4 * 3600, 8).length <= 8);
+// Time zone: with +0530 the 1 h ticks fall on full hours of that zone (UTC :30).
+assert.ok(axisTicks(0, 6 * 3600, 8, 19800).every((t) => (t + 19800) % 3600 === 0));
 assert.ok(axisTicks(T0, T0 + 4 * 3600, 8).every((t) => t >= T0 && t <= T0 + 4 * 3600));
 
 console.log('check-roam: all assertions passed');

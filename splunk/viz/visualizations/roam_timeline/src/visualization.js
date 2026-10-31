@@ -24,7 +24,7 @@ tip.hidden = true;
 container.append(body, tip);
 (document.getElementById('root') || document.body).appendChild(container);
 
-const state = { data: null, loading: false, theme: 'dark', model: null, hover: null, width: 0, showDate: false };
+const state = { data: null, loading: false, theme: 'dark', model: null, hover: null, width: 0, showDate: false, tzOff: 0 };
 const colors = () => COLORS[state.theme] || COLORS.dark;
 
 // Columnar search results to one object per row. Values arrive as strings.
@@ -42,10 +42,12 @@ function escapeHtml(text) {
 }
 
 const pad = (n) => String(n).padStart(2, '0');
+// Times in the Splunk user's time zone (tz_offset from the search, "+0100"), like the other panels, not the browser's.
+const parseOffset = (z) => (/^[+-]\d{4}$/.test(z || '') ? (z[0] === '-' ? -1 : 1) * (Number(z.slice(1, 3)) * 3600 + Number(z.slice(3)) * 60) : 0);
 function fmtTime(sec) {
-    const d = new Date(sec * 1000);
-    const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    return state.showDate ? `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${hm}` : hm;
+    const d = new Date((sec + state.tzOff) * 1000);
+    const hm = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    return state.showDate ? `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${hm}` : hm;
 }
 
 function fmtDuration(sec) {
@@ -149,7 +151,7 @@ function renderChart(m) {
     }).join('');
     const axisY = TOP + lanesH;
     const axis = `<line x1="${PL}" y1="${axisY}" x2="${W - PR}" y2="${axisY}" stroke="${c.axis}"/>` +
-        axisTicks(m.from, m.to).map((t) => {
+        axisTicks(m.from, m.to, 8, state.tzOff).map((t) => {
             const tx = Number(x(t));
             const anchor = tx < PL + 24 ? 'start' : tx > W - PR - 24 ? 'end' : 'middle';
             return `<line x1="${tx}" y1="${axisY}" x2="${tx}" y2="${axisY + 4}" stroke="${c.axis}"/>` +
@@ -172,6 +174,7 @@ function legendHtml(c) {
 function update() {
     if (state.loading) return renderMessage('Loading roaming...');
     const rows = state.data ? toRows(state.data) : [];
+    state.tzOff = parseOffset(rows[0]?.tz_offset);
     state.model = buildTimeline(rows, Date.now() / 1000);
     const m = state.model;
     if (m.empty || m.lanes.length === 0 || !(m.to > m.from)) return renderMessage('No roaming data in this range');

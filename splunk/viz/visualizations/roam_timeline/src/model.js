@@ -90,11 +90,12 @@ export function tickClass(category) {
 
 // Time axis ticks: the smallest round step that gives at most maxTicks labels.
 const STEPS = [60, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400];
-export function axisTicks(from, to, maxTicks = 8) {
+export function axisTicks(from, to, maxTicks = 8, tzOff = 0) {
   const span = to - from;
   if (!(span > 0)) return [];
   const step = STEPS.find((s) => span / s <= maxTicks) ?? 86400 * Math.ceil(span / (86400 * maxTicks));
   const out = [];
-  for (let t = Math.ceil(from / step) * step; t <= to; t += step) out.push(t);
+  // Round in the display time zone (tzOff seconds east of UTC), so ticks fall on its full hours and midnights.
+  for (let t = Math.ceil((from + tzOff) / step) * step - tzOff; t <= to; t += step) out.push(t);
   return out;
 }
