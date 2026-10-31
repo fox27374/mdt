@@ -58,7 +58,8 @@ function fmtDuration(sec) {
 
 const roamLabel = (roam) => (roam === 'none' ? 'First join' : roam || '-');
 
-// Tooltip rows. A stay (s) lists its whole time on the AP; a tick (t) lists the association's roam details.
+// Tooltip, three lines so it fits the short panel: AP and band, time, roam details.
+// A stay (s) shows its whole time on the AP; a tick (t) the association's roam.
 function tipHtml(key) {
     const m = state.model;
     const kind = key[0];
@@ -68,12 +69,12 @@ function tipHtml(key) {
         return `<b>Not seen ${fmtTime(g.start)} – ${fmtTime(g.end)}</b><br>(${Math.round((g.end - g.start) / 60)} min)`;
     }
     const s = m.stays[i];
-    const roam = `Roam: ${escapeHtml(roamLabel(s.roam))}<br>Roam time: ${Number.isFinite(s.runLatency) ? Math.round(s.runLatency) + ' ms' : '-'}<br>BSSID: ${escapeHtml(s.bssid || '-')}`;
-    const head = `<b>${escapeHtml(s.ap)}</b><br>Band: ${escapeHtml(s.band || '-')}`;
+    const roam = `${escapeHtml(roamLabel(s.roam))} · ${Number.isFinite(s.runLatency) ? Math.round(s.runLatency) + ' ms' : '-'} · BSSID ${escapeHtml(s.bssid || '-')}`;
+    const head = `<b>${escapeHtml(s.ap)}</b> · ${escapeHtml(s.band || '-')}`;
     if (kind === 't') return `${head}<br>Roamed ${fmtTime(s.start)}<br>${roam}`;
+    const from = `${fmtTime(s.start)}${s.inRange ? '' : ' (before range)'}`;
     const to = `${fmtTime(s.end)}${s.endReason === 'last' ? ' (last seen)' : ''}`;
-    const before = s.inRange ? '' : '<br>(started before this range)';
-    return `${head}<br>From ${fmtTime(s.start)}${before}<br>To ${to}<br>Duration: ${fmtDuration(s.end - s.start)}<br>${roam}`;
+    return `${head}<br>${from} – ${to} (${fmtDuration(s.end - s.start)})<br>${roam}`;
 }
 
 function setOutline(key, on) {
@@ -84,12 +85,13 @@ function setOutline(key, on) {
 function placeTip(clientX, clientY) {
     const r = container.getBoundingClientRect();
     const tw = tip.offsetWidth, th = tip.offsetHeight, off = 14;
+    // Beside the pointer (right, or left near the edge), never under it; vertically centred on it and kept
+    // inside the panel, which clips anything outside.
     let x = clientX - r.left + off;
-    let y = clientY - r.top + off;
     if (x + tw > r.width) x = clientX - r.left - tw - off;
-    if (y + th > r.height) y = clientY - r.top - th - off;
+    const y = Math.min(Math.max(0, clientY - r.top - th / 2), Math.max(0, r.height - th));
     tip.style.left = `${Math.max(0, x)}px`;
-    tip.style.top = `${Math.max(0, y)}px`;
+    tip.style.top = `${y}px`;
 }
 
 // Hover only moves an outline and the tooltip: the SVG is not rebuilt.

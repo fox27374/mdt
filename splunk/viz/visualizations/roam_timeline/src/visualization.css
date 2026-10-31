@@ -5,7 +5,7 @@
 .rt-gap { fill-opacity: 0.16; }
 .rt-hit { fill: transparent; }
 .rt-legend { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; margin-top: 6px; }
-.rt-legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.rt-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .rt-swatch { display: inline-block; width: 12px; height: 9px; border-radius: 2px; }
 .rt-tick-swatch { width: 3px; height: 11px; }
 .rt-message { padding: 24px 8px; text-align: center; }
