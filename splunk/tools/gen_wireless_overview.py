@@ -24,7 +24,7 @@ RK = "radio_oper_data_wtp_mac radio_oper_data_radio_slot_id"
 RADIOS = (f"| mstats latest(mdt_wl_radio_info_curr_freq) as ch latest(mdt_wl_radio_info_chan_width) as w WHERE {W} BY {RK} "
           f"| join type=left {RK} [| mstats latest(mdt_wl_radio_info_curr_tx_power_in_dbm) as p WHERE {W} BY {RK} radio_band_info_band_id "
           "| where radio_band_info_band_id=radio_oper_data_radio_slot_id | fields - radio_band_info_band_id] "
-          f"| join type=left {RK} [| mstats latest(_value) WHERE {W} metric_name=mdt_wl_radio_info_oper_state BY {RK} oper_state | fields - latest*] "
+          f"| join type=left {RK} [| mstats latest_time(_value) as t WHERE {W} metric_name=mdt_wl_radio_info_oper_state BY {RK} oper_state | sort 0 - t | dedup {RK} | fields - t] "
           "| where ch > 0 "
           "| eval cell=if(isnotnull(oper_state) AND oper_state!=\"radio-up\", \"down\", \"ch \".ch.\" / \".w.\" MHz\".if(isnotnull(p), \" / \".p.\" dBm\", \"\")), "
           "col=\"Radio \".radio_oper_data_radio_slot_id | xyseries radio_oper_data_wtp_mac col cell | rename radio_oper_data_wtp_mac as wtp_mac")
