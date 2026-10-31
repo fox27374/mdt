@@ -1,7 +1,7 @@
 {
   "name": "port_faceplate",
   "version": "0.1.0",
-  "description": "Switch port faceplate for MDT Infrastructure Monitoring",
+  "description": "Custom Dashboard Studio visualizations for MDT Infrastructure Monitoring",
   "author": "Daniel Kofler",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "build": "node build.mjs --entry=visualization.js",
     "build:prod": "NODE_ENV=production node build.mjs --entry=visualization.js",
     "sync": "NODE_ENV=production node build.mjs --entry=visualization.js && node sync-app.mjs",
-    "check": "node check-layout.mjs"
+    "check": "node check-layout.mjs && node check-roam.mjs"
   },
   "devDependencies": {
     "@splunk/dashboard-studio-extension": "^1.0.0",

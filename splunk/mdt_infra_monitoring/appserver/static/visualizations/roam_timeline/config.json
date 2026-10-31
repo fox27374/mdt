@@ -1,0 +1,24 @@
+{
+  "showTitleAndDescription": true,
+  "includeInToolbar": false,
+  "includeInVizSwitcher": false,
+  "showDrilldown": false,
+  "canSetTokens": [],
+  "hasEventHandlers": false,
+  "config": {
+    "name": "Roaming timeline",
+    "description": "One lane per AP: bars = time on the AP, ticks = roams coloured by roam time",
+    "category": "Custom",
+    "icon": null,
+    "dataContract": {
+      "requiredDataSources": ["primary"],
+      "optionalDataSources": []
+    },
+    "size": {
+      "initialWidth": 1440,
+      "initialHeight": 300
+    },
+    "optionsSchema": {},
+    "editorConfig": []
+  }
+}

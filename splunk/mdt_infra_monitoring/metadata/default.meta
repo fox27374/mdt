@@ -12,3 +12,6 @@ export = none
 
 [visualizations/port_faceplate]
 export = system
+
+[visualizations/roam_timeline]
+export = system
