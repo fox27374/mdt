@@ -704,11 +704,11 @@ processors:
         - path-base:
             apply-on: "name"
 
-  # Management ports: NX-OS mgmt0, IOS-XE GigabitEthernet0/0. Port-channels (po, Port-channel) are kept: status, counters and
+  # Management ports: NX-OS mgmt0, IOS-XE GigabitEthernet0/0. LISP0.x (SD-Access borders): overlay traffic the uplinks carry too. Port-channels (po, Port-channel) are kept: status, counters and
   # members are used by Switch Details. Aggregate totals stay physical-only in the dashboards (mdt_is_physical).
   drop-if-stats-interfaces:
     event-drop:
-      condition: '.tags.interface_name != null and (.tags.interface_name | test("^(vlan|loopback|tunnel|app|nve|bluetooth|mgmt|GigabitEthernet0/0$)"; "i"))'
+      condition: '.tags.interface_name != null and (.tags.interface_name | test("^(vlan|loopback|tunnel|lisp|app|nve|bluetooth|mgmt|GigabitEthernet0/0$)"; "i"))'
 
   # PoE port entries are keyed by intf-name (tag poe-port-detail_intf-name); give them the interface_name tag the other XE interface data uses.
   xe-poe-port-interface:
