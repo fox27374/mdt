@@ -116,7 +116,10 @@
     "unit": "%",
     "unitPosition": "after",
     "majorColor": "> majorValue | rangeValue(levels)",
-    "sparklineStrokeColor": "> majorValue | rangeValue(levels)"
+    "sparklineStrokeColor": "> majorValue | rangeValue(levels)",
+    "majorFontSize": 44,
+    "showSparklineAreaGraph": true,
+    "showSparklineTooltip": true
    },
    "context": {
     "levels": [
@@ -150,7 +153,10 @@
     "unit": "%",
     "unitPosition": "after",
     "majorColor": "> majorValue | rangeValue(levels)",
-    "sparklineStrokeColor": "> majorValue | rangeValue(levels)"
+    "sparklineStrokeColor": "> majorValue | rangeValue(levels)",
+    "majorFontSize": 44,
+    "showSparklineAreaGraph": true,
+    "showSparklineTooltip": true
    },
    "context": {
     "levels": [
@@ -184,7 +190,10 @@
     "unit": "%",
     "unitPosition": "after",
     "majorColor": "> majorValue | rangeValue(levels)",
-    "sparklineStrokeColor": "> majorValue | rangeValue(levels)"
+    "sparklineStrokeColor": "> majorValue | rangeValue(levels)",
+    "majorFontSize": 44,
+    "showSparklineAreaGraph": true,
+    "showSparklineTooltip": true
    },
    "context": {
     "levels": [
@@ -223,7 +232,10 @@
     "unit": "%",
     "unitPosition": "after",
     "majorColor": "#708794",
-    "sparklineStrokeColor": "#708794"
+    "sparklineStrokeColor": "#708794",
+    "majorFontSize": 44,
+    "showSparklineAreaGraph": true,
+    "showSparklineTooltip": true
    },
    "context": {
     "levels": [

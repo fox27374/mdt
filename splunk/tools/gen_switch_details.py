@@ -136,7 +136,9 @@ def pct_tile(title, d, field, color=None):
     return {"type": "splunk.singlevalue", "title": title, "dataSources": {"primary": d},
             "options": {"sparklineValues": f"> primary | seriesByName(\"{field}\")", "majorValue": "> sparklineValues | lastPoint()",
                         "sparklineDisplay": "below", "trendDisplay": "off", "unit": "%", "unitPosition": "after",
-                        "majorColor": color_opt, "sparklineStrokeColor": color_opt},
+                        "majorColor": color_opt, "sparklineStrokeColor": color_opt,
+                        # Fixed font size: the automatic one fills the tile and leaves the sparkline a 1 px strip.
+                        "majorFontSize": 44, "showSparklineAreaGraph": True, "showSparklineTooltip": True},
             "context": {"levels": [{"to": 70, "value": "#53a051"}, {"from": 70, "to": 90, "value": "#f8be34"}, {"from": 90, "value": "#dc4e41"}]}}
 
 def chart(kind, title, d, **opts):
