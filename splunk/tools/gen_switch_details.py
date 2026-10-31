@@ -125,11 +125,11 @@ def gauge(title, d, color=None):
 def chart(kind, title, d, **opts):
     return {"type": kind, "title": title, "dataSources": {"primary": d}, "options": opts, "showProgressBar": True}
 
-# Clicking a port opens its Interface Details in a new tab, with the device and time range.
+# Clicking a port opens its Interface Details (same tab), with the device and time range.
 def open_port(port):
     return [{"type": "drilldown.customUrl", "options": {"url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=" + N
              + "&form.tk_interface=" + port + "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
-             "newTab": True}}]
+             "newTab": False}}]
 viz = {
     # Custom visualization (splunk/viz, built into the app): the type is <app id>.<visualization name>.
     # Clicking a port sends its interface as click.value, see visualization.js.
