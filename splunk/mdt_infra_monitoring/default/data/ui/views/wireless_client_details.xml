@@ -280,7 +280,7 @@
    "type": "ds.search",
    "name": "now",
    "options": {
-    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" traffic_stats_ms_mac_address=\"$tk_client$\" | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname | where mac=\"$tk_client$\" | fields device_hostname] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ip_addr sisf_db_mac_mac_addr=\"$tk_client$\" BY ip_addr | sort - t | head 1 | fields ip_addr] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid dot11_oper_data_ms_mac_address=\"$tk_client$\" BY vap_ssid | sort - t | head 1 | fields vap_ssid] | appendcols [| mstats latest(mdt_wl_info_current_channel) as ch latest(mdt_wl_info_ms_ap_slot_id) as slot WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" dot11_oper_data_ms_mac_address=\"$tk_client$\"] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ewlc_ms_phy_type dot11_oper_data_ms_mac_address=\"$tk_client$\" BY ewlc_ms_phy_type | sort - t | head 1 | eval phy=replace(ewlc_ms_phy_type, \"^client-dot11([a-z]+).*\", \"802.11\\\\1\") | fields phy] | eval device_hostname=coalesce(device_hostname, \"(none)\"), band=case(slot==2, \"6 GHz\", ch <= 14, \"2.4 GHz\", ch > 14, \"5 GHz\"), radio=if(isnotnull(ch), band.\" ch \".ch.if(isnotnull(phy), \", \".phy, \"\"), null())",
+    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" traffic_stats_ms_mac_address=\"$tk_client$\" | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname | where mac=\"$tk_client$\" | fields device_hostname] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ip_addr sisf_db_mac_mac_addr=\"$tk_client$\" BY ip_addr | sort - t | head 1 | fields ip_addr] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid dot11_oper_data_ms_mac_address=\"$tk_client$\" BY vap_ssid | sort - t | head 1 | fields vap_ssid] | appendcols [| mstats latest(mdt_wl_info_current_channel) as ch latest(mdt_wl_info_ms_ap_slot_id) as slot WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" dot11_oper_data_ms_mac_address=\"$tk_client$\"] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ewlc_ms_phy_type dot11_oper_data_ms_mac_address=\"$tk_client$\" BY ewlc_ms_phy_type | sort - t | head 1 | eval phy=replace(ewlc_ms_phy_type, \"^client-dot11([a-z]+).*\", \"802.11\\\\1\") | fields phy] | appendcols [| mstats latest_time(_value) as last_seen WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_most_recent_rssi traffic_stats_ms_mac_address=\"$tk_client$\" earliest=-30d latest=now] | append [| makeresults | eval connected=0 | fields - _time] | head 1 | eval connected=if(isnotnull(rssi), 1, 0), band=case(slot==2, \"6 GHz\", ch <= 14, \"2.4 GHz\", ch > 14, \"5 GHz\"), radio=if(isnotnull(ch), band.\" ch \".ch.if(isnotnull(phy), \", \".phy, \"\"), null()) | eval device_hostname=if(connected==1, coalesce(device_hostname, \"(none)\"), \"Not connected\"), radio=if(connected==1, radio, if(isnotnull(last_seen), \"Last seen \".strftime(last_seen, if(last_seen < relative_time(now(), \"-24h\"), \"%Y-%m-%d %H:%M\", \"%H:%M\")), \"Not seen in 30 days\")) | foreach ip_addr vap_ssid rssi snr speed [eval <<FIELD>>=coalesce(<<FIELD>>, \"-\")]",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -353,7 +353,7 @@
    "name": "ap_now",
    "options": {
     "extend": "ds_roam",
-    "query": "| where last >= relative_time(now(), \"-15m\") | head 1 | eval ap=coalesce(ap_name, eth_mac) | fields ap"
+    "query": "| where last >= relative_time(now(), \"-15m\") | head 1 | eval ap=coalesce(ap_name, eth_mac) | appendpipe [| stats count | where count=0 | eval ap=\"-\"] | fields ap"
    }
   },
   "ds_roam_table": {
@@ -462,11 +462,21 @@
       }
      },
      {
-      "item": "viz_rssi",
+      "item": "viz_roam_timeline",
       "type": "block",
       "position": {
        "x": 0,
        "y": 110,
+       "w": 1440,
+       "h": 160
+      }
+     },
+     {
+      "item": "viz_rssi",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 270,
        "w": 720,
        "h": 280
       }
@@ -476,7 +486,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 110,
+       "y": 270,
        "w": 720,
        "h": 280
       }
@@ -486,7 +496,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 390,
+       "y": 550,
        "w": 720,
        "h": 280
       }
@@ -496,7 +506,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 390,
+       "y": 550,
        "w": 720,
        "h": 280
       }
@@ -506,19 +516,9 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 670,
+       "y": 830,
        "w": 1440,
        "h": 280
-      }
-     },
-     {
-      "item": "viz_roam_timeline",
-      "type": "block",
-      "position": {
-       "x": 0,
-       "y": 950,
-       "w": 1440,
-       "h": 160
       }
      },
      {

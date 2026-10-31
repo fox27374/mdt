@@ -42,6 +42,8 @@ bases = {
                    f"| rename traffic_stats_ms_mac_address as mac | join type=left mac [{HOSTNAMES}] "
                    "| eval label=if(isnotnull(device_hostname), device_hostname.\" (\".mac.\")\", mac) | sort label | table label mac"),
     # Identity and radio values now; each appendcols adds one column, empty when the client sent nothing.
+    # Not seen in the last 15 minutes: the name tile says "Not connected" and the radio tile when it was last seen
+    # (last 30 days); the other tiles show "-" instead of an empty-result warning.
     "ds_now": (f"| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr "
                f"latest(mdt_wl_client_stats_speed) as speed WHERE {W} traffic_stats_ms_mac_address=\"{C}\" "
                f"| appendcols [{HOSTNAMES} | where mac=\"{C}\" | fields device_hostname] "
@@ -52,9 +54,14 @@ bases = {
                f"| appendcols [| mstats latest(mdt_wl_info_current_channel) as ch latest(mdt_wl_info_ms_ap_slot_id) as slot WHERE {W} dot11_oper_data_ms_mac_address=\"{C}\"] "
                f"| appendcols [| mstats latest_time(_value) as t WHERE {W} metric_name=mdt_wl_info_ewlc_ms_phy_type dot11_oper_data_ms_mac_address=\"{C}\" BY ewlc_ms_phy_type "
                "| sort - t | head 1 | eval phy=replace(ewlc_ms_phy_type, \"^client-dot11([a-z]+).*\", \"802.11\\\\1\") | fields phy] "
-               "| eval device_hostname=coalesce(device_hostname, \"(none)\"), "
+               f"| appendcols [| mstats latest_time(_value) as last_seen WHERE {W} metric_name=mdt_wl_client_stats_most_recent_rssi traffic_stats_ms_mac_address=\"{C}\" earliest=-30d latest=now] "
+               "| append [| makeresults | eval connected=0 | fields - _time] | head 1 "
+               "| eval connected=if(isnotnull(rssi), 1, 0), "
                "band=case(slot==2, \"6 GHz\", ch <= 14, \"2.4 GHz\", ch > 14, \"5 GHz\"), "
-               "radio=if(isnotnull(ch), band.\" ch \".ch.if(isnotnull(phy), \", \".phy, \"\"), null())"),
+               "radio=if(isnotnull(ch), band.\" ch \".ch.if(isnotnull(phy), \", \".phy, \"\"), null()) "
+               "| eval device_hostname=if(connected==1, coalesce(device_hostname, \"(none)\"), \"Not connected\"), "
+               "radio=if(connected==1, radio, if(isnotnull(last_seen), \"Last seen \".strftime(last_seen, if(last_seen < relative_time(now(), \"-24h\"), \"%Y-%m-%d %H:%M\", \"%H:%M\")), \"Not seen in 30 days\")) "
+               "| foreach ip_addr vap_ssid rssi snr speed [eval <<FIELD>>=coalesce(<<FIELD>>, \"-\")]"),
     "ds_metrics": (f"| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr "
                    f"latest(mdt_wl_client_stats_speed) as speed max(mdt_wl_client_stats_data_retries) as retries max(mdt_wl_client_stats_pkts_tx) as ptx "
                    f"max(mdt_wl_client_stats_bytes_tx) as btx max(mdt_wl_client_stats_bytes_rx) as brx "
@@ -83,7 +90,7 @@ chains = {  # name: (base, post-process)
                    "| eval \"Retry %\"=if(dp + dr > 0, round(dr / (dp + dr) * 100, 1), null()), \"Problem above\"=10 | fields _time \"Retry %\" \"Problem above\""),
     "ds_throughput": ("ds_metrics", "| rename tx_kbps as \"TX (kb/s)\", rx_kbps as \"RX (kb/s)\" | fields _time \"TX (kb/s)\" \"RX (kb/s)\""),
     # AP tile: the stay that reached into the last 15 minutes.
-    "ds_ap_now": ("ds_roam", "| where last >= relative_time(now(), \"-15m\") | head 1 | eval ap=coalesce(ap_name, eth_mac) | fields ap"),
+    "ds_ap_now": ("ds_roam", "| where last >= relative_time(now(), \"-15m\") | head 1 | eval ap=coalesce(ap_name, eth_mac) | appendpipe [| stats count | where count=0 | eval ap=\"-\"] | fields ap"),
     "ds_roam_table": ("ds_roam", "| eval AP=coalesce(ap_name, eth_mac), \"AP IP\"=ap_ip_addr, Location=location, "
                       "\"First seen\"=strftime(first, \"%Y-%m-%d %H:%M\"), \"Last seen\"=strftime(last, \"%Y-%m-%d %H:%M\") "
                       "| table AP \"AP IP\" Location \"First seen\" \"Last seen\""),
@@ -142,10 +149,10 @@ inputs = {
 tiles = ["viz_name", "viz_ip", "viz_ssid", "viz_ap", "viz_radio", "viz_rssi_now", "viz_snr_now", "viz_speed_now"]
 TW = [220, 160, 160, 180, 260, 150, 150, 160]  # widths add up to 1440
 rows = [(t, sum(TW[:i]), 0, w, 110) for i, (t, w) in enumerate(zip(tiles, TW))] + [  # (item, x, y, w, h)
-    ("viz_rssi", 0, 110, 720, 280), ("viz_snr", 720, 110, 720, 280),
-    ("viz_speed", 0, 390, 720, 280), ("viz_retries", 720, 390, 720, 280),
-    ("viz_throughput", 0, 670, 1440, 280),
-    ("viz_roam_timeline", 0, 950, 1440, 160),
+    ("viz_roam_timeline", 0, 110, 1440, 160),
+    ("viz_rssi", 0, 270, 720, 280), ("viz_snr", 720, 270, 720, 280),
+    ("viz_speed", 0, 550, 720, 280), ("viz_retries", 720, 550, 720, 280),
+    ("viz_throughput", 0, 830, 1440, 280),
     ("viz_roam", 0, 1110, 1440, 300),
 ]
 layout = {
