@@ -9,21 +9,23 @@ const (
 	StatusWaiting Status = "WAITING"
 	StatusStale   Status = "STALE"
 	StatusNoData  Status = "NO_DATA"
+	StatusEmpty   Status = "EMPTY" // device answers the subscribe, but nothing ever reaches NATS
 	StatusError   Status = "ERROR"
 )
 
 // Worse returns the more severe of a and b. Severity order, lowest to highest:
-// OK, WAITING, STALE, NO_DATA, ERROR.
+// OK and EMPTY (same severity), WAITING, STALE, NO_DATA, ERROR. On equal severity it returns a.
 func Worse(a, b Status) Status {
-	// Severity mapping: OK=0, WAITING=1, STALE=2, NO_DATA=3, ERROR=4
+	// Severity mapping: OK=0, EMPTY=0, WAITING=1, STALE=2, NO_DATA=3, ERROR=4
 	severity := map[Status]int{
 		StatusOK:      0,
+		StatusEmpty:   0,
 		StatusWaiting: 1,
 		StatusStale:   2,
 		StatusNoData:  3,
 		StatusError:   4,
 	}
-	if severity[a] > severity[b] {
+	if severity[a] >= severity[b] {
 		return a
 	}
 	return b
@@ -41,13 +43,16 @@ func StaleWindow(interval time.Duration) time.Duration {
 }
 
 // EvalSub decides the status of one subscription. Rules, in this order:
-// 1. errReason != ""            -> StatusError
-// 2. lastSeen.IsZero():
-//      now-started < StaleWindow(interval) -> StatusWaiting
-//      otherwise                           -> StatusNoData
-// 3. now-lastSeen > StaleWindow(interval)  -> StatusStale
-// 4. otherwise                             -> StatusOK
-func EvalSub(now, started, lastSeen time.Time, interval time.Duration, errReason string) Status {
+//  1. errReason != ""            -> StatusError
+//  2. lastSeen.IsZero():
+//     now-started < StaleWindow(interval) -> StatusWaiting
+//     answered                            -> StatusEmpty
+//     otherwise                           -> StatusNoData
+//  3. now-lastSeen > StaleWindow(interval)  -> StatusStale
+//  4. otherwise                             -> StatusOK
+//
+// answered means the device returned subscribe responses for the subscription (never data on NATS).
+func EvalSub(now, started, lastSeen time.Time, interval time.Duration, errReason string, answered bool) Status {
 	if errReason != "" {
 		return StatusError
 	}
@@ -57,6 +62,9 @@ func EvalSub(now, started, lastSeen time.Time, interval time.Duration, errReason
 		window := StaleWindow(interval)
 		if elapsed < window {
 			return StatusWaiting
+		}
+		if answered {
+			return StatusEmpty
 		}
 		return StatusNoData
 	}
@@ -70,12 +78,13 @@ func EvalSub(now, started, lastSeen time.Time, interval time.Duration, errReason
 	return StatusOK
 }
 
-// settlePartial turns a WAITING or NO_DATA target into OK when at least one subscription is
-// OK and every other one is only WAITING (e.g. hourly subscriptions that have not reported yet)
-// or NO_DATA (empty: the device has nothing on those paths, e.g. xe_lag_info without port-channels).
+// settlePartial turns a WAITING target into OK when at least one subscription is OK and the others
+// are WAITING (e.g. hourly subscriptions that have not reported yet) or EMPTY (the device answers but
+// has nothing on those paths, e.g. xe_lag_info without port-channels). An OK target keeps its status
+// and only reports its EMPTY count. NO_DATA is never settled: it is a real problem.
 // It returns the resulting status and how many subs are still waiting and empty.
 func settlePartial(status Status, subs []SubState) (Status, int, int) {
-	if status != StatusWaiting && status != StatusNoData {
+	if status != StatusWaiting && status != StatusOK {
 		return status, 0, 0
 	}
 	ok, waiting, empty := 0, 0, 0
@@ -85,11 +94,11 @@ func settlePartial(status Status, subs []SubState) (Status, int, int) {
 			ok++
 		case StatusWaiting:
 			waiting++
-		case StatusNoData:
+		case StatusEmpty:
 			empty++
 		}
 	}
-	if ok == 0 {
+	if status == StatusWaiting && ok == 0 {
 		return status, 0, 0
 	}
 	return StatusOK, waiting, empty
@@ -169,7 +178,7 @@ func ParseCollectors(s string) ([]Collector, error) {
 // Output types (served as JSON by /api/status).
 type SubState struct {
 	Name     string     `json:"name"`
-	Interval string     `json:"interval"` // time.Duration.String(), "0s" if unknown
+	Interval string     `json:"interval"`  // time.Duration.String(), "0s" if unknown
 	LastSeen *time.Time `json:"last_seen"` // nil if never seen
 	Count    uint64     `json:"count"`
 	Status   Status     `json:"status"`
@@ -183,7 +192,7 @@ type TargetState struct {
 	Status  Status     `json:"status"`
 	Reason  string     `json:"reason,omitempty"`
 	Waiting int        `json:"waiting,omitempty"` // subs still WAITING on an otherwise OK target
-	Empty   int        `json:"empty,omitempty"`   // subs that never delivered (NO_DATA) on an otherwise OK target
+	Empty   int        `json:"empty,omitempty"`   // subs EMPTY (device answers, nothing on NATS) on an OK target
 	Subs    []SubState `json:"subs"`
 }
 

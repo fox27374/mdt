@@ -1105,3 +1105,61 @@ func TestHostsConcurrentSetHostSnapshot(t *testing.T) {
 		t.Errorf("hosts count = %d, want <= 5", len(snap.Hosts))
 	}
 }
+
+func TestStoreEmptyWhenDeviceAnswers(t *testing.T) {
+	// Never seen on NATS: EMPTY when a collector counted subscribe responses for it (target OK),
+	// NO_DATA when nothing answers (target NO_DATA, not settled to OK)
+	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	started := now.Add(-5 * time.Minute) // past the 2-minute window
+
+	store := NewStore(started)
+	store.SetConfig("gnmic-1", []TargetConfig{
+		{Name: "answers", Owner: "gnmic-1", Subs: []SubConfig{{Name: "xe_lag_info", Interval: 30 * time.Second}}},
+		{Name: "silent", Owner: "gnmic-1", Subs: []SubConfig{{Name: "xe_lag_info", Interval: 30 * time.Second}}},
+		{Name: "other-col", Owner: "gnmic-1", Subs: []SubConfig{{Name: "xe_lag_info", Interval: 30 * time.Second}}},
+		{Name: "by-addr", Address: "10.0.0.5:830", Owner: "gnmic-1", Subs: []SubConfig{{Name: "xe_lag_info", Interval: 30 * time.Second}}},
+	})
+	store.SetResponses("gnmic-1", map[string]map[string]uint64{
+		"answers":      {"xe_lag_info": 28},
+		"silent":       {"xe_lag_info": 0},
+		"10.0.0.5:830": {"xe_lag_info": 5},
+	})
+	// Counted by gnmic-2 only (the owner is gnmic-1): still counts
+	store.SetResponses("gnmic-2", map[string]map[string]uint64{
+		"other-col": {"xe_lag_info": 3},
+	})
+
+	check := func(snap Snapshot, name string, wantSub, wantTarget Status, wantEmpty int) {
+		t.Helper()
+		for _, tgt := range snap.Targets {
+			if tgt.Name != name {
+				continue
+			}
+			if tgt.Status != wantTarget {
+				t.Errorf("%s: target status = %v, want %v", name, tgt.Status, wantTarget)
+			}
+			if tgt.Empty != wantEmpty {
+				t.Errorf("%s: target empty = %d, want %d", name, tgt.Empty, wantEmpty)
+			}
+			if len(tgt.Subs) != 1 || tgt.Subs[0].Status != wantSub {
+				t.Fatalf("%s: sub = %+v, want status %v", name, tgt.Subs, wantSub)
+			}
+			return
+		}
+		t.Fatalf("target %s not found", name)
+	}
+
+	snap := store.Snapshot(now)
+	check(snap, "answers", StatusEmpty, StatusOK, 1)
+	check(snap, "other-col", StatusEmpty, StatusOK, 1)
+	check(snap, "by-addr", StatusEmpty, StatusOK, 1)
+	check(snap, "silent", StatusNoData, StatusNoData, 0)
+	if r := snap.Targets[0].Subs[0].Reason; r != "device answers, nothing on these paths" {
+		t.Errorf("EMPTY reason = %q", r)
+	}
+
+	// A collector whose scrape fails passes nil: its counts are dropped
+	store.SetResponses("gnmic-2", nil)
+	snap = store.Snapshot(now)
+	check(snap, "other-col", StatusNoData, StatusNoData, 0)
+}

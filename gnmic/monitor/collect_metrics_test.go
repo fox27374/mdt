@@ -26,7 +26,7 @@ func TestParseMetricsFixtures(t *testing.T) {
 			}
 
 			tr := newFailTracker()
-			issues, err := parseMetrics("test-collector", bytes.NewReader(body), time.Now(), tr)
+			issues, _, err := parseMetrics("test-collector", bytes.NewReader(body), time.Now(), tr)
 			if err != nil {
 				t.Fatalf("parseMetrics failed: %v", err)
 			}
@@ -86,7 +86,7 @@ gnmic_target_up{name="sw1"} 1
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := newFailTracker()
-			issues, err := parseMetrics("test-col", bytes.NewReader([]byte(tt.metrics)), time.Now(), tr)
+			issues, _, err := parseMetrics("test-col", bytes.NewReader([]byte(tt.metrics)), time.Now(), tr)
 			if err != nil {
 				t.Fatalf("parseMetrics failed: %v", err)
 			}
@@ -121,7 +121,7 @@ func TestParseMetricsFailedCounter(t *testing.T) {
 gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="target1",subscription="sub1"} 3
 `
 
-	issues, err := parseMetrics("col1", bytes.NewReader([]byte(metrics1)), now, tr)
+	issues, _, err := parseMetrics("col1", bytes.NewReader([]byte(metrics1)), now, tr)
 	if err != nil {
 		t.Fatalf("parseMetrics failed: %v", err)
 	}
@@ -136,7 +136,7 @@ gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="target
 gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="target1",subscription="sub1"} 4
 `
 
-	issues, err = parseMetrics("col1", bytes.NewReader([]byte(metrics2)), now2, tr)
+	issues, _, err = parseMetrics("col1", bytes.NewReader([]byte(metrics2)), now2, tr)
 	if err != nil {
 		t.Fatalf("parseMetrics failed: %v", err)
 	}
@@ -149,7 +149,7 @@ gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="target
 
 	// Third parse 11 minutes after the increase with value 4 returns none
 	now3 := now.Add(11 * time.Minute)
-	issues, err = parseMetrics("col1", bytes.NewReader([]byte(metrics2)), now3, tr)
+	issues, _, err = parseMetrics("col1", bytes.NewReader([]byte(metrics2)), now3, tr)
 	if err != nil {
 		t.Fatalf("parseMetrics failed: %v", err)
 	}
@@ -158,7 +158,7 @@ gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="target
 	}
 
 	// Parse with unchanged value returns none
-	issues, err = parseMetrics("col1", bytes.NewReader([]byte(metrics2)), now2.Add(5*time.Minute), tr)
+	issues, _, err = parseMetrics("col1", bytes.NewReader([]byte(metrics2)), now2.Add(5*time.Minute), tr)
 	if err != nil {
 		t.Fatalf("parseMetrics failed: %v", err)
 	}
@@ -167,12 +167,39 @@ gnmic_subscribe_number_of_failed_subscribe_request_messages_total{source="target
 	}
 }
 
+// TestParseMetricsResponses tests the received-subscribe-response counter parsing
+func TestParseMetricsResponses(t *testing.T) {
+	body, err := loadTestFile("testdata/metrics_gnmic-1.txt")
+	if err != nil {
+		t.Fatalf("failed to load fixture: %v", err)
+	}
+
+	_, responses, err := parseMetrics("gnmic-1", bytes.NewReader(body), time.Now(), newFailTracker())
+	if err != nil {
+		t.Fatalf("parseMetrics failed: %v", err)
+	}
+
+	tests := []struct {
+		source, sub string
+		want        uint64
+	}{
+		{"ibk-lab-sw99", "xe_if_info", 9},
+		{"Lab-IBK-PA560-2", "nx_if_info", 6},
+		{"ibk-lab-sw99", "xe_lag_info", 0}, // not in the fixture: absent reads as 0
+	}
+	for _, tt := range tests {
+		if got := responses[tt.source][tt.sub]; got != tt.want {
+			t.Errorf("responses[%s][%s] = %d, want %d", tt.source, tt.sub, got, tt.want)
+		}
+	}
+}
+
 // TestParseMetricsGarbageInput tests that garbage input returns an error
 func TestParseMetricsGarbageInput(t *testing.T) {
 	tr := newFailTracker()
 	metrics := "this is not valid exposition text"
 
-	_, err := parseMetrics("col1", bytes.NewReader([]byte(metrics)), time.Now(), tr)
+	_, _, err := parseMetrics("col1", bytes.NewReader([]byte(metrics)), time.Now(), tr)
 	if err == nil {
 		t.Errorf("parseMetrics should fail on garbage input")
 	}

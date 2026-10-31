@@ -14,16 +14,17 @@ type SeenRecord struct {
 type Store struct {
 	mu              sync.RWMutex
 	started         time.Time
-	targets         map[string]map[string]TargetConfig // source -> (key -> config)
-	issues          map[string][]Issue                  // source -> issues
-	components      map[string]Component                // name -> component
-	seen            map[string]map[string]SeenRecord    // targetKey -> (sub -> record)
-	hosts           map[string]HostState                // name -> host state
-	containers      map[string][]ContainerState         // host name -> container rows
-	otel            *OtelState                          // OpenTelemetry collector view, nil when off
-	setConfigCount  map[string]int64                    // source -> counter (for determining latest owner)
-	maxSetConfigID  int64                               // monotonically increasing counter
-	hasCollectorSet bool                                // true if any non-"config" source called SetConfig
+	targets         map[string]map[string]TargetConfig      // source -> (key -> config)
+	issues          map[string][]Issue                      // source -> issues
+	components      map[string]Component                    // name -> component
+	seen            map[string]map[string]SeenRecord        // targetKey -> (sub -> record)
+	responses       map[string]map[string]map[string]uint64 // collector -> (source -> (sub -> received subscribe responses))
+	hosts           map[string]HostState                    // name -> host state
+	containers      map[string][]ContainerState             // host name -> container rows
+	otel            *OtelState                              // OpenTelemetry collector view, nil when off
+	setConfigCount  map[string]int64                        // source -> counter (for determining latest owner)
+	maxSetConfigID  int64                                   // monotonically increasing counter
+	hasCollectorSet bool                                    // true if any non-"config" source called SetConfig
 }
 
 func NewStore(started time.Time) *Store {
@@ -33,6 +34,7 @@ func NewStore(started time.Time) *Store {
 		issues:         make(map[string][]Issue),
 		components:     make(map[string]Component),
 		seen:           make(map[string]map[string]SeenRecord),
+		responses:      make(map[string]map[string]map[string]uint64),
 		hosts:          make(map[string]HostState),
 		containers:     make(map[string][]ContainerState),
 		setConfigCount: make(map[string]int64),
@@ -68,6 +70,19 @@ func (s *Store) SetIssues(source string, issues []Issue) {
 
 	s.issues[source] = make([]Issue, len(issues))
 	copy(s.issues[source], issues)
+}
+
+// SetResponses replaces the received-subscribe-response counts scraped from `collector`.
+// A collector that could not be scraped passes nil.
+func (s *Store) SetResponses(collector string, responses map[string]map[string]uint64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if responses == nil {
+		delete(s.responses, collector)
+		return
+	}
+	s.responses[collector] = responses
 }
 
 // SetComponent inserts or replaces the component with the same Name.
@@ -154,7 +169,7 @@ func (s *Store) Snapshot(now time.Time) Snapshot {
 					Addresses:      make(map[string]bool),
 					SubsBySource:   make(map[string]map[string]SubConfig), // source -> (subname -> config)
 					Owners:         make(map[string]int64),                // collector -> setConfigCount
-					TargetCfgByOwn: make(map[string]TargetConfig),        // owner -> targetconfig
+					TargetCfgByOwn: make(map[string]TargetConfig),         // owner -> targetconfig
 				}
 			}
 
@@ -316,7 +331,7 @@ func (s *Store) Snapshot(now time.Time) Snapshot {
 					return time.Time{}
 				}
 				return *lastSeen
-			}(), interval, subReason)
+			}(), interval, subReason, s.answers(merged.Key, addr, subName))
 
 			// Format reason (rule 7)
 			var reason string
@@ -330,6 +345,8 @@ func (s *Store) Snapshot(now time.Time) Snapshot {
 				}
 			case StatusNoData:
 				reason = "no data received"
+			case StatusEmpty:
+				reason = "device answers, nothing on these paths"
 			}
 
 			subStates = append(subStates, SubState{
@@ -433,6 +450,17 @@ func (s *Store) targetKey(t TargetConfig) string {
 	return t.Address
 }
 
+// Helper: true when any collector has received subscribe responses for (target, sub).
+// The target is matched by key or address, like the seen records.
+func (s *Store) answers(key, addr, sub string) bool {
+	for _, bySource := range s.responses {
+		if bySource[key][sub] > 0 || (addr != "" && bySource[addr][sub] > 0) {
+			return true
+		}
+	}
+	return false
+}
+
 // Helper: check if an issue matches a target
 func (s *Store) matchesTarget(issue Issue, key, addr, owner string) bool {
 	issueTarget := issue.Target
@@ -466,6 +494,6 @@ type mergedTarget struct {
 	Key            string
 	Addresses      map[string]bool
 	SubsBySource   map[string]map[string]SubConfig // source -> (subname -> config)
-	Owners         map[string]int64                 // collector -> setConfigCount
+	Owners         map[string]int64                // collector -> setConfigCount
 	TargetCfgByOwn map[string]TargetConfig         // owner -> targetconfig
 }
