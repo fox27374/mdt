@@ -120,7 +120,7 @@ processors:
         # Inventory (platform-oper part-no): only the per-member chassis entries (Switch1, Switch2, ...).
         - 'metric.name == "cisco.part-no_info" and not IsMatch(attributes["cname"], "^Switch[0-9]+$")'
         # Interfaces gnmic drops too (drop-if-stats-interfaces in mdt.yaml), plus the IOS-XE internal ones. Port-channels are kept.
-        - 'not IsMatch(metric.name, "memory$") and attributes["name"] != nil and IsMatch(attributes["name"], "(?i)^(vlan|loopback|tunnel|app|nve|bluetooth|mgmt|control|virtualportgroup|GigabitEthernet0/0$)")'
+        - 'not IsMatch(metric.name, "memory$") and attributes["name"] != nil and IsMatch(attributes["name"], "(?i)^(vlan|loopback|tunnel|lisp|app|nve|bluetooth|mgmt|control|virtualportgroup|GigabitEthernet0/0$)")'
 
   # Same label names as the gnmic data (source, interface_name), and only labels that identify a series:
   # values that change all the time (timestamps, counters as text) would start a new series on every change.
