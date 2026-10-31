@@ -25,6 +25,7 @@ type Store struct {
 	setConfigCount  map[string]int64                        // source -> counter (for determining latest owner)
 	maxSetConfigID  int64                                   // monotonically increasing counter
 	hasCollectorSet bool                                    // true if any non-"config" source called SetConfig
+	locks           map[string]string                       // target -> Consul lock holder instance, nil when unknown
 }
 
 func NewStore(started time.Time) *Store {
@@ -61,6 +62,15 @@ func (s *Store) SetConfig(source string, targets []TargetConfig) {
 	}
 
 	s.targets[source] = targetsByKey
+}
+
+// SetLocks replaces the Consul lock holders (target -> instance). Nil clears them, so owners fall back
+// to the latest SetConfig.
+func (s *Store) SetLocks(locks map[string]string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.locks = locks
 }
 
 // SetIssues replaces all issues previously set by `source`.
@@ -201,13 +211,15 @@ func (s *Store) Snapshot(now time.Time) Snapshot {
 	for _, merged := range targetsByKey {
 		addr := addresses[merged.Key]
 
-		// Determine owner (most recent collector SetConfig)
-		var owner string
-		var maxCount int64
-		for o, count := range merged.Owners {
-			if count > maxCount {
-				maxCount = count
-				owner = o
+		// Determine owner: the Consul lock holder when known, else the most recent collector SetConfig
+		owner := s.locks[merged.Key]
+		if owner == "" {
+			var maxCount int64
+			for o, count := range merged.Owners {
+				if count > maxCount {
+					maxCount = count
+					owner = o
+				}
 			}
 		}
 

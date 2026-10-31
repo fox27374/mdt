@@ -1163,3 +1163,51 @@ func TestStoreEmptyWhenDeviceAnswers(t *testing.T) {
 	snap = store.Snapshot(now)
 	check(snap, "other-col", StatusNoData, StatusNoData, 0)
 }
+
+func TestStoreLockWinsOverLatestSetConfig(t *testing.T) {
+	// Lock holder is the owner even when another collector called SetConfig later
+	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	store := NewStore(time.Date(2024, 1, 1, 11, 0, 0, 0, time.UTC))
+
+	store.SetConfig("gnmic-1", []TargetConfig{{Name: "target-1", Owner: "gnmic-1", Subs: []SubConfig{{Name: "interfaces", Interval: 30 * time.Second}}}})
+	store.SetConfig("gnmic-2", []TargetConfig{{Name: "target-1", Owner: "gnmic-2", Subs: []SubConfig{{Name: "interfaces", Interval: 30 * time.Second}}}})
+	store.SetLocks(map[string]string{"target-1": "gnmic-1"})
+
+	snap := store.Snapshot(now)
+	if got := snap.Targets[0].Owner; got != "gnmic-1" {
+		t.Errorf("owner = %q, want gnmic-1 (lock holder)", got)
+	}
+
+	// Lock cleared (Consul unreachable): back to the latest SetConfig
+	store.SetLocks(nil)
+	snap = store.Snapshot(now)
+	if got := snap.Targets[0].Owner; got != "gnmic-2" {
+		t.Errorf("owner without locks = %q, want gnmic-2 (latest SetConfig)", got)
+	}
+}
+
+func TestStoreIdleDuplicateIgnoredWithLock(t *testing.T) {
+	// Both collectors list target-1 after a restart. gnmic-2 is the idle copy (its SetConfig is newer)
+	// and reports the target down. The lock says gnmic-1 collects it, so the target is not ERROR.
+	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	store := NewStore(time.Date(2024, 1, 1, 11, 0, 0, 0, time.UTC))
+
+	store.SetConfig("gnmic-1", []TargetConfig{{Name: "target-1", Address: "10.0.0.1:57400", Owner: "gnmic-1", Subs: []SubConfig{{Name: "interfaces", Interval: 30 * time.Second}}}})
+	store.SetConfig("gnmic-2", []TargetConfig{{Name: "target-1", Address: "10.0.0.1:57400", Owner: "gnmic-2", Subs: []SubConfig{{Name: "interfaces", Interval: 30 * time.Second}}}})
+	store.Seen("target-1", "interfaces", now.Add(-5*time.Second))
+	store.SetIssues("gnmic-2", []Issue{{Collector: "gnmic-2", Target: "target-1", Sub: "", Reason: "gNMI connection down (UNKNOWN)"}})
+
+	// Without the lock the idle copy is the owner and the target is ERROR
+	if tgt := store.Snapshot(now).Targets[0]; tgt.Status != StatusError || tgt.Owner != "gnmic-2" {
+		t.Fatalf("without lock: owner %q status %v, want gnmic-2 ERROR", tgt.Owner, tgt.Status)
+	}
+
+	store.SetLocks(map[string]string{"target-1": "gnmic-1"})
+	tgt := store.Snapshot(now).Targets[0]
+	if tgt.Owner != "gnmic-1" {
+		t.Errorf("owner = %q, want gnmic-1", tgt.Owner)
+	}
+	if tgt.Status != StatusOK {
+		t.Errorf("status = %v (reason %q), want OK", tgt.Status, tgt.Reason)
+	}
+}
