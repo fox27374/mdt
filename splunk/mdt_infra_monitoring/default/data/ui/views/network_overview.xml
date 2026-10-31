@@ -135,13 +135,13 @@
           <!-- Click fields are eval names in single quotes ($tokens$ are not substituted here). row.type is wifi for APs (icon type);
                row.value is the node's role (tooltip), firewall for firewalls. Viz drilldownClick=single fires on double click only (see report). -->
           <condition match="'row.type'=&quot;wifi&quot; OR 'row.value'=&quot;wlc&quot;">
-            <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
+            <link>/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
           </condition>
           <condition match="'row.value'=&quot;firewall&quot;">
-            <link target="_blank">/app/mdt_infra_monitoring/firewall_details?form.tk_fw=$nd_node_token|u$&amp;form.site=$site|u$</link>
+            <link>/app/mdt_infra_monitoring/firewall_details?form.tk_fw=$nd_node_token|u$&amp;form.site=$site|u$</link>
           </condition>
           <condition>
-            <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$&amp;form.site=$site|u$</link>
+            <link>/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$&amp;form.site=$site|u$</link>
           </condition>
         </drilldown>
       </viz>
@@ -188,7 +188,7 @@
           <scale type="threshold">1</scale>
         </format>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/switch_details?form.tk_node=$row.Switch|u$&amp;form.site=$site|u$</link>
+          <link>/app/mdt_infra_monitoring/switch_details?form.tk_node=$row.Switch|u$&amp;form.site=$site|u$</link>
         </drilldown>
       </table>
     </panel>
@@ -210,7 +210,7 @@
         <option name="drilldown">all</option>
         <option name="refresh.display">progressbar</option>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
+          <link>/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
         </drilldown>
       </single>
     </panel>
@@ -230,7 +230,7 @@
         <option name="drilldown">all</option>
         <option name="refresh.display">progressbar</option>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
+          <link>/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
         </drilldown>
       </single>
     </panel>
@@ -253,7 +253,7 @@
         <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
         <option name="unit">%</option>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
+          <link>/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
         </drilldown>
       </single>
     </panel>
@@ -278,7 +278,7 @@
         <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
         <option name="unit">%</option>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
+          <link>/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
         </drilldown>
       </single>
     </panel>
@@ -317,7 +317,7 @@
           <scale type="threshold">1</scale>
         </format>
         <drilldown>
-          <link target="_blank">/app/mdt_infra_monitoring/wireless_overview?form.wlc=$row.WLC|u$&amp;form.site=$site|u$</link>
+          <link>/app/mdt_infra_monitoring/wireless_overview?form.wlc=$row.WLC|u$&amp;form.site=$site|u$</link>
         </drilldown>
       </table>
     </panel>
