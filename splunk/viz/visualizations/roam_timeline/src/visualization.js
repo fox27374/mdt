@@ -169,12 +169,13 @@ function renderChart(m) {
     body.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" style="color:${c.text}">${gaps}${lanes}${bars}${moves}${ticks}${axis}</svg>${legend}`;
 }
 
+// Legend lined up with the lanes (left edge of the plot), not the panel edge.
 function legendHtml(c) {
     const bands = Object.keys(BAND).map((b) => `<span><i class="rt-swatch" style="background:${BAND[b]}"></i>${b}</span>`).join('');
     const ticks = [['good', 'Good (under 100 ms)'], ['slow', 'Slow (100–500 ms)'], ['bad', 'Bad (over 500 ms)'], ['join', 'First join']]
         .map(([k, label]) => `<span><i class="rt-swatch rt-tick-swatch" style="background:${TICK[k]}"></i>${label}</span>`).join('');
     const offline = `<span><i class="rt-swatch" style="background:${c.gap};opacity:0.3"></i>Offline (not seen over ${GAP_SECONDS / 60} min)</span>`;
-    return `<div class="rt-legend" style="color:${c.muted}"><div style="display:flex;gap:16px;flex-wrap:wrap">${bands}</div>` +
+    return `<div class="rt-legend" style="color:${c.muted};padding:0 ${PR}px 0 ${PL}px"><div style="display:flex;gap:16px;flex-wrap:wrap">${bands}</div>` +
         `<div style="display:flex;gap:16px;flex-wrap:wrap">${ticks}${offline}</div></div>`;
 }
 
