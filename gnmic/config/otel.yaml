@@ -219,6 +219,8 @@ processors:
       - context: datapoint
         statements:
           - set(datapoint.attributes["source"], datapoint.attributes["node_id"])
+          # The receiver copies every string leaf of a /native entry onto each of its metrics, secrets included.
+          - delete_matching_keys(datapoint.attributes, "(?i)(secret|password|key-hash|key-string|key-type)")
 
 exporters:
   splunk_hec/syslog:
