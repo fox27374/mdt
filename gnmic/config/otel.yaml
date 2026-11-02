@@ -207,6 +207,8 @@ processors:
     metrics:
       datapoint:
         - 'attributes["node_id"] != "GRZ-LABOR-SW8"'
+        # The switch also streams /native (running config): never store secrets, password hashes or keys.
+        - 'IsMatch(metric.name, "(?i)(secret|password|key-hash|key-string)")'
 
   transform/grz:
     error_mode: ignore
