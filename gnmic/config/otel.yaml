@@ -200,7 +200,8 @@ processors:
           - set(metric.name, "mdt_xe_lag_info_access_vlan") where metric.name == "cisco.access-vlan"
 
   # Temporary test switch GRZ-LABOR-SW8 (172.20.80.8, dial-out to :57000): all of its data, unfiltered, for the
-  # GRZ-LABOR-SW8 dashboard in the Splunk search app. Remove together with the node_id line in filter/cisco.
+  # GRZ-LABOR-SW8 dashboard in the Splunk search app (index grz_metrics). Remove together with the node_id line in
+  # filter/cisco and splunk_hec/grz.
   filter/grz:
     error_mode: ignore
     metrics:
@@ -242,6 +243,17 @@ exporters:
     index: "cisco_metrics"
     profiling_data_enabled: false
 
+  # Temporary test switch GRZ-LABOR-SW8 (metrics/grz): own metric index, 30-day retention, created on Splunk by hand.
+  splunk_hec/grz:
+    token: "${env:SPLUNK_HEC_TOKEN}"
+    endpoint: "https://172.24.89.194:8088/services/collector"
+    tls:
+      insecure_skip_verify: true
+    source: "otel:grz"
+    sourcetype: "otel"
+    index: "grz_metrics"
+    profiling_data_enabled: false
+
 service:
   telemetry:
     metrics:
@@ -263,7 +275,7 @@ service:
     metrics/grz:
       receivers: [yang_grpc]
       processors: [filter/grz, transform/grz, batch]
-      exporters: [splunk_hec/splunkfree]
+      exporters: [splunk_hec/grz]
     logs/syslog:
       receivers: [udp_log/syslog]
       processors: [filter/syslog, transform/syslog, batch]
