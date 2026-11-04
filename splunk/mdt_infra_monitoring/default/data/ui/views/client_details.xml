@@ -1,0 +1,1009 @@
+<dashboard version="2" theme="dark">
+    <label>Client Details</label>
+    <description>One client, wireless or wired: identity, AP or switch port, RSSI or port traffic, roaming or port errors, syslog</description>
+    <definition><![CDATA[
+{
+ "title": "Client Details",
+ "description": "One client, wireless or wired. Wireless: name, IP, SSID, AP and radio, RSSI, SNR, speed, retry % and throughput over time, and the APs it was on. Wired: the client's port, its status and PoE, port traffic and errors, and syslog for the port.",
+ "inputs": {
+  "input_time": {
+   "type": "input.timerange",
+   "title": "Time range",
+   "options": {
+    "token": "global_time",
+    "defaultValue": "-4h@m,now"
+   }
+  },
+  "input_site": {
+   "type": "input.dropdown",
+   "title": "Site",
+   "dataSources": {
+    "primary": "ds_sites"
+   },
+   "options": {
+    "token": "site",
+    "defaultValue": "ibk-lab",
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"
+   }
+  },
+  "input_wlc": {
+   "type": "input.dropdown",
+   "title": "WLC",
+   "dataSources": {
+    "primary": "ds_wlc"
+   },
+   "options": {
+    "token": "wlc",
+    "selectFirstSearchResult": true,
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"wlc\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"wlc\") | renameSeries(\"value\")"
+   }
+  },
+  "input_client": {
+   "type": "input.dropdown",
+   "title": "Client",
+   "dataSources": {
+    "primary": "ds_clients"
+   },
+   "options": {
+    "token": "tk_client",
+    "selectFirstSearchResult": true,
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"mac\") | renameSeries(\"value\")"
+   }
+  },
+  "input_wired": {
+   "type": "input.dropdown",
+   "title": "Wired client",
+   "dataSources": {
+    "primary": "ds_wired_clients"
+   },
+   "options": {
+    "token": "tk_wired",
+    "selectFirstSearchResult": true,
+    "items": ">frame(label, value) | objects()"
+   },
+   "context": {
+    "label": ">primary | seriesByName(\"label\") | renameSeries(\"label\")",
+    "value": ">primary | seriesByName(\"value\") | renameSeries(\"value\")"
+   }
+  }
+ },
+ "defaults": {
+  "dataSources": {
+   "ds.search": {
+    "options": {
+     "queryParameters": {
+      "earliest": "$global_time.earliest$",
+      "latest": "$global_time.latest$"
+     },
+     "refresh": "90s",
+     "refreshType": "delay"
+    }
+   }
+  }
+ },
+ "visualizations": {
+  "viz_name": {
+   "type": "splunk.singlevalue",
+   "title": "Client name",
+   "dataSources": {
+    "primary": "ds_now"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"device_hostname\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_ip": {
+   "type": "splunk.singlevalue",
+   "title": "Client IP",
+   "dataSources": {
+    "primary": "ds_now"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"ip_addr\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_ssid": {
+   "type": "splunk.singlevalue",
+   "title": "SSID",
+   "dataSources": {
+    "primary": "ds_now"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"vap_ssid\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_ap": {
+   "type": "splunk.singlevalue",
+   "title": "AP",
+   "dataSources": {
+    "primary": "ds_ap_now"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"ap\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_rssi_now": {
+   "type": "splunk.singlevalue",
+   "title": "RSSI",
+   "dataSources": {
+    "primary": "ds_now"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"rssi\")",
+    "majorColor": "#708794",
+    "unit": "dBm",
+    "unitPosition": "after"
+   }
+  },
+  "viz_snr_now": {
+   "type": "splunk.singlevalue",
+   "title": "SNR",
+   "dataSources": {
+    "primary": "ds_now"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"snr\")",
+    "majorColor": "#708794",
+    "unit": "dB",
+    "unitPosition": "after"
+   }
+  },
+  "viz_speed_now": {
+   "type": "splunk.singlevalue",
+   "title": "Speed",
+   "dataSources": {
+    "primary": "ds_now"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"speed\")",
+    "majorColor": "#708794",
+    "unit": "Mb/s",
+    "unitPosition": "after"
+   }
+  },
+  "viz_radio": {
+   "type": "splunk.singlevalue",
+   "title": "Radio",
+   "dataSources": {
+    "primary": "ds_now"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"radio\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_rssi": {
+   "type": "splunk.line",
+   "title": "RSSI (dBm)",
+   "dataSources": {
+    "primary": "ds_rssi"
+   },
+   "options": {
+    "legendDisplay": "off"
+   },
+   "showProgressBar": true
+  },
+  "viz_snr": {
+   "type": "splunk.line",
+   "title": "SNR (dB)",
+   "dataSources": {
+    "primary": "ds_snr"
+   },
+   "options": {
+    "legendDisplay": "off"
+   },
+   "showProgressBar": true
+  },
+  "viz_speed": {
+   "type": "splunk.line",
+   "title": "Speed (Mb/s)",
+   "dataSources": {
+    "primary": "ds_speed"
+   },
+   "options": {
+    "legendDisplay": "off"
+   },
+   "showProgressBar": true
+  },
+  "viz_retries": {
+   "type": "splunk.line",
+   "title": "Retry %: retries as share of all transmissions (5 min)",
+   "dataSources": {
+    "primary": "ds_retries"
+   },
+   "options": {
+    "legendDisplay": "bottom",
+    "lineDashStylesByField": {
+     "Problem above": "dash"
+    },
+    "seriesColorsByField": {
+     "Retry %": "#1e93c6",
+     "Problem above": "#dc4e41"
+    }
+   },
+   "showProgressBar": true
+  },
+  "viz_throughput": {
+   "type": "splunk.line",
+   "title": "Throughput (kb/s)",
+   "dataSources": {
+    "primary": "ds_throughput"
+   },
+   "options": {
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true
+  },
+  "viz_roam_timeline": {
+   "type": "mdt_infra_monitoring.roam_timeline",
+   "title": "Roaming timeline",
+   "dataSources": {
+    "primary": "ds_roam_timeline"
+   },
+   "options": {}
+  },
+  "viz_roam": {
+   "type": "splunk.table",
+   "title": "APs the client was on (a gap over 5 minutes starts a new row)",
+   "dataSources": {
+    "primary": "ds_roam_table"
+   },
+   "options": {
+    "count": 20
+   },
+   "showProgressBar": true
+  },
+  "viz_wired_name": {
+   "type": "splunk.singlevalue",
+   "title": "Name",
+   "dataSources": {
+    "primary": "ds_wired_name"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"Name\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_wired_ip": {
+   "type": "splunk.singlevalue",
+   "title": "IP address(es)",
+   "dataSources": {
+    "primary": "ds_wired_ip"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"IP address(es)\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_wired_switch": {
+   "type": "splunk.singlevalue",
+   "title": "Switch",
+   "dataSources": {
+    "primary": "ds_wired_switch"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"Switch\")",
+    "majorColor": "#4ea6e8"
+   },
+   "eventHandlers": [
+    {
+     "type": "drilldown.customUrl",
+     "options": {
+      "url": "/app/mdt_infra_monitoring/switch_details?form.tk_node=$wired_seen:result.node$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+      "newTab": false
+     }
+    }
+   ]
+  },
+  "viz_wired_port": {
+   "type": "splunk.singlevalue",
+   "title": "Port",
+   "dataSources": {
+    "primary": "ds_wired_port"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"Port\")",
+    "majorColor": "#4ea6e8"
+   },
+   "eventHandlers": [
+    {
+     "type": "drilldown.customUrl",
+     "options": {
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$wired_seen:result.node$&form.tk_interface=$wired_seen:result.iface$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+      "newTab": false
+     }
+    }
+   ]
+  },
+  "viz_wired_vlan": {
+   "type": "splunk.singlevalue",
+   "title": "VLAN",
+   "dataSources": {
+    "primary": "ds_wired_vlan"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"VLAN\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_wired_last": {
+   "type": "splunk.singlevalue",
+   "title": "Last seen",
+   "dataSources": {
+    "primary": "ds_wired_last"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"Last seen\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_wired_status": {
+   "type": "splunk.singlevalue",
+   "title": "Port status",
+   "dataSources": {
+    "primary": "ds_wired_status"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"Port status\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_wired_poe": {
+   "type": "splunk.singlevalue",
+   "title": "PoE draw (W)",
+   "dataSources": {
+    "primary": "ds_wired_poe"
+   },
+   "options": {
+    "majorValue": "> primary | seriesByName(\"PoE\")",
+    "majorColor": "#708794"
+   }
+  },
+  "viz_wired_table": {
+   "type": "splunk.table",
+   "title": "Where this client was seen (client ports, newest first). Click a row for its port",
+   "dataSources": {
+    "primary": "ds_wired_table"
+   },
+   "options": {
+    "count": 50,
+    "showInternalFields": false
+   },
+   "showProgressBar": true,
+   "eventHandlers": [
+    {
+     "type": "drilldown.customUrl",
+     "options": {
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$row.Switch.value$&form.tk_interface=$row._iface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+      "newTab": false
+     }
+    }
+   ]
+  },
+  "viz_wired_throughput": {
+   "type": "splunk.line",
+   "title": "Port throughput (5 min average)",
+   "dataSources": {
+    "primary": "ds_wired_throughput"
+   },
+   "options": {
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true
+  },
+  "viz_wired_errors": {
+   "type": "splunk.column",
+   "title": "Port errors per 5 min by kind",
+   "dataSources": {
+    "primary": "ds_wired_errors"
+   },
+   "options": {
+    "stackMode": "stacked",
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true
+  },
+  "viz_wired_logs": {
+   "type": "splunk.table",
+   "title": "Syslog for this port, newest first",
+   "dataSources": {
+    "primary": "ds_wired_logs"
+   },
+   "options": {
+    "count": 50
+   },
+   "showProgressBar": true,
+   "containerOptions": {
+    "visibility": {
+     "hideWhenNoData": true
+    }
+   }
+  }
+ },
+ "dataSources": {
+  "ds_sites": {
+   "type": "ds.search",
+   "name": "sites",
+   "options": {
+    "query": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label"
+   }
+  },
+  "ds_wlc": {
+   "type": "ds.search",
+   "name": "wlc",
+   "options": {
+    "query": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc"
+   }
+  },
+  "ds_clients": {
+   "type": "ds.search",
+   "name": "clients",
+   "options": {
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_most_recent_rssi BY traffic_stats_ms_mac_address | rename traffic_stats_ms_mac_address as mac | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname earliest=-30d latest=now BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname] | eval label=if(isnotnull(device_hostname), device_hostname.\" (\".mac.\")\", mac) | sort label | table label mac"
+   }
+  },
+  "ds_now": {
+   "type": "ds.search",
+   "name": "now",
+   "options": {
+    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" traffic_stats_ms_mac_address=\"$tk_client$\" | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname earliest=-30d latest=now BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname | where mac=\"$tk_client$\" | fields device_hostname] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ip_addr sisf_db_mac_mac_addr=\"$tk_client$\" BY ip_addr | sort - t | head 1 | fields ip_addr] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid dot11_oper_data_ms_mac_address=\"$tk_client$\" BY vap_ssid | sort - t | head 1 | fields vap_ssid] | appendcols [| mstats latest(mdt_wl_info_current_channel) as ch latest(mdt_wl_info_ms_ap_slot_id) as slot WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" dot11_oper_data_ms_mac_address=\"$tk_client$\"] | appendcols [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ewlc_ms_phy_type dot11_oper_data_ms_mac_address=\"$tk_client$\" BY ewlc_ms_phy_type | sort - t | head 1 | eval phy=replace(ewlc_ms_phy_type, \"^client-dot11([a-z]+).*\", \"802.11\\\\1\") | fields phy] | appendcols [| mstats latest_time(_value) as last_seen WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_most_recent_rssi traffic_stats_ms_mac_address=\"$tk_client$\" earliest=-30d latest=now] | append [| makeresults | eval connected=0 | fields - _time] | head 1 | eval connected=if(isnotnull(rssi), 1, 0), band=case(slot==2, \"6 GHz\", ch <= 14, \"2.4 GHz\", ch > 14, \"5 GHz\"), radio=if(isnotnull(ch), band.\" ch \".ch.if(isnotnull(phy), \", \".phy, \"\"), null()) | eval device_hostname=if(connected==1, coalesce(device_hostname, \"(none)\"), \"Not connected\"), radio=if(connected==1, radio, if(isnotnull(last_seen), \"Last seen \".strftime(last_seen, if(last_seen < relative_time(now(), \"-24h\"), \"%Y-%m-%d %H:%M\", \"%H:%M\")), \"Not seen in 30 days\")) | foreach ip_addr vap_ssid rssi snr speed [eval <<FIELD>>=coalesce(<<FIELD>>, \"-\")]",
+    "queryParameters": {
+     "earliest": "-15m",
+     "latest": "now"
+    }
+   }
+  },
+  "ds_metrics": {
+   "type": "ds.search",
+   "name": "metrics",
+   "options": {
+    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed max(mdt_wl_client_stats_data_retries) as retries max(mdt_wl_client_stats_pkts_tx) as ptx max(mdt_wl_client_stats_bytes_tx) as btx max(mdt_wl_client_stats_bytes_rx) as brx WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" traffic_stats_ms_mac_address=\"$tk_client$\" span=1m | sort 0 _time | streamstats current=f last(retries) as pr last(ptx) as pp last(btx) as pbt last(brx) as pbr last(_time) as pt | eval dr=if(retries >= pr, retries - pr, null()), dp=if(ptx >= pp, ptx - pp, null()), dt=_time - pt | eval tx_kbps=if(btx >= pbt, round((btx - pbt) * 8 / dt / 1000, 1), null()), rx_kbps=if(brx >= pbr, round((brx - pbr) * 8 / dt / 1000, 1), null())"
+   }
+  },
+  "ds_roam": {
+   "type": "ds.search",
+   "name": "roam",
+   "options": {
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address dot11_oper_data_ms_mac_address=\"$tk_client$\" span=1m BY ap_mac_address | rename ap_mac_address as eth_mac | sort 0 _time | streamstats current=f last(eth_mac) as prev last(_time) as pt | eval new=if(isnull(prev) OR prev!=eth_mac OR _time - pt > 300, 1, 0) | streamstats sum(new) as stay | stats min(_time) as first max(_time) as last first(eth_mac) as eth_mac by stay | join type=left eth_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name | join type=left eth_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_wtp_mac BY ethernet_mac_wtp_mac_map_ethernet_mac wtp_mac | rename ethernet_mac_wtp_mac_map_ethernet_mac as eth_mac] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ap_ip_addr BY oper_data_wtp_mac ap_ip_addr | where ap_ip_addr!=\"0.0.0.0\" | rename oper_data_wtp_mac as wtp_mac] | join type=left wtp_mac [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_location BY capwap_data_wtp_mac location | where location!=\"default location\" | rename capwap_data_wtp_mac as wtp_mac | fields wtp_mac location] | rename ap_name_mac_map_wtp_name as ap_name | fields eth_mac ap_name ap_ip_addr location] | sort - last"
+   }
+  },
+  "ds_roam_timeline": {
+   "type": "ds.search",
+   "name": "roam_timeline",
+   "options": {
+    "query": "| mstats latest(_value) as run_latency WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_roam_run_latency client_mac=\"$tk_client$\" BY ap_name bssid roam_type slot assoc_time | dedup assoc_time | eval kind=\"assoc\", t=strptime(substr(assoc_time, 1, 19).\" +0000\", \"%Y-%m-%dT%H:%M:%S %z\"), ap=coalesce(ap_name, bssid), slot_n=tonumber(slot) | eval band=case(slot_n==0, \"2.4 GHz\", slot_n==1, \"5 GHz\", slot_n==2, \"6 GHz\", true(), \"slot \".slot) | eval roam=case(match(roam_type, \"11r\"), \"802.11r\", match(roam_type, \"okc\"), \"OKC\", match(roam_type, \"none\"), \"none\", true(), replace(roam_type, \"^dot11-roam-type-\", \"\")) | eval category=case(match(roam_type, \"none\"), \"Join\", run_latency < 100, \"Good\", run_latency <= 500, \"Slow\", true(), \"Bad\") | fields kind t ap band roam run_latency category bssid | append [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address dot11_oper_data_ms_mac_address=\"$tk_client$\" span=1m BY ap_mac_address | stats count by _time | eval kind=\"seen\", t=_time | fields kind t] | addinfo | eval tz_offset=strftime(now(), \"%z\") | sort 0 t"
+   }
+  },
+  "ds_wired_clients": {
+   "type": "ds.search",
+   "name": "wired_clients",
+   "options": {
+    "query": "| mstats latest_time(_value) as t earliest_time(_value) as tf WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_xe_mac_info_port BY site extracted_source port matm_mac_entry_mac matm_mac_entry_vlan_id_number | rename extracted_source as node, matm_mac_entry_mac as mac, matm_mac_entry_vlan_id_number as vlan | append [| mstats latest_time(_value) as t earliest_time(_value) as tf WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_nx_mac_info_age BY site extracted_source port vlan mac type | rename extracted_source as node | where type!=\"gateway\" | eval vlan=replace(vlan, \"^vlan-\", \"\")] | append [| mstats latest_time(_value) as t earliest_time(_value) as tf WHERE `mdt_metrics_index` site=\"$site$\" metric_name=cisco.port_info BY site extracted_source port mac | rename extracted_source as node] | eval mac=lower(mac) | where NOT match(mac, \"^(00:00:0c:07:ac|00:00:0c:9f:f|00:00:5e:00:01)\") | where NOT match(port, \"(?i)^(sup|cpu|vl|lo|nve|tu|app|mgmt|drop)\") | eval ik=lower(node).\"|\".`mdt_ifkey(port)` | join type=left ik [| `mdt_cdp(*, $site$)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)`, is_cdp=1 | dedup ik | fields ik is_cdp] | join type=left ik [| `mdt_if_status(*, $site$)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)` | dedup ik | rename interface as ifname | fields ik ifname] | join type=left ik [| `mdt_port_vlan(*)` | eval ik=lower(node).\"|\".ik | fields ik port_vlan] | eval vlan=coalesce(vlan, port_vlan) | eval prio=if(is_cdp=1, 2, 1), type=\"Wired\" | where prio=1 AND NOT match(port, \"(?i)^po\") | sort 0 - t | dedup mac | join type=left mac [| mstats latest_time(_value) as ta WHERE `mdt_metrics_index` metric_name=mdt_xe_arp_info_hardware BY extracted_source arp_oper_address arp_vrf_vrf hardware | join type=left extracted_source arp_oper_address arp_vrf_vrf [| mstats latest_time(_value) as tm WHERE `mdt_metrics_index` metric_name=mdt_xe_arp_info_mode BY extracted_source arp_oper_address arp_vrf_vrf mode | where mode=\"ios-arp-mode-interface\" | eval own=1 | fields extracted_source arp_oper_address arp_vrf_vrf own] | where isnull(own) | fields arp_oper_address hardware | append [| mstats latest_time(_value) as tn WHERE `mdt_metrics_index` metric_name=mdt_nx_arp_info_hardware BY extracted_source arp_oper_address hardware | fields arp_oper_address hardware] | append [| mstats latest_time(_value) as tw WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ip_addr BY sisf_db_mac_mac_addr ip_addr | where ip_addr!=\"0.0.0.0\" | rename ip_addr as arp_oper_address, sisf_db_mac_mac_addr as hardware | fields arp_oper_address hardware] | eval mac=lower(hardware), ip=arp_oper_address | stats values(ip) as ips by mac] | eval ip=mvindex(ips, 0) | lookup dnslookup clientip AS ip OUTPUT clienthost AS dns_name | eval label=if(isnotnull(dns_name), dns_name.\" (\".mac.\")\", mac), value=mac | sort label | table label value"
+   }
+  },
+  "ds_wired_seen": {
+   "type": "ds.search",
+   "name": "wired_seen",
+   "options": {
+    "query": "| mstats latest_time(_value) as t earliest_time(_value) as tf WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_xe_mac_info_port BY site extracted_source port matm_mac_entry_mac matm_mac_entry_vlan_id_number | rename extracted_source as node, matm_mac_entry_mac as mac, matm_mac_entry_vlan_id_number as vlan | append [| mstats latest_time(_value) as t earliest_time(_value) as tf WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_nx_mac_info_age BY site extracted_source port vlan mac type | rename extracted_source as node | where type!=\"gateway\" | eval vlan=replace(vlan, \"^vlan-\", \"\")] | append [| mstats latest_time(_value) as t earliest_time(_value) as tf WHERE `mdt_metrics_index` site=\"$site$\" metric_name=cisco.port_info BY site extracted_source port mac | rename extracted_source as node] | eval mac=lower(mac) | where NOT match(mac, \"^(00:00:0c:07:ac|00:00:0c:9f:f|00:00:5e:00:01)\") | where NOT match(port, \"(?i)^(sup|cpu|vl|lo|nve|tu|app|mgmt|drop)\") | eval ik=lower(node).\"|\".`mdt_ifkey(port)` | join type=left ik [| `mdt_cdp(*, $site$)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)`, is_cdp=1 | dedup ik | fields ik is_cdp] | join type=left ik [| `mdt_if_status(*, $site$)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)` | dedup ik | rename interface as ifname | fields ik ifname] | join type=left ik [| `mdt_port_vlan(*)` | eval ik=lower(node).\"|\".ik | fields ik port_vlan] | eval vlan=coalesce(vlan, port_vlan) | eval prio=if(is_cdp=1, 2, 1), type=\"Wired\" | where prio=1 AND NOT match(port, \"(?i)^po\") AND mac=\"$tk_wired$\" | join type=left mac [| mstats latest_time(_value) as ta WHERE `mdt_metrics_index` metric_name=mdt_xe_arp_info_hardware BY extracted_source arp_oper_address arp_vrf_vrf hardware | join type=left extracted_source arp_oper_address arp_vrf_vrf [| mstats latest_time(_value) as tm WHERE `mdt_metrics_index` metric_name=mdt_xe_arp_info_mode BY extracted_source arp_oper_address arp_vrf_vrf mode | where mode=\"ios-arp-mode-interface\" | eval own=1 | fields extracted_source arp_oper_address arp_vrf_vrf own] | where isnull(own) | fields arp_oper_address hardware | append [| mstats latest_time(_value) as tn WHERE `mdt_metrics_index` metric_name=mdt_nx_arp_info_hardware BY extracted_source arp_oper_address hardware | fields arp_oper_address hardware] | append [| mstats latest_time(_value) as tw WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ip_addr BY sisf_db_mac_mac_addr ip_addr | where ip_addr!=\"0.0.0.0\" | rename ip_addr as arp_oper_address, sisf_db_mac_mac_addr as hardware | fields arp_oper_address hardware] | eval mac=lower(hardware), ip=arp_oper_address | stats values(ip) as ips by mac] | eval ip=mvindex(ips, 0) | lookup dnslookup clientip AS ip OUTPUT clienthost AS dns_name | eval iface=coalesce(ifname, port) | join type=left ik [| `mdt_if_status(*, $site$)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)` | dedup ik | fields ik oper_up speed] | join type=left node iface [| `mdt_poe_port(*)` | rename interface as iface | fields node iface poe_w] | sort 0 - t | fields node port iface vlan tf t ips dns_name oper_up speed poe_w",
+    "enableSmartSources": true
+   }
+  },
+  "ds_wired_flow": {
+   "type": "ds.search",
+   "name": "wired_flow",
+   "options": {
+    "query": "| `mdt_if_counters($wired_seen:result.node$,$wired_seen:result.iface$, $site$)` | append [| `mdt_if_detail($wired_seen:result.node$,$wired_seen:result.iface$)`] | stats max(in_octets) as in_octets max(out_octets) as out_octets max(in_errors) as in_errors max(out_errors) as out_errors max(crc) as crc max(oversize_rx) as oversize_rx max(undersize_rx) as undersize_rx max(fragment_rx) as fragment_rx max(jabber_rx) as jabber_rx max(tx_errors) as tx_errors max(oversize_tx) as oversize_tx by _time node interface | sort 0 node interface _time | streamstats current=f window=1 last(_time) as p_t last(in_octets) as p_in_octets last(out_octets) as p_out_octets last(in_errors) as p_in_errors last(out_errors) as p_out_errors last(crc) as p_crc last(oversize_rx) as p_oversize_rx last(undersize_rx) as p_undersize_rx last(fragment_rx) as p_fragment_rx last(jabber_rx) as p_jabber_rx last(tx_errors) as p_tx_errors last(oversize_tx) as p_oversize_tx by node interface | eval dt=_time - p_t | where dt > 0 | eval in_oct=if(in_octets >= p_in_octets, in_octets - p_in_octets, null()), out_oct=if(out_octets >= p_out_octets, out_octets - p_out_octets, null()), in_err=if(in_errors >= p_in_errors, in_errors - p_in_errors, null()), out_err=if(out_errors >= p_out_errors, out_errors - p_out_errors, null()), crc=if(crc >= p_crc, crc - p_crc, null()), ov_rx=if(oversize_rx >= p_oversize_rx, oversize_rx - p_oversize_rx, null()), un_rx=if(undersize_rx >= p_undersize_rx, undersize_rx - p_undersize_rx, null()), frag_rx=if(fragment_rx >= p_fragment_rx, fragment_rx - p_fragment_rx, null()), jab_rx=if(jabber_rx >= p_jabber_rx, jabber_rx - p_jabber_rx, null()), tx_err=if(tx_errors >= p_tx_errors, tx_errors - p_tx_errors, null()), ov_tx=if(oversize_tx >= p_oversize_tx, oversize_tx - p_oversize_tx, null()) | eval in_bps=in_oct * 8 / dt, out_bps=out_oct * 8 / dt | bin _time span=5m | stats avg(in_bps) as in_bps avg(out_bps) as out_bps sum(in_oct) as in_oct count(in_oct) as in_oct_n sum(out_oct) as out_oct count(out_oct) as out_oct_n sum(in_err) as in_err count(in_err) as in_err_n sum(out_err) as out_err count(out_err) as out_err_n sum(crc) as crc count(crc) as crc_n sum(ov_rx) as ov_rx count(ov_rx) as ov_rx_n sum(un_rx) as un_rx count(un_rx) as un_rx_n sum(frag_rx) as frag_rx count(frag_rx) as frag_rx_n sum(jab_rx) as jab_rx count(jab_rx) as jab_rx_n sum(tx_err) as tx_err count(tx_err) as tx_err_n sum(ov_tx) as ov_tx count(ov_tx) as ov_tx_n by _time node interface | where _time + 300 <= now()"
+   }
+  },
+  "ds_wired_logs": {
+   "type": "ds.search",
+   "name": "wired_logs",
+   "options": {
+    "query": "`mdt_syslog_index` host=\"$wired_seen:result.node$\" | eval severity=mvindex(severity, 0), message=mvindex(message, 0) | eval tp=if(match(\"$wired_seen:result.iface$\", \"^\\D\"), replace(\"$wired_seen:result.iface$\", \"^\\D+\", \"\"), \"$wired_seen:result.iface$\") | where match(message, \"(?<![\\d/])\" . tp . \"(?![\\d/])\") | table _time severity message | sort - _time | head 200"
+   }
+  },
+  "ds_rssi": {
+   "type": "ds.chain",
+   "name": "rssi",
+   "options": {
+    "extend": "ds_metrics",
+    "query": "| rename rssi as \"RSSI (dBm)\" | fields _time \"RSSI (dBm)\""
+   }
+  },
+  "ds_snr": {
+   "type": "ds.chain",
+   "name": "snr",
+   "options": {
+    "extend": "ds_metrics",
+    "query": "| rename snr as \"SNR (dB)\" | fields _time \"SNR (dB)\""
+   }
+  },
+  "ds_speed": {
+   "type": "ds.chain",
+   "name": "speed",
+   "options": {
+    "extend": "ds_metrics",
+    "query": "| rename speed as \"Speed (Mb/s)\" | fields _time \"Speed (Mb/s)\""
+   }
+  },
+  "ds_retries": {
+   "type": "ds.chain",
+   "name": "retries",
+   "options": {
+    "extend": "ds_metrics",
+    "query": "| bin _time span=5m | stats sum(dr) as dr sum(dp) as dp by _time | where _time + 300 <= now() | eval \"Retry %\"=if(dp + dr > 0, round(dr / (dp + dr) * 100, 1), null()), \"Problem above\"=10 | fields _time \"Retry %\" \"Problem above\""
+   }
+  },
+  "ds_throughput": {
+   "type": "ds.chain",
+   "name": "throughput",
+   "options": {
+    "extend": "ds_metrics",
+    "query": "| rename tx_kbps as \"TX (kb/s)\", rx_kbps as \"RX (kb/s)\" | fields _time \"TX (kb/s)\" \"RX (kb/s)\""
+   }
+  },
+  "ds_ap_now": {
+   "type": "ds.chain",
+   "name": "ap_now",
+   "options": {
+    "extend": "ds_roam",
+    "query": "| where last >= relative_time(now(), \"-15m\") | head 1 | eval ap=coalesce(ap_name, eth_mac) | appendpipe [| stats count | where count=0 | eval ap=\"-\"] | fields ap"
+   }
+  },
+  "ds_roam_table": {
+   "type": "ds.chain",
+   "name": "roam_table",
+   "options": {
+    "extend": "ds_roam",
+    "query": "| eval AP=coalesce(ap_name, eth_mac), \"AP IP\"=ap_ip_addr, Location=location, \"First seen\"=strftime(first, \"%Y-%m-%d %H:%M\"), \"Last seen\"=strftime(last, \"%Y-%m-%d %H:%M\") | table AP \"AP IP\" Location \"First seen\" \"Last seen\""
+   }
+  },
+  "ds_wired_name": {
+   "type": "ds.chain",
+   "name": "wired_name",
+   "options": {
+    "extend": "ds_wired_seen",
+    "query": "| head 1 | eval Name=coalesce(dns_name, \"-\") | fields Name"
+   }
+  },
+  "ds_wired_ip": {
+   "type": "ds.chain",
+   "name": "wired_ip",
+   "options": {
+    "extend": "ds_wired_seen",
+    "query": "| head 1 | eval \"IP address(es)\"=coalesce(mvjoin(ips, \", \"), \"-\") | fields \"IP address(es)\""
+   }
+  },
+  "ds_wired_switch": {
+   "type": "ds.chain",
+   "name": "wired_switch",
+   "options": {
+    "extend": "ds_wired_seen",
+    "query": "| head 1 | eval Switch=node | fields Switch"
+   }
+  },
+  "ds_wired_port": {
+   "type": "ds.chain",
+   "name": "wired_port",
+   "options": {
+    "extend": "ds_wired_seen",
+    "query": "| head 1 | eval Port=case(match(iface, \"^TenGigabitEthernet\\d\"), replace(iface, \"^TenGigabitEthernet\", \"Te\"), match(iface, \"^TwentyFiveGigE\\d\"), replace(iface, \"^TwentyFiveGigE\", \"Twe\"), match(iface, \"^TwoGigabitEthernet\\d\"), replace(iface, \"^TwoGigabitEthernet\", \"Tw\"), match(iface, \"^FortyGigabitEthernet\\d\"), replace(iface, \"^FortyGigabitEthernet\", \"Fo\"), match(iface, \"^FiftyGigE\\d\"), replace(iface, \"^FiftyGigE\", \"Fi\"), match(iface, \"^HundredGigE\\d\"), replace(iface, \"^HundredGigE\", \"Hu\"), match(iface, \"^FastEthernet\\d\"), replace(iface, \"^FastEthernet\", \"Fa\"), match(iface, \"^AppGigabitEthernet\\d\"), replace(iface, \"^AppGigabitEthernet\", \"Ap\"), match(iface, \"^GigabitEthernet\\d\"), replace(iface, \"^GigabitEthernet\", \"Gi\"), match(iface, \"^Ethernet\\d\"), replace(iface, \"^Ethernet\", \"Eth\"), match(iface, \"^(?i)port-channel\\d\"), replace(iface, \"^(?i)port-channel\", \"Po\"), true(), iface) | fields Port"
+   }
+  },
+  "ds_wired_vlan": {
+   "type": "ds.chain",
+   "name": "wired_vlan",
+   "options": {
+    "extend": "ds_wired_seen",
+    "query": "| head 1 | eval VLAN=coalesce(vlan, \"-\") | fields VLAN"
+   }
+  },
+  "ds_wired_last": {
+   "type": "ds.chain",
+   "name": "wired_last",
+   "options": {
+    "extend": "ds_wired_seen",
+    "query": "| head 1 | eval \"Last seen\"=strftime(t, \"%Y-%m-%d %H:%M\") | fields \"Last seen\""
+   }
+  },
+  "ds_wired_status": {
+   "type": "ds.chain",
+   "name": "wired_status",
+   "options": {
+    "extend": "ds_wired_seen",
+    "query": "| head 1 | eval Status=case(isnull(oper_up), \"-\", oper_up==1, \"up\", true(), \"down\"), Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | eval \"Port status\"=Status.coalesce(\" \u00b7 \".Speed, \"\") | fields \"Port status\""
+   }
+  },
+  "ds_wired_poe": {
+   "type": "ds.chain",
+   "name": "wired_poe",
+   "options": {
+    "extend": "ds_wired_seen",
+    "query": "| head 1 | eval PoE=if(isnull(poe_w), \"-\", tostring(round(poe_w, 1))) | fields PoE"
+   }
+  },
+  "ds_wired_table": {
+   "type": "ds.chain",
+   "name": "wired_table",
+   "options": {
+    "extend": "ds_wired_seen",
+    "query": "| eval Switch=node, Port=case(match(iface, \"^TenGigabitEthernet\\d\"), replace(iface, \"^TenGigabitEthernet\", \"Te\"), match(iface, \"^TwentyFiveGigE\\d\"), replace(iface, \"^TwentyFiveGigE\", \"Twe\"), match(iface, \"^TwoGigabitEthernet\\d\"), replace(iface, \"^TwoGigabitEthernet\", \"Tw\"), match(iface, \"^FortyGigabitEthernet\\d\"), replace(iface, \"^FortyGigabitEthernet\", \"Fo\"), match(iface, \"^FiftyGigE\\d\"), replace(iface, \"^FiftyGigE\", \"Fi\"), match(iface, \"^HundredGigE\\d\"), replace(iface, \"^HundredGigE\", \"Hu\"), match(iface, \"^FastEthernet\\d\"), replace(iface, \"^FastEthernet\", \"Fa\"), match(iface, \"^AppGigabitEthernet\\d\"), replace(iface, \"^AppGigabitEthernet\", \"Ap\"), match(iface, \"^GigabitEthernet\\d\"), replace(iface, \"^GigabitEthernet\", \"Gi\"), match(iface, \"^Ethernet\\d\"), replace(iface, \"^Ethernet\", \"Eth\"), match(iface, \"^(?i)port-channel\\d\"), replace(iface, \"^(?i)port-channel\", \"Po\"), true(), iface), VLAN=coalesce(vlan, \"-\"), \"First seen\"=strftime(tf, \"%Y-%m-%d %H:%M\"), \"Last seen\"=strftime(t, \"%Y-%m-%d %H:%M\") | eval _iface=iface | table Switch Port VLAN \"First seen\" \"Last seen\" _iface"
+   }
+  },
+  "ds_wired_throughput": {
+   "type": "ds.chain",
+   "name": "wired_throughput",
+   "options": {
+    "extend": "ds_wired_flow",
+    "query": "| eval \"In (Mb/s)\"=round(in_bps / 1000000, 2), \"Out (Mb/s)\"=round(out_bps / 1000000, 2) | table _time \"In (Mb/s)\" \"Out (Mb/s)\""
+   }
+  },
+  "ds_wired_errors": {
+   "type": "ds.chain",
+   "name": "wired_errors",
+   "options": {
+    "extend": "ds_wired_flow",
+    "query": "| eval ie=coalesce(in_err, 0), oe=coalesce(out_err, 0), CRC=coalesce(crc, 0), Undersize=coalesce(un_rx, 0), Fragment=coalesce(frag_rx, 0), Jabber=coalesce(jab_rx, 0) | eval Oversize=min(coalesce(ov_rx, 0), max(0, ie - CRC - Undersize - Fragment - Jabber)), Transmit=min(coalesce(tx_err, 0), oe) | eval Other=max(0, ie + oe - CRC - Oversize - Undersize - Fragment - Jabber - Transmit) | table _time CRC Oversize Undersize Fragment Jabber Transmit Other"
+   }
+  }
+ },
+ "layout": {
+  "type": "grid",
+  "globalInputs": [
+   "input_time",
+   "input_site"
+  ],
+  "layoutDefinitions": {
+   "layout_1": {
+    "type": "grid",
+    "options": {
+     "width": 1440,
+     "height": 1660
+    },
+    "structure": [
+     {
+      "item": "input_wlc",
+      "type": "input",
+      "position": {
+       "x": 0,
+       "y": 0,
+       "w": 360,
+       "h": 90
+      }
+     },
+     {
+      "item": "input_client",
+      "type": "input",
+      "position": {
+       "x": 360,
+       "y": 0,
+       "w": 1080,
+       "h": 90
+      }
+     },
+     {
+      "item": "viz_name",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 90,
+       "w": 220,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_ip",
+      "type": "block",
+      "position": {
+       "x": 220,
+       "y": 90,
+       "w": 160,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_ssid",
+      "type": "block",
+      "position": {
+       "x": 380,
+       "y": 90,
+       "w": 160,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_ap",
+      "type": "block",
+      "position": {
+       "x": 540,
+       "y": 90,
+       "w": 180,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_radio",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 90,
+       "w": 260,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_rssi_now",
+      "type": "block",
+      "position": {
+       "x": 980,
+       "y": 90,
+       "w": 150,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_snr_now",
+      "type": "block",
+      "position": {
+       "x": 1130,
+       "y": 90,
+       "w": 150,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_speed_now",
+      "type": "block",
+      "position": {
+       "x": 1280,
+       "y": 90,
+       "w": 160,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_roam_timeline",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 200,
+       "w": 1440,
+       "h": 160
+      }
+     },
+     {
+      "item": "viz_rssi",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 360,
+       "w": 720,
+       "h": 280
+      }
+     },
+     {
+      "item": "viz_snr",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 360,
+       "w": 720,
+       "h": 280
+      }
+     },
+     {
+      "item": "viz_speed",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 640,
+       "w": 720,
+       "h": 280
+      }
+     },
+     {
+      "item": "viz_retries",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 640,
+       "w": 720,
+       "h": 280
+      }
+     },
+     {
+      "item": "viz_throughput",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 920,
+       "w": 1440,
+       "h": 280
+      }
+     },
+     {
+      "item": "viz_roam",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 1200,
+       "w": 1440,
+       "h": 300
+      }
+     }
+    ]
+   },
+   "layout_2": {
+    "type": "grid",
+    "options": {
+     "width": 1440,
+     "height": 980
+    },
+    "structure": [
+     {
+      "item": "input_wired",
+      "type": "input",
+      "position": {
+       "x": 0,
+       "y": 0,
+       "w": 720,
+       "h": 90
+      }
+     },
+     {
+      "item": "viz_wired_name",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 90,
+       "w": 200,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_wired_ip",
+      "type": "block",
+      "position": {
+       "x": 200,
+       "y": 90,
+       "w": 280,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_wired_switch",
+      "type": "block",
+      "position": {
+       "x": 480,
+       "y": 90,
+       "w": 160,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_wired_port",
+      "type": "block",
+      "position": {
+       "x": 640,
+       "y": 90,
+       "w": 160,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_wired_vlan",
+      "type": "block",
+      "position": {
+       "x": 800,
+       "y": 90,
+       "w": 100,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_wired_last",
+      "type": "block",
+      "position": {
+       "x": 900,
+       "y": 90,
+       "w": 180,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_wired_status",
+      "type": "block",
+      "position": {
+       "x": 1080,
+       "y": 90,
+       "w": 200,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_wired_poe",
+      "type": "block",
+      "position": {
+       "x": 1280,
+       "y": 90,
+       "w": 160,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_wired_table",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 200,
+       "w": 1440,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_wired_throughput",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 400,
+       "w": 720,
+       "h": 280
+      }
+     },
+     {
+      "item": "viz_wired_errors",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 400,
+       "w": 720,
+       "h": 280
+      }
+     },
+     {
+      "item": "viz_wired_logs",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 680,
+       "w": 1440,
+       "h": 300
+      }
+     }
+    ]
+   }
+  },
+  "tabs": {
+   "items": [
+    {
+     "label": "Wireless",
+     "layoutId": "layout_1"
+    },
+    {
+     "label": "Wired",
+     "layoutId": "layout_2"
+    }
+   ]
+  }
+ },
+ "applicationProperties": {}
+}
+    ]]></definition>
+</dashboard>
