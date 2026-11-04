@@ -300,7 +300,16 @@
    "options": {
     "majorValue": "> primary | seriesByName(\"Switch\")",
     "majorColor": "#708794"
-   }
+   },
+   "eventHandlers": [
+    {
+     "type": "drilldown.customUrl",
+     "options": {
+      "url": "/app/mdt_infra_monitoring/switch_details?form.tk_node=$wired_seen:result.node$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+      "newTab": false
+     }
+    }
+   ]
   },
   "viz_wired_port": {
    "type": "splunk.singlevalue",
@@ -368,14 +377,24 @@
   },
   "viz_wired_table": {
    "type": "splunk.table",
-   "title": "Where this client was seen (client ports, newest first)",
+   "title": "Where this client was seen (client ports, newest first). Click a row for its port",
    "dataSources": {
     "primary": "ds_wired_table"
    },
    "options": {
-    "count": 50
+    "count": 50,
+    "showInternalFields": false
    },
-   "showProgressBar": true
+   "showProgressBar": true,
+   "eventHandlers": [
+    {
+     "type": "drilldown.customUrl",
+     "options": {
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$row.Switch.value$&form.tk_interface=$row._iface.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+      "newTab": false
+     }
+    }
+   ]
   },
   "viz_wired_throughput": {
    "type": "splunk.line",
@@ -625,7 +644,7 @@
    "name": "wired_table",
    "options": {
     "extend": "ds_wired_seen",
-    "query": "| eval Switch=node, Port=case(match(iface, \"^TenGigabitEthernet\\d\"), replace(iface, \"^TenGigabitEthernet\", \"Te\"), match(iface, \"^TwentyFiveGigE\\d\"), replace(iface, \"^TwentyFiveGigE\", \"Twe\"), match(iface, \"^TwoGigabitEthernet\\d\"), replace(iface, \"^TwoGigabitEthernet\", \"Tw\"), match(iface, \"^FortyGigabitEthernet\\d\"), replace(iface, \"^FortyGigabitEthernet\", \"Fo\"), match(iface, \"^FiftyGigE\\d\"), replace(iface, \"^FiftyGigE\", \"Fi\"), match(iface, \"^HundredGigE\\d\"), replace(iface, \"^HundredGigE\", \"Hu\"), match(iface, \"^FastEthernet\\d\"), replace(iface, \"^FastEthernet\", \"Fa\"), match(iface, \"^AppGigabitEthernet\\d\"), replace(iface, \"^AppGigabitEthernet\", \"Ap\"), match(iface, \"^GigabitEthernet\\d\"), replace(iface, \"^GigabitEthernet\", \"Gi\"), match(iface, \"^Ethernet\\d\"), replace(iface, \"^Ethernet\", \"Eth\"), match(iface, \"^(?i)port-channel\\d\"), replace(iface, \"^(?i)port-channel\", \"Po\"), true(), iface), VLAN=coalesce(vlan, \"-\"), \"First seen\"=strftime(tf, \"%Y-%m-%d %H:%M\"), \"Last seen\"=strftime(t, \"%Y-%m-%d %H:%M\") | table Switch Port VLAN \"First seen\" \"Last seen\""
+    "query": "| eval Switch=node, Port=case(match(iface, \"^TenGigabitEthernet\\d\"), replace(iface, \"^TenGigabitEthernet\", \"Te\"), match(iface, \"^TwentyFiveGigE\\d\"), replace(iface, \"^TwentyFiveGigE\", \"Twe\"), match(iface, \"^TwoGigabitEthernet\\d\"), replace(iface, \"^TwoGigabitEthernet\", \"Tw\"), match(iface, \"^FortyGigabitEthernet\\d\"), replace(iface, \"^FortyGigabitEthernet\", \"Fo\"), match(iface, \"^FiftyGigE\\d\"), replace(iface, \"^FiftyGigE\", \"Fi\"), match(iface, \"^HundredGigE\\d\"), replace(iface, \"^HundredGigE\", \"Hu\"), match(iface, \"^FastEthernet\\d\"), replace(iface, \"^FastEthernet\", \"Fa\"), match(iface, \"^AppGigabitEthernet\\d\"), replace(iface, \"^AppGigabitEthernet\", \"Ap\"), match(iface, \"^GigabitEthernet\\d\"), replace(iface, \"^GigabitEthernet\", \"Gi\"), match(iface, \"^Ethernet\\d\"), replace(iface, \"^Ethernet\", \"Eth\"), match(iface, \"^(?i)port-channel\\d\"), replace(iface, \"^(?i)port-channel\", \"Po\"), true(), iface), VLAN=coalesce(vlan, \"-\"), \"First seen\"=strftime(tf, \"%Y-%m-%d %H:%M\"), \"Last seen\"=strftime(t, \"%Y-%m-%d %H:%M\") | eval _iface=iface | table Switch Port VLAN \"First seen\" \"Last seen\" _iface"
    }
   },
   "ds_wired_throughput": {

@@ -171,7 +171,7 @@ wired_chains = {  # name: (base, post-process); one row for the tiles (head 1 = 
     # Same columns as the Wireless tab's roam table: where the client was, first and last seen over the range.
     "ds_wired_table": ("ds_wired_seen", f"| eval Switch=node, Port={short('iface')}, VLAN=coalesce(vlan, \"-\"), "
                        "\"First seen\"=strftime(tf, \"%Y-%m-%d %H:%M\"), \"Last seen\"=strftime(t, \"%Y-%m-%d %H:%M\") "
-                       "| table Switch Port VLAN \"First seen\" \"Last seen\""),
+                       "| eval _iface=iface | table Switch Port VLAN \"First seen\" \"Last seen\" _iface"),
     "ds_wired_throughput": ("ds_wired_flow", "| eval \"In (Mb/s)\"=round(in_bps / 1000000, 2), \"Out (Mb/s)\"=round(out_bps / 1000000, 2) "
                             "| table _time \"In (Mb/s)\" \"Out (Mb/s)\""),
     # As Interface Details: oversize is capped at the input errors the other kinds leave, transmit at the output errors.
@@ -255,7 +255,11 @@ inputs["input_wired"] = {"type": "input.dropdown", "title": "Wired client", "dat
 viz.update({
     "viz_wired_name": tile("Name", "ds_wired_name", "Name"),
     "viz_wired_ip": tile("IP address(es)", "ds_wired_ip", "IP address(es)"),
-    "viz_wired_switch": tile("Switch", "ds_wired_switch", "Switch"),
+    # Click: Switch Details for the switch.
+    "viz_wired_switch": {**tile("Switch", "ds_wired_switch", "Switch"), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
+                         "url": "/app/mdt_infra_monitoring/switch_details?form.tk_node=$wired_seen:result.node$"
+                                "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+                         "newTab": False}}]},
     # Click: Interface Details for the port (full telemetry name, this site and time range). Only values as tokens.
     "viz_wired_port": {**tile("Port", "ds_wired_port", "Port"), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
                        "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$wired_seen:result.node$&form.tk_interface=$wired_seen:result.iface$"
@@ -265,7 +269,12 @@ viz.update({
     "viz_wired_last": tile("Last seen", "ds_wired_last", "Last seen"),
     "viz_wired_status": tile("Port status", "ds_wired_status", "Port status"),
     "viz_wired_poe": tile("PoE draw (W)", "ds_wired_poe", "PoE"),
-    "viz_wired_table": chart("splunk.table", "Where this client was seen (client ports, newest first)", "ds_wired_table", count=50),
+    # One link per table (Studio has no per-column drilldown): a row opens Interface Details for its switch and port.
+    "viz_wired_table": {**chart("splunk.table", "Where this client was seen (client ports, newest first). Click a row for its port", "ds_wired_table",
+                                count=50, showInternalFields=False), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
+                        "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$row.Switch.value$&form.tk_interface=$row._iface.value$"
+                               "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+                        "newTab": False}}]},
     "viz_wired_throughput": chart("splunk.line", "Port throughput (5 min average)", "ds_wired_throughput", legendDisplay="bottom"),
     "viz_wired_errors": chart("splunk.column", "Port errors per 5 min by kind", "ds_wired_errors", stackMode="stacked", legendDisplay="bottom"),
     # Hidden when empty (most ports have no syslog) instead of a no-results warning.
