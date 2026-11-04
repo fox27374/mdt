@@ -130,10 +130,10 @@ viz = {
     "viz_phy": chart("splunk.bar", "Clients by PHY (last 15 min)", "ds_phy", legendDisplay="off"),
     "viz_ap_table": {**chart("splunk.table", "Access points (last 15 min): radio = channel / width / TX power", "ds_ap_table", count=20),
                      "context": {"stateColors": [{"match": "registered", "value": "#53a051"}, {"match": "not joined", "value": "#dc4e41"}]}},
-    # Click a client: Wireless Client Details for it, same site, WLC and time range (same tab, like the other drilldowns).
+    # Click a client: Client Details (Wireless tab) for it, same site, WLC and time range (same tab, like the other drilldowns).
     "viz_client_list": {**chart("splunk.table", "Clients (last 15 min). Click a client to open its details", "ds_client_list", count=20),
                         "eventHandlers": [{"type": "drilldown.customUrl", "options": {
-                            "url": "/app/mdt_infra_monitoring/wireless_client_details?form.site=$site$&form.wlc=$wlc$&form.tk_client=$row.MAC.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+                            "url": "/app/mdt_infra_monitoring/client_details?tab=layout_1&form.site=$site$&form.wlc=$wlc$&form.tk_client=$row.MAC.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
                             "newTab": False}}]},
     "viz_clients": chart("splunk.area", "Clients by band", "ds_clients", stackMode="stacked", seriesColorsByField=COLORS, legendDisplay="bottom"),
     "viz_sys": chart("splunk.line", "WLC CPU and memory %", "ds_sys", legendDisplay="bottom", yAxisMin=0),

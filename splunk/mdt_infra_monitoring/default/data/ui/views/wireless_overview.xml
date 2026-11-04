@@ -195,7 +195,7 @@
     {
      "type": "drilldown.customUrl",
      "options": {
-      "url": "/app/mdt_infra_monitoring/wireless_client_details?form.site=$site$&form.wlc=$wlc$&form.tk_client=$row.MAC.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
+      "url": "/app/mdt_infra_monitoring/client_details?tab=layout_1&form.site=$site$&form.wlc=$wlc$&form.tk_client=$row.MAC.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$",
       "newTab": false
      }
     }

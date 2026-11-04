@@ -1,6 +1,7 @@
 # Generates the Client Search dashboard (Dashboard Studio JSON in views/client_search.xml).
 # Edit this script, not the XML:  python3 splunk/tools/gen_client_search.py  then scripts/splunk-deploy
 import json, os, sys
+from client_sources import WIRED_BODY, ARP_IPS
 
 OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data", "ui", "views", "client_search.xml")
 
@@ -26,39 +27,8 @@ WIRELESS = (
     "| rename ap_name_mac_map_wtp_name as ap_name | eval eth_mac=lower(eth_mac) | dedup eth_mac | fields eth_mac ap_name]"
 )
 
-# Wired MAC table entries (IOS-XE dial-in and dial-out, NX-OS), the latest per switch, port, VLAN and MAC.
-# The CDP join marks ports with a neighbour (is_cdp=1). Ports are keyed like mdt_ifkey names them, so both sides match.
-WIRED = (
-    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_xe_mac_info_port BY site extracted_source port matm_mac_entry_mac matm_mac_entry_vlan_id_number "
-    "| rename extracted_source as node, matm_mac_entry_mac as mac, matm_mac_entry_vlan_id_number as vlan "
-    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_nx_mac_info_age BY site extracted_source port vlan mac type "
-    "| rename extracted_source as node | where type!=\"gateway\" | eval vlan=replace(vlan, \"^vlan-\", \"\")] "
-    # Dial-out has no VLAN (the yang_grpc receiver drops numeric keys, otel.yaml): the port's, from mdt_port_vlan.
-    "| append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" metric_name=cisco.port_info BY site extracted_source port mac "
-    "| rename extracted_source as node] "
-    # FHRP virtual MACs (HSRP v1/v2, VRRP) are gateways, not clients.
-    "| eval mac=lower(mac) | where NOT match(mac, \"^(00:00:0c:07:ac|00:00:0c:9f:f|00:00:5e:00:01)\") | where NOT match(port, \"(?i)^(sup|cpu|vl|lo|nve|tu|app|mgmt|drop)\") "
-    "| eval ik=lower(node).\"|\".`mdt_ifkey(port)` "
-    "| join type=left ik [| `mdt_cdp(*, $site$)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)`, is_cdp=1 | dedup ik | fields ik is_cdp] "
-    # MAC tables name ports short (Gi1/0/9); the Interface Details drilldown needs the telemetry name (GigabitEthernet1/0/9).
-    "| join type=left ik [| `mdt_if_status(*, $site$)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)` | dedup ik | rename interface as ifname | fields ik ifname] "
-    "| join type=left ik [| `mdt_port_vlan(*)` | eval ik=lower(node).\"|\".ik | fields ik port_vlan] | eval vlan=coalesce(vlan, port_vlan) "
-    "| eval prio=if(is_cdp=1, 2, 1), type=\"Wired\"]"
-)
-
-# ARP: (address, MAC) pairs of the wired clients (XE without the switch's own interface entries, NX-OS) and the WLC's
-# client IPs; one row per MAC with all its IPs. Names of the labels come from gnmic (arp_oper_address, hardware).
-ARP_IPS = (
-    "| mstats latest_time(_value) as ta WHERE `mdt_metrics_index` metric_name=mdt_xe_arp_info_hardware BY extracted_source arp_oper_address arp_vrf_vrf hardware "
-    "| join type=left extracted_source arp_oper_address arp_vrf_vrf [| mstats latest_time(_value) as tm WHERE `mdt_metrics_index` metric_name=mdt_xe_arp_info_mode "
-    "BY extracted_source arp_oper_address arp_vrf_vrf mode | where mode=\"ios-arp-mode-interface\" | eval own=1 | fields extracted_source arp_oper_address arp_vrf_vrf own] "
-    "| where isnull(own) | fields arp_oper_address hardware "
-    "| append [| mstats latest_time(_value) as tn WHERE `mdt_metrics_index` metric_name=mdt_nx_arp_info_hardware BY extracted_source arp_oper_address hardware "
-    "| fields arp_oper_address hardware] "
-    "| append [| mstats latest_time(_value) as tw WHERE `mdt_metrics_index` metric_name=mdt_wl_info_ip_addr BY sisf_db_mac_mac_addr ip_addr "
-    "| where ip_addr!=\"0.0.0.0\" | rename ip_addr as arp_oper_address, sisf_db_mac_mac_addr as hardware | fields arp_oper_address hardware] "
-    "| eval mac=lower(hardware), ip=arp_oper_address | stats values(ip) as ips by mac"
-)
+# Wired MAC table entries and ARP IPs: shared with Client Details (client_sources.py).
+WIRED = "| append [" + WIRED_BODY + "]"
 
 # Filter: MAC (any format, compared without separators), IP and name as case-insensitive substrings. A query that looks like
 # an IPv4 address or a partial one is never read as a MAC. * is dropped: the input defaults to * (an empty text input leaves
@@ -83,9 +53,12 @@ ROWS = (
     "\"Last seen\"=strftime(t, \"%Y-%m-%d %H:%M\"), "
     # Drilldown parts (hidden: leading _). Studio URL-encodes a token, so the URL template holds the path and each part fills one slot.
     # Port-channels have no Interface Details (drop-if-stats-interfaces drops their stats): those open Switch Details.
-    "_view=case(type=\"Wireless\", \"wireless_client_details\", match(port, \"(?i)^po\"), \"switch_details\", true(), \"interface_details\"), _wlc=coalesce(wlc, \"-\"), _node=coalesce(node, \"-\"), _port=coalesce(ifname, port, \"-\"), _site=coalesce(site, \"-\") "
+    # Client ports (wired, no CDP neighbour) and wireless clients open Client Details: its Wired tab (layout_2) or Wireless tab (layout_1).
+    "_view=case(type=\"Wireless\", \"client_details\", match(port, \"(?i)^po\"), \"switch_details\", is_cdp=1, \"interface_details\", true(), \"client_details\"), "
+    "_tab=case(type=\"Wireless\", \"layout_1\", _view=\"client_details\", \"layout_2\", true(), \"layout_1\"), "
+    "_wlc=coalesce(wlc, \"-\"), _node=coalesce(node, \"-\"), _port=coalesce(ifname, port, \"-\"), _site=coalesce(site, \"-\") "
     "| sort 0 - t "
-    "| table Type MAC IP Name Where \"Last seen\" _view _wlc _node _port _site"
+    "| table Type MAC IP Name Where \"Last seen\" _view _tab _wlc _node _port _site"
 )
 
 SEARCH = (WIRELESS + " " + WIRED + " | sort 0 mac prio - t | dedup mac "
@@ -96,11 +69,11 @@ dataSources = {
     "ds_clients": {"type": "ds.search", "name": "clients", "options": {"query": SEARCH}}}
 
 viz = {
-    "viz_clients": {"type": "splunk.table", "title": "Clients: wired and wireless, latest sighting in range. Click a row to open its switch port (port-channel: the switch) or wireless client",
+    "viz_clients": {"type": "splunk.table", "title": "Clients: wired and wireless, latest sighting in range. Click a row to open its client (wired on a client port, or wireless), its switch port (uplink), or its port-channel's switch",
                     "dataSources": {"primary": "ds_clients"},
                     "options": {"count": 100, "showInternalFields": False},
                     "eventHandlers": [{"type": "drilldown.customUrl", "options": {
-                        "url": "/app/mdt_infra_monitoring/$row._view.value$?form.wlc=$row._wlc.value$&form.tk_client=$row.MAC.value$&form.tk_node=$row._node.value$&form.tk_interface=$row._port.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$row._site.value$",
+                        "url": "/app/mdt_infra_monitoring/$row._view.value$?tab=$row._tab.value$&form.wlc=$row._wlc.value$&form.tk_client=$row.MAC.value$&form.tk_wired=$row.MAC.value$&form.tk_node=$row._node.value$&form.tk_interface=$row._port.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$row._site.value$",
                         "newTab": False}}],
                     "showProgressBar": True},
 }
