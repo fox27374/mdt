@@ -95,6 +95,17 @@
     ]
    }
   },
+  "viz_ip": {
+   "type": "splunk.singlevalue",
+   "title": "Management IP",
+   "dataSources": {
+    "primary": "ds_ip"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "majorFontSize": 36
+   }
+  },
   "viz_cpu_now": {
    "type": "splunk.singlevalue",
    "title": "WLC CPU (last 15 min)",
@@ -303,6 +314,13 @@
     "query": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc"
    }
   },
+  "ds_ip": {
+   "type": "ds.search",
+   "name": "ip",
+   "options": {
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_xe_cpu_stats_one_minute mgmt_ip=* earliest=-1h BY mgmt_ip | fields mgmt_ip | head 1"
+   }
+  },
   "ds_clients_now": {
    "type": "ds.search",
    "name": "clients_now",
@@ -340,7 +358,7 @@
    "type": "ds.search",
    "name": "client_list",
    "options": {
-    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" BY traffic_stats_ms_mac_address | rename traffic_stats_ms_mac_address as mac | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname] | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ip_addr BY sisf_db_mac_mac_addr ip_addr | sort 0 - t | dedup sisf_db_mac_mac_addr | rename sisf_db_mac_mac_addr as mac | fields mac ip_addr] | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid BY dot11_oper_data_ms_mac_address vap_ssid | sort 0 - t | dedup dot11_oper_data_ms_mac_address | rename dot11_oper_data_ms_mac_address as mac | fields mac vap_ssid] | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address BY dot11_oper_data_ms_mac_address ap_mac_address | sort 0 - t | dedup dot11_oper_data_ms_mac_address | rename dot11_oper_data_ms_mac_address as mac | fields mac ap_mac_address] | join type=left ap_mac_address [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name | rename eth_mac as ap_mac_address | fields ap_mac_address ap_name_mac_map_wtp_name] | join type=left mac [| mstats latest(mdt_wl_info_current_channel) as ch latest(mdt_wl_info_ms_ap_slot_id) as slot WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" BY dot11_oper_data_ms_mac_address | rename dot11_oper_data_ms_mac_address as mac] | eval Band=case(slot==2, \"6 GHz\", ch <= 14, \"2.4 GHz\", ch > 14, \"5 GHz\") | rename device_hostname as Name, mac as MAC, ip_addr as IP, vap_ssid as SSID, ap_name_mac_map_wtp_name as AP, ch as Channel, rssi as \"RSSI (dBm)\", snr as \"SNR (dB)\", speed as \"Speed (Mbps)\" | sort 0 Name MAC | table Name MAC IP SSID AP Band Channel \"RSSI (dBm)\" \"SNR (dB)\" \"Speed (Mbps)\"",
+    "query": "| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr latest(mdt_wl_client_stats_speed) as speed WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" BY traffic_stats_ms_mac_address | rename traffic_stats_ms_mac_address as mac | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_device_hostname earliest=-30d latest=now BY client_wsa_info_client_mac device_hostname | sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname] | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_ip_addr BY sisf_db_mac_mac_addr ip_addr | sort 0 - t | dedup sisf_db_mac_mac_addr | rename sisf_db_mac_mac_addr as mac | fields mac ip_addr] | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_vap_ssid BY dot11_oper_data_ms_mac_address vap_ssid | sort 0 - t | dedup dot11_oper_data_ms_mac_address | rename dot11_oper_data_ms_mac_address as mac | fields mac vap_ssid] | join type=left mac [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_client_stats_ap_mac_address BY dot11_oper_data_ms_mac_address ap_mac_address | sort 0 - t | dedup dot11_oper_data_ms_mac_address | rename dot11_oper_data_ms_mac_address as mac | fields mac ap_mac_address] | join type=left ap_mac_address [| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name | rename eth_mac as ap_mac_address | fields ap_mac_address ap_name_mac_map_wtp_name] | join type=left mac [| mstats latest(mdt_wl_info_current_channel) as ch latest(mdt_wl_info_ms_ap_slot_id) as slot WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" BY dot11_oper_data_ms_mac_address | rename dot11_oper_data_ms_mac_address as mac] | eval Band=case(slot==2, \"6 GHz\", ch <= 14, \"2.4 GHz\", ch > 14, \"5 GHz\") | rename device_hostname as Name, mac as MAC, ip_addr as IP, vap_ssid as SSID, ap_name_mac_map_wtp_name as AP, ch as Channel, rssi as \"RSSI (dBm)\", snr as \"SNR (dB)\", speed as \"Speed (Mbps)\" | sort 0 Name MAC | table Name MAC IP SSID AP Band Channel \"RSSI (dBm)\" \"SNR (dB)\" \"Speed (Mbps)\"",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -471,12 +489,22 @@
     },
     "structure": [
      {
-      "item": "viz_clients_now",
+      "item": "viz_ip",
       "type": "block",
       "position": {
        "x": 0,
        "y": 0,
-       "w": 360,
+       "w": 288,
+       "h": 130
+      }
+     },
+     {
+      "item": "viz_clients_now",
+      "type": "block",
+      "position": {
+       "x": 288,
+       "y": 0,
+       "w": 288,
        "h": 130
       }
      },
@@ -484,9 +512,9 @@
       "item": "viz_aps",
       "type": "block",
       "position": {
-       "x": 360,
+       "x": 576,
        "y": 0,
-       "w": 360,
+       "w": 288,
        "h": 130
       }
      },
@@ -494,9 +522,9 @@
       "item": "viz_cpu_now",
       "type": "block",
       "position": {
-       "x": 720,
+       "x": 864,
        "y": 0,
-       "w": 360,
+       "w": 288,
        "h": 130
       }
      },
@@ -504,9 +532,9 @@
       "item": "viz_mem_now",
       "type": "block",
       "position": {
-       "x": 1080,
+       "x": 1152,
        "y": 0,
-       "w": 360,
+       "w": 288,
        "h": 130
       }
      },
