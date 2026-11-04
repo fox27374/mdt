@@ -153,7 +153,7 @@
             <link>/app/mdt_infra_monitoring/firewall_details?form.tk_fw=$nd_node_token|u$&amp;form.site=$site|u$</link>
           </condition>
           <condition>
-            <link>/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_value_token$&amp;form.site=$site|u$</link>
+            <link>/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_node_token|u$&amp;form.site=$site|u$</link>
           </condition>
         </drilldown>
       </viz>
