@@ -196,19 +196,29 @@
   },
   "viz_macs_table": {
    "type": "splunk.table",
-   "title": "Learned MAC addresses",
+   "title": "Learned MAC addresses. Click a MAC for the client",
    "dataSources": {
     "primary": "ds_macs"
    },
    "options": {
-    "count": 50
+    "count": 50,
+    "showInternalFields": false
    },
    "showProgressBar": true,
    "containerOptions": {
     "visibility": {
      "hideWhenNoData": true
     }
-   }
+   },
+   "eventHandlers": [
+    {
+     "type": "drilldown.customUrl",
+     "options": {
+      "url": "/app/mdt_infra_monitoring/$row._view.value$?tab=layout_2&form.tk_wired=$row._mac.value$&form.q=$row._mac.value$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+      "newTab": false
+     }
+    }
+   ]
   },
   "viz_logs": {
    "type": "splunk.table",
@@ -261,7 +271,7 @@
    "type": "ds.search",
    "name": "macs",
    "options": {
-    "query": "| `mdt_mac($status:result.node$,$status:result.interface$)` | rename mac as MAC, vlan as VLAN | fields MAC VLAN | sort MAC"
+    "query": "| `mdt_mac($status:result.node$,$status:result.interface$)` | eval ik=`mdt_ifkey(interface)` | join type=left ik [| `mdt_cdp($status:result.node$, $site$)` | eval ik=`mdt_ifkey(interface)`, cdp=1 | append [| makeresults | eval ik=\"#none\", cdp=0] | stats max(cdp) as cdp by ik] | rename mac as MAC, vlan as VLAN | sort MAC | eval _mac=lower(MAC), _view=if(cdp==1, \"client_search\", \"client_details\") | fields MAC VLAN _mac _view"
    }
   },
   "ds_logs": {

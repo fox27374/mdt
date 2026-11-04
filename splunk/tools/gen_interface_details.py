@@ -65,8 +65,15 @@ STATUS = (f"| `mdt_if_status({N}, $site$)` {PO_OR_PHYS} {PICK_ONE} | eval inorm=
           "| eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")")
 
 # Learned MACs on the port (one row per MAC and VLAN). The mac macro names ports in full, the slot rule picks the port.
+# A MAC opens Client Details (Wired tab). On a port with a CDP neighbour (uplink, AP) the MAC is no client of this port:
+# it opens Client Search for the MAC instead, which knows whether it is wireless, wired elsewhere or an uplink sighting.
 MACS = (f"| `mdt_mac({T_NODE},{T_IF})` "
-        "| rename mac as MAC, vlan as VLAN | fields MAC VLAN | sort MAC")
+        "| eval ik=`mdt_ifkey(interface)` "
+        # Sentinel row: join with an empty subsearch (no CDP neighbour on the switch) would drop every MAC.
+        f"| join type=left ik [| `mdt_cdp({T_NODE}, $site$)` | eval ik=`mdt_ifkey(interface)`, cdp=1 | append [| makeresults | eval ik=\"#none\", cdp=0] "
+        "| stats max(cdp) as cdp by ik] "
+        "| rename mac as MAC, vlan as VLAN | sort MAC "
+        "| eval _mac=lower(MAC), _view=if(cdp==1, \"client_search\", \"client_details\") | fields MAC VLAN _mac _view")
 
 # Syslog naming the port by its path (Gi1/1/4, TenGigabitEthernet1/1/4, Ethernet1/23, eth1/23 all contain the path).
 tokpath = f"if(match(\"{I}\", \"^\\D\"), replace(\"{I}\", \"^\\D+\", \"\"), \"{I}\")"
@@ -170,7 +177,11 @@ viz = {
     "viz_errors": chart("splunk.column", "Errors per 5 min by kind", "ds_errors", stackMode="stacked", legendDisplay="bottom"),
     "viz_compare": chart("splunk.table", "Link comparison, whole time range", "ds_compare", count=20),
     # Hidden when empty (most uplinks learn no MACs, most ports have no syslog) instead of a no-results warning.
-    "viz_macs_table": {**chart("splunk.table", "Learned MAC addresses", "ds_macs", count=50), "containerOptions": {"visibility": {"hideWhenNoData": True}}},
+    "viz_macs_table": {**chart("splunk.table", "Learned MAC addresses. Click a MAC for the client", "ds_macs", count=50, showInternalFields=False),
+                       "containerOptions": {"visibility": {"hideWhenNoData": True}}, "eventHandlers": [{"type": "drilldown.customUrl", "options": {
+                       "url": "/app/mdt_infra_monitoring/$row._view.value$?tab=layout_2&form.tk_wired=$row._mac.value$&form.q=$row._mac.value$"
+                              "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+                       "newTab": False}}]},
     "viz_logs": {**chart("splunk.table", "Syslog for this port, newest first", "ds_logs", count=50), "containerOptions": {"visibility": {"hideWhenNoData": True}}},
 }
 
