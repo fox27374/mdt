@@ -92,16 +92,25 @@
   </row>
   <row depends="$show_overview$">
     <panel>
-      <title>CDP topology. Switches (arrows), APs (wifi icon) and firewalls (brick wall) by health: green OK, yellow warning, red critical, dark grey no data (monitored, silent for 10 minutes), light grey not monitored (CDP neighbour only, e.g. an AP on a WLC without telemetry). Click a switch for Switch Details, an AP for Wireless Overview, a firewall for Firewall Details</title>
+      <title>CDP topology. Switches (arrows), APs (wifi icon), firewalls (brick wall) and WLCs (controller, top right, CPU and memory from 70 % warning, 90 % critical) by health: green OK, yellow warning, red critical, dark grey no data (monitored, silent for 10 minutes), light grey not monitored (CDP neighbour only, e.g. an AP on a WLC without telemetry). Click a switch for Switch Details, an AP or WLC for Wireless Overview, a firewall for Firewall Details</title>
       <viz type="network-diagram-viz.network-diagram-viz">
         <search>
-          <!-- Joins topo_base and sh_base (both run in parallel) and adds the positions. -->
+          <!-- Joins topo_base and sh_base (both run in parallel) and adds the positions. WLCs are not cabled: one row in the top right
+               corner, right of the rightmost node. A WLC that is also in the tree (CDP) keeps its links but takes the corner position. -->
           <query>| loadjob $topo_sid$
 | append [| loadjob $sh_sid$ | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/switch-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg" | rename node as from | fields from color type customurl]
 | appendpipe [| `mdt_topology_positions`]
 | eventstats max(x) as x max(y) as y max(value) as value by from
 | eventstats values(eval(if(isnull(x), from, null()))) as hidden
 | where isnotnull(x) AND (isnull(hidden) OR isnull(to) OR isnull(mvfind(hidden, "^\Q".to."\E$")))
+| eventstats max(x) as mx min(y) as my
+| append [| `mdt_wlc_health($site$)` | sort node | streamstats count as wi
+  | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/wlc-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg", value="wlc"
+  | rename node as from | fields from color type customurl value wi]
+| eventstats max(wi) as isw by from
+| eventstats max(mx) as mx min(my) as my
+| where isnotnull(wi) OR isnull(isw) OR isnotnull(to)
+| eval x=if(isnotnull(isw), coalesce(mx, 0) + 200 * isw, x), y=if(isnotnull(isw), coalesce(my, 100), y)
 | table from to linkwidth color type customurl x y value</query>
           <sampleRatio>1</sampleRatio>
         </search>
@@ -134,7 +143,10 @@
         <drilldown>
           <!-- Click fields are eval names in single quotes ($tokens$ are not substituted here). row.type is wifi for APs (icon type);
                row.value is the node's role (tooltip), firewall for firewalls. Viz drilldownClick=single fires on double click only (see report). -->
-          <condition match="'row.type'=&quot;wifi&quot; OR 'row.value'=&quot;wlc&quot;">
+          <condition match="'row.value'=&quot;wlc&quot;">
+            <link>/app/mdt_infra_monitoring/wireless_overview?form.wlc=$nd_node_token|u$&amp;form.site=$site|u$</link>
+          </condition>
+          <condition match="'row.type'=&quot;wifi&quot;">
             <link>/app/mdt_infra_monitoring/wireless_overview?form.site=$site|u$</link>
           </condition>
           <condition match="'row.value'=&quot;firewall&quot;">
@@ -355,7 +367,7 @@
         <ul>
           <li>Patterns are host names. * matches any text. A device takes the role of the longest pattern that matches it. Adding an existing pattern changes its role.</li>
           <li>Roles: core, distribution and access are the rows of the tree, top to bottom. APs (wifi) are always the bottom row and need no entry.</li>
-          <li>Firewalls sit above the cores, over their neighbours. wlc and server sit on the distribution row, right of the distribution switches.</li>
+          <li>Firewalls sit above the cores, over their neighbours. server sits on the distribution row, right of the distribution switches. WLCs (devices with AP telemetry) always sit in the top right corner, whatever their role.</li>
           <li>hidden: the device and its links are left out of the topology (for example servers).</li>
           <li>Devices without a role are placed one row below their highest neighbour by CDP link. Devices not reached from a role device go to the islands block on the far right.</li>
           <li>Changes show on the Overview tab after its next refresh (1 minute). Only admin and power users can save.</li>
