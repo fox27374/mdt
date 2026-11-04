@@ -6,8 +6,9 @@ OUT = os.path.join(sys.path[0], "..", "mdt_infra_monitoring", "default", "data",
 
 W = '`mdt_metrics_index` site="$site$" extracted_source="$wlc$"'
 C = "$tk_client$"
-# Latest hostname per client MAC (a client can rename itself).
-HOSTNAMES = (f"| mstats latest_time(_value) as t WHERE {W} metric_name=mdt_wl_info_device_hostname BY client_wsa_info_client_mac device_hostname "
+# Latest hostname per client MAC (a client can rename itself). Last 30 days, whatever the search's range: the WLC sometimes
+# reports a connected client's hostname once and then no more (seen on an iPhone).
+HOSTNAMES = (f"| mstats latest_time(_value) as t WHERE {W} metric_name=mdt_wl_info_device_hostname earliest=-30d latest=now BY client_wsa_info_client_mac device_hostname "
              "| sort 0 - t | dedup client_wsa_info_client_mac | rename client_wsa_info_client_mac as mac | fields mac device_hostname")
 # AP by Ethernet MAC (what a client's AP reference carries): name, and the IP via the radio MAC. APs without an address report 0.0.0.0.
 APS = (f"| mstats latest(_value) WHERE {W} metric_name=mdt_wl_info_eth_mac BY eth_mac ap_name_mac_map_wtp_name "

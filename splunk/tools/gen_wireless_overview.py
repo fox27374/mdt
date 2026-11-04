@@ -46,12 +46,13 @@ APS = (f"| mstats latest(_value) WHERE {W} metric_name=mdt_wl_info_eth_mac BY et
        "| eval State=coalesce(ap_operation_state, \"not joined\")")
 
 # Every client in the last 15 minutes, one row each: latest hostname, IP, SSID, AP and radio. All keys are the client MAC.
-def latest(metric, key, field):
-    return (f"| mstats latest_time(_value) as t WHERE {W} metric_name={metric} BY {key} {field} "
+def latest(metric, key, field, since=""):
+    return (f"| mstats latest_time(_value) as t WHERE {W} metric_name={metric} {since}BY {key} {field} "
             f"| sort 0 - t | dedup {key} | rename {key} as mac | fields mac {field}")
+# Hostnames from the last 30 days: the WLC sometimes reports a connected client's hostname once and then no more.
 CLIENT_LIST = (f"| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi latest(mdt_wl_client_stats_most_recent_snr) as snr "
                f"latest(mdt_wl_client_stats_speed) as speed WHERE {W} BY traffic_stats_ms_mac_address | rename traffic_stats_ms_mac_address as mac "
-               f"| join type=left mac [{latest('mdt_wl_info_device_hostname', 'client_wsa_info_client_mac', 'device_hostname')}] "
+               f"| join type=left mac [{latest('mdt_wl_info_device_hostname', 'client_wsa_info_client_mac', 'device_hostname', 'earliest=-30d latest=now ')}] "
                f"| join type=left mac [{latest('mdt_wl_info_ip_addr', 'sisf_db_mac_mac_addr', 'ip_addr')}] "
                f"| join type=left mac [{latest('mdt_wl_info_vap_ssid', 'dot11_oper_data_ms_mac_address', 'vap_ssid')}] "
                f"| join type=left mac [{latest('mdt_wl_client_stats_ap_mac_address', 'dot11_oper_data_ms_mac_address', 'ap_mac_address')}] "
