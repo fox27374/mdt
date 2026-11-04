@@ -67,6 +67,8 @@ CLIENT_LIST = (f"| mstats latest(mdt_wl_client_stats_most_recent_rssi) as rssi l
 bases = {
     "ds_sites": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label",
     "ds_wlc": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc",
+    # Address the WLC is polled on (gnmic event-tags mgmt_ip), latest value in the last hour.
+    "ds_ip": f"| mstats latest(_value) WHERE {W} metric_name=mdt_xe_cpu_stats_one_minute mgmt_ip=* earliest=-1h BY mgmt_ip | fields mgmt_ip | head 1",
     "ds_clients_now": CLIENTS + "| stats sum(c) as c by _time | stats latest(c) as clients",
     "ds_aps": APS,
     "ds_sys_now": SYS,
@@ -120,6 +122,7 @@ viz = {
     "viz_clients_now": tile("Connected clients (last 15 min)", "ds_clients_now"),
     "viz_aps": tile("APs joined (last 15 min)", "ds_aps_joined", majorValue="> primary | seriesByName(\"aps\")",
                     majorColor="> primary | seriesByName(\"short\") | lastPoint() | rangeValue(shortColors)"),
+    "viz_ip": tile("Management IP", "ds_ip", majorFontSize=36),
     "viz_cpu_now": tile("WLC CPU (last 15 min)", "ds_cpu_now", unit="%", unitPosition="after"),
     "viz_mem_now": tile("WLC memory (last 15 min)", "ds_mem_now", unit="%", unitPosition="after", numberPrecision=1),
     "viz_ssids": chart("splunk.table", "SSIDs and their clients (last 15 min)", "ds_ssids", count=10),
@@ -156,7 +159,8 @@ viz["viz_aps"]["context"] = {"shortColors": [{"to": 1, "value": "#708794"}, {"fr
 viz["viz_ap_table"]["options"]["columnFormat"] = {"State": {"rowBackgroundColors": "> table | seriesByName(\"State\") | matchValue(stateColors)"}}
 
 rows = [  # (item, x, y, w, h)
-    ("viz_clients_now", 0, 0, 360, 130), ("viz_aps", 360, 0, 360, 130), ("viz_cpu_now", 720, 0, 360, 130), ("viz_mem_now", 1080, 0, 360, 130),
+    ("viz_ip", 0, 0, 288, 130), ("viz_clients_now", 288, 0, 288, 130), ("viz_aps", 576, 0, 288, 130), ("viz_cpu_now", 864, 0, 288, 130),
+    ("viz_mem_now", 1152, 0, 288, 130),
     ("viz_clients", 0, 130, 720, 300), ("viz_ssids", 720, 130, 360, 300), ("viz_phy", 1080, 130, 360, 300),
     ("viz_ap_table", 0, 430, 1440, 260),
     ("viz_client_list", 0, 690, 1440, 300),

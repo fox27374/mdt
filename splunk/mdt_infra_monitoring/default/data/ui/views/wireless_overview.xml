@@ -95,6 +95,17 @@
     ]
    }
   },
+  "viz_ip": {
+   "type": "splunk.singlevalue",
+   "title": "Management IP",
+   "dataSources": {
+    "primary": "ds_ip"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "majorFontSize": 36
+   }
+  },
   "viz_cpu_now": {
    "type": "splunk.singlevalue",
    "title": "WLC CPU (last 15 min)",
@@ -303,6 +314,13 @@
     "query": "| mcatalog values(extracted_source) as wlc WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_wl_info_ap_ip_addr | mvexpand wlc"
    }
   },
+  "ds_ip": {
+   "type": "ds.search",
+   "name": "ip",
+   "options": {
+    "query": "| mstats latest(_value) WHERE `mdt_metrics_index` site=\"$site$\" extracted_source=\"$wlc$\" metric_name=mdt_xe_cpu_stats_one_minute mgmt_ip=* earliest=-1h BY mgmt_ip | fields mgmt_ip | head 1"
+   }
+  },
   "ds_clients_now": {
    "type": "ds.search",
    "name": "clients_now",
@@ -471,12 +489,22 @@
     },
     "structure": [
      {
-      "item": "viz_clients_now",
+      "item": "viz_ip",
       "type": "block",
       "position": {
        "x": 0,
        "y": 0,
-       "w": 360,
+       "w": 288,
+       "h": 130
+      }
+     },
+     {
+      "item": "viz_clients_now",
+      "type": "block",
+      "position": {
+       "x": 288,
+       "y": 0,
+       "w": 288,
        "h": 130
       }
      },
@@ -484,9 +512,9 @@
       "item": "viz_aps",
       "type": "block",
       "position": {
-       "x": 360,
+       "x": 576,
        "y": 0,
-       "w": 360,
+       "w": 288,
        "h": 130
       }
      },
@@ -494,9 +522,9 @@
       "item": "viz_cpu_now",
       "type": "block",
       "position": {
-       "x": 720,
+       "x": 864,
        "y": 0,
-       "w": 360,
+       "w": 288,
        "h": 130
       }
      },
@@ -504,9 +532,9 @@
       "item": "viz_mem_now",
       "type": "block",
       "position": {
-       "x": 1080,
+       "x": 1152,
        "y": 0,
-       "w": 360,
+       "w": 288,
        "h": 130
       }
      },
