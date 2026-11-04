@@ -237,6 +237,22 @@ targets:
       - wl_radio_info
       - wl_client_roam
 
+  # Fabric WLC (C9800-CL 17.18). gnxi enabled 2026-11-04, same as ibk-lab-ewlc01. bssid-stats on in ap profiles
+  # ibk-fabric and default-ap-profile (needs no statistics traffic-distribution: the two are exclusive).
+  172.24.89.146:57400:
+    name: "ibk-lab-fabwlc01"
+    event-tags:
+      site: "ibk-lab"
+      mgmt_ip: "172.24.89.146"
+    subscriptions:
+      - xe_cpu_stats
+      - xe_mem_stats
+      - wl_client_stats
+      - wl_ap_stats
+      - wl_info
+      - wl_radio_info
+      - wl_client_roam
+
   # nk-home WLC (C9800-CL 17.18, hostname C9800-CL-161). bssid-stats is on in ap profile AP_JOIN_NK_Home.
   172.24.88.161:57400:
     name: "nk-home-ewlc01"
