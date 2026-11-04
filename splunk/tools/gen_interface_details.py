@@ -49,13 +49,18 @@ THIS = "| where side=\"this\""
 
 # Device status of the port (one row), with its CDP neighbour and far-end port.
 # Front-panel ports and port-channels (a port-channel's counters and status are not physical-only, but its ports are the front-panel ones).
-PO_OR_PHYS = "| where (`mdt_is_physical` OR match(interface, \"(?i)^(port-channel|po[0-9])\"))"
+SHORT =("case(" + ", ".join(f"match(far_interface, \"^{l}\\d\"), replace(far_interface, \"^{l}\", \"{s}\")" for l, s in [
+    ("TenGigabitEthernet", "Te"), ("TwentyFiveGigE", "Twe"), ("TwoGigabitEthernet", "Tw"), ("FortyGigabitEthernet", "Fo"), ("FiftyGigE", "Fi"),
+    ("HundredGigE", "Hu"), ("FastEthernet", "Fa"), ("AppGigabitEthernet", "Ap"), ("GigabitEthernet", "Gi"), ("Ethernet", "Eth"), ("(?i)port-channel", "Po")])
+    + ", true(), far_interface)")
+PO_OR_PHYS ="| where (`mdt_is_physical` OR match(interface, \"(?i)^(port-channel|po[0-9])\"))"
 STATUS = (f"| `mdt_if_status({N}, $site$)` {PO_OR_PHYS} {PICK_ONE} | eval inorm=`mdt_ifkey(interface)` "
           "| join type=left node inorm [| `mdt_links($site$)`] "
           "| join type=left far_node far_inorm [| `mdt_if_status(*, $site$)` " + phys + " | eval inorm=`mdt_ifkey(interface)` "
           "| rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] "
           # A neighbour without telemetry (an AP, a phone) has no telemetry port: its CDP name only, and a click stays on this port.
-          "| eval neighbour=case(isnull(far_node), \"none\", isnull(far_interface), far_node, true(), far_node.\" \".far_interface), "
+          # Tile: host name, short port name below it (the reverse of mdt_ifkey: TenGigabitEthernet1/0/3 is Te1/0/3).
+          f"| eval far_short=coalesce({SHORT}, \" \"), neighbour=coalesce(far_node, \"none\"), "
           "nb_node=if(isnull(far_interface), \"$tk_node$\", far_node), nb_interface=if(isnull(far_interface), \"$tk_interface$\", far_interface) "
           "| eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")")
 
@@ -152,7 +157,7 @@ viz = {
     "viz_changed": tile("Last change", "ds_hdr_changed"),
     # Click: the neighbour's port when it has one (nb_node / nb_interface from the status search). Only values as tokens: a
     # whole-URL token is encoded and Splunk refuses it.
-    "viz_neighbour": {**tile("CDP neighbour", "ds_hdr_neighbour"), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
+    "viz_neighbour": {**tile("CDP neighbour", "ds_hdr_neighbour", underLabel="$status:result.far_short$", underLabelFontSize=22), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
                       "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$status:result.nb_node$&form.tk_interface=$status:result.nb_interface$"
                              "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
                       "newTab": False}}]},
