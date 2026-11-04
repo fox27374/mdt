@@ -103,10 +103,21 @@
    "options": {}
   },
   "viz_neighbour": {
-   "type": "splunk.markdown",
-   "options": {
-    "markdown": "**CDP neighbour**\n\n## $status:result.neighbour_md$"
-   }
+   "type": "splunk.singlevalue",
+   "title": "CDP neighbour",
+   "dataSources": {
+    "primary": "ds_hdr_neighbour"
+   },
+   "options": {},
+   "eventHandlers": [
+    {
+     "type": "drilldown.customUrl",
+     "options": {
+      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$status:result.nb_node$&form.tk_interface=$status:result.nb_interface$&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+      "newTab": false
+     }
+    }
+   ]
   },
   "viz_duplex": {
    "type": "splunk.singlevalue",
@@ -239,7 +250,7 @@
    "type": "ds.search",
    "name": "status",
    "options": {
-    "query": "| `mdt_if_status($tk_node$, $site$)` | where (`mdt_is_physical` OR match(interface, \"(?i)^(port-channel|po[0-9])\")) | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | where node=\"$tk_node$\" AND (interface=\"$tk_interface$\" OR path=\"$tk_interface$\") | sort 0 - oper_up - speed | dedup keepempty=true node path | eval inorm=`mdt_ifkey(interface)` | join type=left node inorm [| `mdt_links($site$)`] | join type=left far_node far_inorm [| `mdt_if_status(*, $site$)` | `mdt_physical_ports` | eval inorm=`mdt_ifkey(interface)` | rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] | eval neighbour_md=case(isnull(far_node), \"none\", isnull(far_interface), far_node, true(), \"[\".far_node.\" \".far_interface.\"](/app/mdt_infra_monitoring/interface_details?form.tk_node=\".far_node.\"&form.tk_interface=\".far_interface.\"&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$)\") | eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")",
+    "query": "| `mdt_if_status($tk_node$, $site$)` | where (`mdt_is_physical` OR match(interface, \"(?i)^(port-channel|po[0-9])\")) | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" | where node=\"$tk_node$\" AND (interface=\"$tk_interface$\" OR path=\"$tk_interface$\") | sort 0 - oper_up - speed | dedup keepempty=true node path | eval inorm=`mdt_ifkey(interface)` | join type=left node inorm [| `mdt_links($site$)`] | join type=left far_node far_inorm [| `mdt_if_status(*, $site$)` | `mdt_physical_ports` | eval inorm=`mdt_ifkey(interface)` | rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] | eval neighbour=case(isnull(far_node), \"none\", isnull(far_interface), far_node, true(), far_node.\" \".far_interface), nb_node=if(isnull(far_interface), \"$tk_node$\", far_node), nb_interface=if(isnull(far_interface), \"$tk_interface$\", far_interface) | eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")",
     "enableSmartSources": true
    }
   },
@@ -294,6 +305,14 @@
    "options": {
     "extend": "ds_macs",
     "query": "| stats dc(MAC) as \"Learned MACs\""
+   }
+  },
+  "ds_hdr_neighbour": {
+   "type": "ds.chain",
+   "name": "hdr_neighbour",
+   "options": {
+    "extend": "ds_status",
+    "query": "| fields neighbour"
    }
   },
   "ds_hdr_duplex": {

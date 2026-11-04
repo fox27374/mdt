@@ -54,9 +54,9 @@ STATUS = (f"| `mdt_if_status({N}, $site$)` {PO_OR_PHYS} {PICK_ONE} | eval inorm=
           "| join type=left node inorm [| `mdt_links($site$)`] "
           "| join type=left far_node far_inorm [| `mdt_if_status(*, $site$)` " + phys + " | eval inorm=`mdt_ifkey(interface)` "
           "| rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] "
-          # A neighbour without telemetry (an AP, a phone) has no telemetry port: its CDP name only, no link.
-          "| eval neighbour_md=case(isnull(far_node), \"none\", isnull(far_interface), far_node, true(), \"[\".far_node.\" \".far_interface.\"](/app/mdt_infra_monitoring/interface_details?form.tk_node=\".far_node.\"&form.tk_interface=\".far_interface"
-          ".\"&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$)\") "
+          # A neighbour without telemetry (an AP, a phone) has no telemetry port: its CDP name only, and a click stays on this port.
+          "| eval neighbour=case(isnull(far_node), \"none\", isnull(far_interface), far_node, true(), far_node.\" \".far_interface), "
+          "nb_node=if(isnull(far_interface), \"$tk_node$\", far_node), nb_interface=if(isnull(far_interface), \"$tk_interface$\", far_interface) "
           "| eval far_node=coalesce(far_node, \"none\"), far_interface=coalesce(far_interface, \"none\")")
 
 # Learned MACs on the port (one row per MAC and VLAN). The mac macro names ports in full, the slot rule picks the port.
@@ -118,7 +118,8 @@ chains = {  # name: (base, post-process)
                        "true(), strftime(last_change, \"%Y-%m-%d %H:%M\")) | fields \"Last change\""),
     "ds_hdr_macs": ("ds_macs", "| stats dc(MAC) as \"Learned MACs\""),
     # Duplex, auto-negotiation and MTU of the port (mdt_if_status); blank when no source reports them.
-    "ds_hdr_duplex": ("ds_status", "| eval Duplex=coalesce(duplex, \"\") | fields Duplex"),
+    "ds_hdr_neighbour": ("ds_status", "| fields neighbour"),
+    "ds_hdr_duplex":("ds_status", "| eval Duplex=coalesce(duplex, \"\") | fields Duplex"),
     "ds_hdr_autoneg": ("ds_status", "| eval \"Auto-neg\"=coalesce(autoneg, \"\") | fields \"Auto-neg\""),
     "ds_hdr_mtu": ("ds_status", "| eval MTU=if(isnull(mtu), \"\", tostring(mtu)) | fields MTU"),
     "ds_throughput": ("ds_flow", f"{THIS} | eval \"In (Mb/s)\"=round(in_bps / 1000000, 2), \"Out (Mb/s)\"=round(out_bps / 1000000, 2) "
@@ -149,9 +150,12 @@ viz = {
     "viz_status": tile("Status", "ds_hdr_status"),
     "viz_speed": tile("Speed", "ds_hdr_speed"),
     "viz_changed": tile("Last change", "ds_hdr_changed"),
-    # A link to the neighbour's port when there is one, plain "none" otherwise.
-    "viz_neighbour": {"type": "splunk.markdown",
-                      "options": {"markdown": "**CDP neighbour**\n\n## $status:result.neighbour_md$"}},
+    # Click: the neighbour's port when it has one (nb_node / nb_interface from the status search). Only values as tokens: a
+    # whole-URL token is encoded and Splunk refuses it.
+    "viz_neighbour": {**tile("CDP neighbour", "ds_hdr_neighbour"), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
+                      "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$status:result.nb_node$&form.tk_interface=$status:result.nb_interface$"
+                             "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
+                      "newTab": False}}]},
     "viz_duplex": tile("Duplex", "ds_hdr_duplex"),
     "viz_autoneg": tile("Auto-negotiation", "ds_hdr_autoneg"),
     "viz_mtu": tile("MTU", "ds_hdr_mtu"),
