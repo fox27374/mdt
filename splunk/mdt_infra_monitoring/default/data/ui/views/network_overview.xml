@@ -96,7 +96,7 @@
       <viz type="network-diagram-viz.network-diagram-viz">
         <search>
           <!-- Joins topo_base and sh_base (both run in parallel) and adds the positions. WLCs are not cabled: one row in the top right
-               corner, right of the rightmost node. A WLC that is also in the tree (CDP) keeps its links but takes the corner position. -->
+               corner, the last WLC above the rightmost node. A WLC that is also in the tree (CDP) keeps its links but takes the corner position. -->
           <query>| loadjob $topo_sid$
 | append [| loadjob $sh_sid$ | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/switch-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg" | rename node as from | fields from color type customurl]
 | appendpipe [| `mdt_topology_positions`]
@@ -108,9 +108,9 @@
   | eval color=case(health=="Critical", "#dc4e41", health=="Warning", "#f8be34", health=="OK", "#53a051", true(), "#3c444d"), type="customimage", customurl="/static/app/mdt_infra_monitoring/icons/wlc-".case(health=="Critical", "critical", health=="Warning", "warning", health=="OK", "ok", true(), "nodata").".svg", value="wlc"
   | rename node as from | fields from color type customurl value wi]
 | eventstats max(wi) as isw by from
-| eventstats max(mx) as mx min(my) as my
+| eventstats max(mx) as mx min(my) as my max(wi) as wn
 | where isnotnull(wi) OR isnull(isw) OR isnotnull(to)
-| eval x=if(isnotnull(isw), coalesce(mx, 0) + 200 * isw, x), y=if(isnotnull(isw), coalesce(my, 100), y)
+| eval x=if(isnotnull(isw), coalesce(mx, 200 * wn) - 200 * (wn - isw), x), y=if(isnotnull(isw), coalesce(my, 100), y)
 | table from to linkwidth color type customurl x y value</query>
           <sampleRatio>1</sampleRatio>
         </search>
