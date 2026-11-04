@@ -299,7 +299,7 @@
    },
    "options": {
     "majorValue": "> primary | seriesByName(\"Switch\")",
-    "majorColor": "#708794"
+    "majorColor": "#4ea6e8"
    },
    "eventHandlers": [
     {
@@ -319,7 +319,7 @@
    },
    "options": {
     "majorValue": "> primary | seriesByName(\"Port\")",
-    "majorColor": "#708794"
+    "majorColor": "#4ea6e8"
    },
    "eventHandlers": [
     {

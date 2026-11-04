@@ -152,6 +152,9 @@ dataSources = {k: {"type": "ds.search", "name": k[3:], "options": {"query": q}} 
 dataSources["ds_status"]["options"]["enableSmartSources"] = True
 dataSources.update({k: {"type": "ds.chain", "name": k[3:], "options": {"extend": b, "query": q}} for k, (b, q) in chains.items()})
 
+# Clickable tiles are link blue, like the links in tables.
+LINK = "#4ea6e8"
+
 def tile(title, d, **opts):
     return {"type": "splunk.singlevalue", "title": title, "dataSources": {"primary": d}, "options": opts}
 
@@ -164,7 +167,7 @@ viz = {
     "viz_changed": tile("Last change", "ds_hdr_changed"),
     # Click: the neighbour's port when it has one (nb_node / nb_interface from the status search). Only values as tokens: a
     # whole-URL token is encoded and Splunk refuses it.
-    "viz_neighbour": {**tile("CDP neighbour", "ds_hdr_neighbour", underLabel="$status:result.far_short$", underLabelFontSize=22), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
+    "viz_neighbour": {**tile("CDP neighbour", "ds_hdr_neighbour", majorColor=LINK, underLabel="$status:result.far_short$", underLabelFontSize=22), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
                       "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$status:result.nb_node$&form.tk_interface=$status:result.nb_interface$"
                              "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
                       "newTab": False}}]},

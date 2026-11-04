@@ -109,6 +109,7 @@
     "primary": "ds_hdr_neighbour"
    },
    "options": {
+    "majorColor": "#4ea6e8",
     "underLabel": "$status:result.far_short$",
     "underLabelFontSize": 22
    },

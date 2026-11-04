@@ -190,6 +190,9 @@ dataSources.update({k: {"type": "ds.chain", "name": k[3:], "options": {"extend":
 # Smart source for the wired tab: its tokens ($wired_seen:result.node$) read the newest sighting, the first row.
 dataSources["ds_wired_seen"]["options"]["enableSmartSources"] = True
 
+# Clickable tiles are link blue, like the links in tables.
+LINK = "#4ea6e8"
+
 def tile(title, d, field, **opts):
     return {"type": "splunk.singlevalue", "title": title, "dataSources": {"primary": d},
             "options": {"majorValue": f"> primary | seriesByName(\"{field}\")", "majorColor": "#708794", **opts}}
@@ -256,12 +259,12 @@ viz.update({
     "viz_wired_name": tile("Name", "ds_wired_name", "Name"),
     "viz_wired_ip": tile("IP address(es)", "ds_wired_ip", "IP address(es)"),
     # Click: Switch Details for the switch.
-    "viz_wired_switch": {**tile("Switch", "ds_wired_switch", "Switch"), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
+    "viz_wired_switch": {**tile("Switch", "ds_wired_switch", "Switch", majorColor=LINK), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
                          "url": "/app/mdt_infra_monitoring/switch_details?form.tk_node=$wired_seen:result.node$"
                                 "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
                          "newTab": False}}]},
     # Click: Interface Details for the port (full telemetry name, this site and time range). Only values as tokens.
-    "viz_wired_port": {**tile("Port", "ds_wired_port", "Port"), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
+    "viz_wired_port": {**tile("Port", "ds_wired_port", "Port", majorColor=LINK), "eventHandlers": [{"type": "drilldown.customUrl", "options": {
                        "url": "/app/mdt_infra_monitoring/interface_details?form.tk_node=$wired_seen:result.node$&form.tk_interface=$wired_seen:result.iface$"
                               "&form.global_time.earliest=$global_time.earliest$&form.global_time.latest=$global_time.latest$&form.site=$site$",
                        "newTab": False}}]},
