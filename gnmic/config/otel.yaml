@@ -117,7 +117,7 @@ processors:
       # The switch's own MACs (port CPU) are not learned addresses.
       datapoint:
         # Temporary test switch: everything it sends goes through the metrics/grz pipeline instead.
-        - 'attributes["node_id"] == "GRZ-LABOR-SW8"'
+        - 'IsMatch(attributes["node_id"], "^GRZ-LABOR-SW8")'  # hostname may carry a suffix
         - 'metric.name == "cisco.port_info" and attributes["port"] == "CPU"'
         # Inventory (platform-oper part-no): only the per-member chassis entries (Switch1, Switch2, ...).
         - 'metric.name == "cisco.part-no_info" and not IsMatch(attributes["cname"], "^Switch[0-9]+$")'
@@ -206,7 +206,7 @@ processors:
     error_mode: ignore
     metrics:
       datapoint:
-        - 'attributes["node_id"] != "GRZ-LABOR-SW8"'
+        - 'not IsMatch(attributes["node_id"], "^GRZ-LABOR-SW8")'
         # The switch also streams /native (running config): never store secrets, password hashes or keys.
         - 'IsMatch(metric.name, "(?i)(secret|password|key-hash|key-string)")'
 
