@@ -61,15 +61,22 @@
   <search id="topo_base">
     <query>| `mdt_cdp(*, $site$)`
 | where NOT match(interface, "(?i)^(mgmt|e0m)") AND NOT match(coalesce(remote_interface, ""), "(?i)^(mgmt|e0m)")
+| eval ik=`mdt_ifkey(interface)`
+| join type=left node ik [| `mdt_if_counters(*,*, $site$)` | `mdt_physical_ports` | `mdt_if_rates` | eval errs=coalesce(in_errs, 0) + coalesce(out_errs, 0)
+  | stats sum(errs) as errs count as n by node interface | eval ik=`mdt_ifkey(interface)`, lvl=case(errs / n &gt;= 100, 2, errs / n &gt; 5, 1, true(), 0)
+  | append [| `mdt_link_mismatch($site$)` | eval ik=inorm, lvl=if(duplex_mm == 1, 2, 1)]
+  | stats max(lvl) as lvl values(interface) as miface by node ik]
 | eval from=node, to=neighbour, nk=lower(neighbour)
 | join type=left nk [| mstats count(_value) WHERE `mdt_metrics_index` site="$site$" metric_name=mdt_panos_* BY extracted_source | eval nk=lower(extracted_source), fw=extracted_source | fields nk fw]
 | eval to=coalesce(fw, to)
 | append [| mstats latest(_value) WHERE `mdt_metrics_index` site="$site$" metric_name=mdt_wl_info_ap_name BY ap_name cdp_cache_data_cdp_cache_device_id
-  | eval from=ap_name, to=replace(cdp_cache_data_cdp_cache_device_id, "\..*$", ""), interface="uplink" | fields from to interface]
+  | eval from=replace(cdp_cache_data_cdp_cache_device_id, "\..*$", ""), to=ap_name | fields from to]
 | where from!=to
 | eval node1=if(from&lt;to, from, to), node2=if(from&lt;to, to, from)
-| stats count by node1 node2
-| eval from=node1, to=node2, linkwidth=2
+| eval lvl=coalesce(lvl, -1)
+| sort 0 - lvl
+| stats first(from) as from first(to) as to first(eval(coalesce(mvindex(miface, 0), interface))) as port max(lvl) as lvl by node1 node2
+| eval linkwidth=2, linkcolor=case(lvl == 2, "#dc4e41", lvl == 1, "#f8be34", true(), "#53a051"), linktext=if(lvl &gt; 0, `mdt_ifshort(port)`, null())
 | appendpipe [| eval node=mvappend(from, to) | stats count by node | eval color="#7b8794" | rename node as from | fields from color]
 | append [| `mdt_cdp(*, $site$)` | eval kind=case(match(platform, "^(C9[2-6]\d\d|WS-C|N\dK-|IE-)"), "switch", match(platform, "^(AIR-[A-Z]*AP|C91\d\dAX|CW91\d\d)"), "ap") | where isnotnull(kind) | stats count by neighbour kind
   | eval color="#7b8794", type=if(kind=="ap", "wifi", "customimage"), customurl=if(kind=="ap", null(), "/static/app/mdt_infra_monitoring/icons/switch-unmonitored.svg") | rename neighbour as from | fields from color type customurl]
@@ -111,7 +118,7 @@
 | eventstats max(mx) as mx min(my) as my max(wi) as wn
 | where isnotnull(wi) OR isnull(isw) OR isnotnull(to)
 | eval x=if(isnotnull(isw), coalesce(mx, 200 * wn) - 200 * (wn - isw), x), y=if(isnotnull(isw), coalesce(my - 150, 100), y)
-| table from to linkwidth color type customurl x y value</query>
+| table from to linkwidth linkcolor linktext color type customurl x y value</query>
           <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">all</option>
@@ -142,7 +149,15 @@
         <option name="trellis.size">medium</option>
         <drilldown>
           <!-- Click fields are eval names in single quotes ($tokens$ are not substituted here). row.type is wifi for APs (icon type);
-               row.value is the node's role (tooltip), firewall for firewalls. Viz drilldownClick=single fires on double click only (see report). -->
+               row.value is the node's role (tooltip), firewall for firewalls. A link click sets row.to and row.value (its text): a yellow or red link
+               carries its worst port as text (short name, mdt_ifshort; nd_iface expands it back) and opens Interface Details (from is that port's switch), a green one opens Switch Details of from. Viz drilldownClick=single fires on double click only (see report). -->
+          <condition match="isnotnull('row.to') AND len('row.value') &gt; 0">
+            <eval token="nd_iface">case(match('row.value', "^Twe\d"), replace('row.value', "^Twe", "TwentyFiveGigE"), match('row.value', "^Tw\d"), replace('row.value', "^Tw", "TwoGigabitEthernet"), match('row.value', "^Te\d"), replace('row.value', "^Te", "TenGigabitEthernet"), match('row.value', "^Fo\d"), replace('row.value', "^Fo", "FortyGigabitEthernet"), match('row.value', "^Fi\d"), replace('row.value', "^Fi", "FiftyGigE"), match('row.value', "^Hu\d"), replace('row.value', "^Hu", "HundredGigE"), match('row.value', "^Fa\d"), replace('row.value', "^Fa", "FastEthernet"), match('row.value', "^Gi\d"), replace('row.value', "^Gi", "GigabitEthernet"), true(), 'row.value')</eval>
+            <link>/app/mdt_infra_monitoring/interface_details?form.tk_node=$nd_node_token|u$&amp;form.tk_interface=$nd_iface|u$&amp;form.site=$site|u$</link>
+          </condition>
+          <condition match="isnotnull('row.to')">
+            <link>/app/mdt_infra_monitoring/switch_details?form.tk_node=$nd_node_token|u$&amp;form.site=$site|u$</link>
+          </condition>
           <condition match="'row.value'=&quot;wlc&quot;">
             <link>/app/mdt_infra_monitoring/wireless_overview?form.wlc=$nd_node_token|u$&amp;form.site=$site|u$</link>
           </condition>
