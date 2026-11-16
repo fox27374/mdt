@@ -176,11 +176,11 @@
   }
  },
  "dataSources": {
-  "ds_tile_metrics": {
+  "ds_m15": {
    "type": "ds.search",
-   "name": "tile_metrics",
+   "name": "m15",
    "options": {
-    "query": "| mstats count(_value) as n WHERE `mdt_metrics_index` site=\"$site$\" metric_name=* earliest=-15m | eval rate=round(n / 900, 0) | fields rate",
+    "query": "| mstats count(_value) as n WHERE `mdt_metrics_index` site=\"$site$\" metric_name=* earliest=-15m BY metric_name extracted_source | eval part=\"all\" | append [| mstats count(_value) as n WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_* earliest=-15m BY metric_name extracted_source subscription_name | eval part=\"subs\"]",
     "queryParameters": {
      "earliest": "-15m",
      "latest": "now"
@@ -198,48 +198,11 @@
     }
    }
   },
-  "ds_subs": {
+  "ds_lic_base": {
    "type": "ds.search",
-   "name": "subs",
+   "name": "lic_base",
    "options": {
-    "query": "| mstats count(_value) WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_* earliest=-15m BY extracted_source subscription_name | stats count as subscriptions",
-    "queryParameters": {
-     "earliest": "-15m",
-     "latest": "now"
-    }
-   }
-  },
-  "ds_lic_today": {
-   "type": "ds.search",
-   "name": "lic_today",
-   "options": {
-    "query": "index=_internal source=*license_usage.log type=Usage [| rest splunk_server=local /servicesNS/-/mdt_infra_monitoring/admin/macros count=0 | search title=mdt_metrics_index OR title=mdt_syslog_index | rex field=definition \"index=\\\"?(?<idx>[^\\\"\\s)]+)\" | dedup idx | fields idx] | stats sum(b) as bytes",
-    "queryParameters": {
-     "earliest": "@d",
-     "latest": "now"
-    },
-    "refresh": "5m",
-    "refreshType": "delay"
-   }
-  },
-  "ds_lic_table": {
-   "type": "ds.search",
-   "name": "lic_table",
-   "options": {
-    "query": "index=_internal source=*license_usage.log type=Usage [| rest splunk_server=local /servicesNS/-/mdt_infra_monitoring/admin/macros count=0 | search title=mdt_metrics_index OR title=mdt_syslog_index | rex field=definition \"index=\\\"?(?<idx>[^\\\"\\s)]+)\" | dedup idx | fields idx] | eval td=if(_time >= relative_time(now(), \"@d\"), b, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), b, 0) | stats sum(td) as td sum(yd) as yd sum(b) as mo by idx | appendpipe [| stats sum(td) as td sum(yd) as yd sum(mo) as mo | eval idx=\"Total\"] | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes] | filldown pool_bytes | eval Index=idx, \"Today (MB)\"=round(td / 1048576, 1), \"Yesterday (MB)\"=round(yd / 1048576, 1), \"30-day average (MB/day)\"=round(mo / 30 / 1048576, 1), \"% of pool (today)\"=round(td / pool_bytes * 100, 2) | table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\"",
-    "queryParameters": {
-     "earliest": "-29d@d",
-     "latest": "now"
-    },
-    "refresh": "5m",
-    "refreshType": "delay"
-   }
-  },
-  "ds_lic_chart": {
-   "type": "ds.search",
-   "name": "lic_chart",
-   "options": {
-    "query": "index=_internal source=*license_usage.log type=Usage [| rest splunk_server=local /servicesNS/-/mdt_infra_monitoring/admin/macros count=0 | search title=mdt_metrics_index OR title=mdt_syslog_index | rex field=definition \"index=\\\"?(?<idx>[^\\\"\\s)]+)\" | dedup idx | fields idx] | bin _time span=1d | stats sum(b) as bytes by _time idx | eval MB=round(bytes / 1048576, 1) | xyseries _time idx MB | fillnull value=0",
+    "query": "index=_internal source=*license_usage.log type=Usage [| rest splunk_server=local /servicesNS/-/mdt_infra_monitoring/admin/macros count=0 | search title=mdt_metrics_index OR title=mdt_syslog_index | rex field=definition \"index=\\\"?(?<idx>[^\\\"\\s)]+)\" | dedup idx | fields idx] | bin _time span=1d | stats sum(b) as bytes by _time idx",
     "queryParameters": {
      "earliest": "-29d@d",
      "latest": "now"
@@ -277,6 +240,46 @@
    "name": "sites",
    "options": {
     "query": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label | append [| makeresults | eval label=\"All sites\", value=\"*\"] | fields label value"
+   }
+  },
+  "ds_tile_metrics": {
+   "type": "ds.chain",
+   "name": "tile_metrics",
+   "options": {
+    "extend": "ds_m15",
+    "query": "| where part=\"all\" | stats sum(n) as n | eval rate=round(n / 900, 0) | fields rate"
+   }
+  },
+  "ds_subs": {
+   "type": "ds.chain",
+   "name": "subs",
+   "options": {
+    "extend": "ds_m15",
+    "query": "| where part=\"subs\" | stats count by extracted_source subscription_name | stats count as subscriptions"
+   }
+  },
+  "ds_lic_today": {
+   "type": "ds.chain",
+   "name": "lic_today",
+   "options": {
+    "extend": "ds_lic_base",
+    "query": "| where _time >= relative_time(now(), \"@d\") | stats sum(bytes) as bytes"
+   }
+  },
+  "ds_lic_table": {
+   "type": "ds.chain",
+   "name": "lic_table",
+   "options": {
+    "extend": "ds_lic_base",
+    "query": "| eval td=if(_time >= relative_time(now(), \"@d\"), bytes, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), bytes, 0) | stats sum(td) as td sum(yd) as yd sum(bytes) as mo by idx | appendpipe [| stats sum(td) as td sum(yd) as yd sum(mo) as mo | eval idx=\"Total\"] | appendcols [| rest /services/licenser/pools splunk_server=local | search title=auto_generated_pool_enterprise | eval pool_bytes=tonumber(effective_quota) | fields pool_bytes] | filldown pool_bytes | eval Index=idx, \"Today (MB)\"=round(td / 1048576, 1), \"Yesterday (MB)\"=round(yd / 1048576, 1), \"30-day average (MB/day)\"=round(mo / 30 / 1048576, 1), \"% of pool (today)\"=round(td / pool_bytes * 100, 2) | table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\""
+   }
+  },
+  "ds_lic_chart": {
+   "type": "ds.chain",
+   "name": "lic_chart",
+   "options": {
+    "extend": "ds_lic_base",
+    "query": "| eval MB=round(bytes / 1048576, 1) | xyseries _time idx MB | fillnull value=0"
    }
   },
   "ds_sending": {

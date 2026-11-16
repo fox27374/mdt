@@ -141,22 +141,27 @@ LOGS_PORT = (f"`mdt_syslog_index` host=\"{W_NODE}\" | eval severity=mvindex(seve
              "| table _time severity message | sort - _time | head 200")
 
 wired_bases = {
-    # Wired clients of the site on client ports, label "name (mac)" (reverse DNS of the first ARP IP) or the MAC.
-    "ds_wired_clients": (WIRED_BODY + f" | where prio=1 AND {PO} | sort 0 - t | dedup mac "
-                         f"| join type=left mac [{ARP_IPS}] | eval ip=mvindex(ips, 0) | lookup dnslookup clientip AS ip OUTPUT clienthost AS dns_name "
-                         "| eval label=if(isnotnull(dns_name), dns_name.\" (\".mac.\")\", mac), value=mac | sort label | table label value"),
-    # Every sighting of the client on a client port in the range, newest first: the first row is the current one.
-    # Port status and PoE of the port join on the same key as the MAC table (ik).
-    "ds_wired_seen": (WIRED_BODY + f" | where prio=1 AND {PO} AND mac=\"{WD}\" "
-                      f"| join type=left mac [{ARP_IPS}] | eval ip=mvindex(ips, 0) | lookup dnslookup clientip AS ip OUTPUT clienthost AS dns_name "
+    # Every wired MAC of the site on a client port, one row per sighting, unfiltered: the wired clients list and the selected
+    # client's sightings are chains of it (the MAC filter is in ds_wired_seen). The joins with subsearches (ARP, the port's
+    # status and PoE) are here, not in the chains: a chain re-runs its ancestors for each dependant, so they would run once per dependant.
+    "ds_wired_base": (WIRED_BODY + f" | where prio=1 AND {PO} "
+                      f"| join type=left mac [{ARP_IPS}] "
                       "| eval iface=coalesce(ifname, port) "
                       "| join type=left ik [| `mdt_if_status(*, $site$)` | eval ik=lower(node).\"|\".`mdt_ifkey(interface)` | dedup ik | fields ik oper_up speed] "
-                      "| join type=left node iface [| `mdt_poe_port(*)` | rename interface as iface | fields node iface poe_w] "
-                      "| sort 0 - t | fields node port iface vlan tf t ips dns_name oper_up speed poe_w"),
+                      "| join type=left node iface [| `mdt_poe_port(*)` | rename interface as iface | fields node iface poe_w]"),
     "ds_wired_flow": FLOW_PORT,
     "ds_wired_logs": LOGS_PORT,
 }
 wired_chains = {  # name: (base, post-process); one row for the tiles (head 1 = current sighting)
+    # Wired clients of the site, label "name (mac)" (reverse DNS of the first ARP IP) or the MAC; newest sighting per MAC.
+    "ds_wired_clients": ("ds_wired_base", "| sort 0 - t | dedup mac "
+                         "| eval ip=mvindex(ips, 0) | lookup dnslookup clientip AS ip OUTPUT clienthost AS dns_name "
+                         "| eval label=if(isnotnull(dns_name), dns_name.\" (\".mac.\")\", mac), value=mac | sort label | table label value"),
+    # Every sighting of the selected client on a client port in the range.
+    # Newest first: the first row is the current sighting (its port status and PoE are in the base).
+    "ds_wired_seen": ("ds_wired_base", f"| where mac=\"{WD}\" "
+                      "| eval ip=mvindex(ips, 0) | lookup dnslookup clientip AS ip OUTPUT clienthost AS dns_name "
+                      "| sort 0 - t | fields node port iface vlan tf t ips dns_name oper_up speed poe_w"),
     "ds_wired_name": ("ds_wired_seen", "| head 1 | eval Name=coalesce(dns_name, \"-\") | fields Name"),
     "ds_wired_ip": ("ds_wired_seen", "| head 1 | eval \"IP address(es)\"=coalesce(mvjoin(ips, \", \"), \"-\") | fields \"IP address(es)\""),
     "ds_wired_switch": ("ds_wired_seen", "| head 1 | eval Switch=node | fields Switch"),

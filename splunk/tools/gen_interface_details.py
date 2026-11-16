@@ -13,7 +13,7 @@ slots = (f"{phys} | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" "
 # Keeps the port the token names: a full name, or a bare path (both slot names match, then the slots rule applies).
 REX = "| rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\""
 MATCH = f"| where node=\"{N}\" AND (interface=\"{I}\" OR path=\"{I}\")"
-PICK_ONE = f"{REX} {MATCH} | sort 0 - oper_up - speed | dedup keepempty=true node path"
+PICK_ONE = f"{REX} {MATCH} | sort 0 - oper_up - speed ord | dedup keepempty=true node path"
 
 # Counters per 5-minute bucket and port, as sums of per-minute deltas (a reset gives no delta) with the sample count.
 # name: raw field from mdt_if_counters / mdt_if_detail. A platform without a detail counter reports in/out errors only.
@@ -54,10 +54,7 @@ SHORT =("case(" + ", ".join(f"match(far_interface, \"^{l}\\d\"), replace(far_int
     ("HundredGigE", "Hu"), ("FastEthernet", "Fa"), ("AppGigabitEthernet", "Ap"), ("GigabitEthernet", "Gi"), ("Ethernet", "Eth"), ("(?i)port-channel", "Po")])
     + ", true(), far_interface)")
 PO_OR_PHYS ="| where (`mdt_is_physical` OR match(interface, \"(?i)^(port-channel|po[0-9])\"))"
-STATUS = (f"| `mdt_if_status({N}, $site$)` {PO_OR_PHYS} {PICK_ONE} | eval inorm=`mdt_ifkey(interface)` "
-          "| join type=left node inorm [| `mdt_links($site$)`] "
-          "| join type=left far_node far_inorm [| `mdt_if_status(*, $site$)` " + phys + " | eval inorm=`mdt_ifkey(interface)` "
-          "| rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface] "
+STATUS = (f"{PO_OR_PHYS} {PICK_ONE} | fields - ord "
           # A neighbour without telemetry (an AP, a phone) has no telemetry port: its CDP name only, and a click stays on this port.
           # Tile: host name, short port name below it (the reverse of mdt_ifkey: TenGigabitEthernet1/0/3 is Te1/0/3).
           f"| eval far_short=coalesce({SHORT}, \" \"), neighbour=coalesce(far_node, \"none\"), "
@@ -113,15 +110,25 @@ COMPARE = (
 bases = {
     "ds_sites": "| mcatalog values(site) as site WHERE `mdt_metrics_index` | mvexpand site | rename site as label | eval value=label",
     "ds_nodes": "| `mdt_nodes($global_time.earliest$, $site$)`",
-    # Port-channels are listed after the front-panel ports, so a port-channel opened from Switch Details is in the dropdown.
-    "ds_ifaces": f"| `mdt_if_status({N}, $site$)` {slots} | fields interface "
-                 f"| append [| `mdt_if_status({N}, $site$)` | where match(interface, \"(?i)^(port-channel|po[0-9])\") | fields interface]",
-    "ds_status": STATUS,
+    # Every port of the device with its CDP neighbour and the far port's status. The joins are in this base, not in the chains:
+    # a chain re-runs its ancestors' post-process for each dependant, so a subsearch there would run once per dependant.
+    # ord: the row order (tie-break for the port pick and for the port-channel list).
+    "ds_if_status": (f"| `mdt_if_status({N}, $site$)` | streamstats count as ord | eval inorm=`mdt_ifkey(interface)` "
+                     "| join type=left node inorm [| `mdt_links($site$)`] "
+                     "| join type=left far_node far_inorm [| `mdt_if_status(*, $site$)` " + phys + " | eval inorm=`mdt_ifkey(interface)` "
+                     "| rename node as far_node, inorm as far_inorm, interface as far_interface | fields far_node far_inorm far_interface]"),
     "ds_macs": MACS,
     "ds_logs": LOGS,
     "ds_flow": FLOW,
 }
 chains = {  # name: (base, post-process)
+    # Front-panel ports by name (one per Catalyst slot, the up one), then the port-channels in the order the status search returns them.
+    "ds_ifaces": ("ds_if_status", "| eval pc=if(match(interface, \"(?i)^(port-channel|po[0-9])\"), 1, 0) "
+                  f"| where pc=1 OR `mdt_is_physical` | rex field=interface \"^\\D+(?<path>\\d+(/\\d+)+)\" "
+                  "| sort 0 - oper_up - speed | dedup keepempty=true node path "
+                  "| eval k1=if(pc=1, ord, 0), k2=if(pc=1, \"\", interface) | sort 0 pc k1 k2 | fields interface"),
+    # The port's status row: the port and its CDP far end (ds_status is what the other searches read as tokens).
+    "ds_status": ("ds_if_status", STATUS),
     "ds_hdr_status": ("ds_status", "| eval Status=case(admin_up==0, \"admin down\", oper_up==1, \"up\", true(), \"down\") | fields Status"),
     "ds_hdr_speed": ("ds_status", "| eval Speed=case(speed >= 1000000000, round(speed / 1000000000, 1).\" Gb/s\", speed > 0, round(speed / 1000000, 0).\" Mb/s\") | fields Speed"),
     # "down for 2d 15h 25m" when down (zero parts left out, minutes shown when nothing else is), else the time of the last change
@@ -149,8 +156,9 @@ chains = {  # name: (base, post-process)
     "ds_compare": ("ds_flow", COMPARE),
 }
 dataSources = {k: {"type": "ds.search", "name": k[3:], "options": {"query": q}} for k, q in bases.items()}
-dataSources["ds_status"]["options"]["enableSmartSources"] = True
 dataSources.update({k: {"type": "ds.chain", "name": k[3:], "options": {"extend": b, "query": q}} for k, (b, q) in chains.items()})
+# Smart source: the other searches read the port and its far end from this row ($status:result.node$ and the like).
+dataSources["ds_status"]["options"]["enableSmartSources"] = True
 
 # Clickable tiles are link blue, like the links in tables.
 LINK = "#4ea6e8"

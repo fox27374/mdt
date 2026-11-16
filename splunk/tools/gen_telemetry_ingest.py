@@ -39,22 +39,16 @@ DEVICES = (
 USAGE = f"index=_internal source=*license_usage.log type=Usage {LIC}"
 
 bases = {
-    "ds_tile_metrics": "| mstats count(_value) as n WHERE `mdt_metrics_index` site=\"$site$\" metric_name=* earliest=-15m "
-                       "| eval rate=round(n / 900, 0) | fields rate",
+    # Last 15 minutes: the metric count per metric and device (part all), and the mdt_* count per subscription (part subs).
+    # Two mstats because mstats drops a series that has no subscription_name (cisco.* metrics), so one BY subscription_name
+    # would lose their points. The tile and the subscriptions are chains of this base, each on its part.
+    "ds_m15": "| mstats count(_value) as n WHERE `mdt_metrics_index` site=\"$site$\" metric_name=* earliest=-15m BY metric_name extracted_source "
+              "| eval part=\"all\" "
+              "| append [| mstats count(_value) as n WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_* earliest=-15m BY metric_name extracted_source subscription_name "
+              "| eval part=\"subs\"]",
     "ds_devices": DEVICES,
-    "ds_subs": "| mstats count(_value) WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_* earliest=-15m BY extracted_source subscription_name "
-               "| stats count as subscriptions",
-    "ds_lic_today": f"{USAGE} | stats sum(b) as bytes",
-    "ds_lic_table": (f"{USAGE} "
-                     "| eval td=if(_time >= relative_time(now(), \"@d\"), b, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), b, 0) "
-                     "| stats sum(td) as td sum(yd) as yd sum(b) as mo by idx "
-                     "| appendpipe [| stats sum(td) as td sum(yd) as yd sum(mo) as mo | eval idx=\"Total\"] "
-                     f"{POOL} | filldown pool_bytes "
-                     "| eval Index=idx, \"Today (MB)\"=round(td / 1048576, 1), \"Yesterday (MB)\"=round(yd / 1048576, 1), "
-                     "\"30-day average (MB/day)\"=round(mo / 30 / 1048576, 1), \"% of pool (today)\"=round(td / pool_bytes * 100, 2) "
-                     "| table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\""),
-    "ds_lic_chart": f"{USAGE} | bin _time span=1d | stats sum(b) as bytes by _time idx "
-                    "| eval MB=round(bytes / 1048576, 1) | xyseries _time idx MB | fillnull value=0",
+    # License volume per index and day, last 30 days: today, the table and the chart are chains of it.
+    "ds_lic_base": f"{USAGE} | bin _time span=1d | stats sum(b) as bytes by _time idx",
     "ds_ingest": "| mstats count(_value) as n WHERE `mdt_metrics_index` site=\"$site$\" metric_name=* BY metric_name span=5m "
                  f"| eval pipe={PIPE} | stats sum(n) as n by _time pipe "
                  "| where _time + 300 <= now() | eval rate=round(n / 300, 1) | xyseries _time pipe rate | fillnull value=0",
@@ -64,6 +58,17 @@ bases = {
                   "| table Index Type \"Size on disk (MB)\" \"Events / data points\" \"Retention (days)\" | sort Index",
 }
 chains = {  # name: (base, post-process)
+    "ds_tile_metrics": ("ds_m15", "| where part=\"all\" | stats sum(n) as n | eval rate=round(n / 900, 0) | fields rate"),
+    "ds_subs": ("ds_m15", "| where part=\"subs\" | stats count by extracted_source subscription_name | stats count as subscriptions"),
+    "ds_lic_today": ("ds_lic_base", "| where _time >= relative_time(now(), \"@d\") | stats sum(bytes) as bytes"),
+    "ds_lic_table": ("ds_lic_base", "| eval td=if(_time >= relative_time(now(), \"@d\"), bytes, 0), yd=if(_time >= relative_time(now(), \"-1d@d\") AND _time < relative_time(now(), \"@d\"), bytes, 0) "
+                     "| stats sum(td) as td sum(yd) as yd sum(bytes) as mo by idx "
+                     "| appendpipe [| stats sum(td) as td sum(yd) as yd sum(mo) as mo | eval idx=\"Total\"] "
+                     f"{POOL} | filldown pool_bytes "
+                     "| eval Index=idx, \"Today (MB)\"=round(td / 1048576, 1), \"Yesterday (MB)\"=round(yd / 1048576, 1), "
+                     "\"30-day average (MB/day)\"=round(mo / 30 / 1048576, 1), \"% of pool (today)\"=round(td / pool_bytes * 100, 2) "
+                     "| table Index \"Today (MB)\" \"Yesterday (MB)\" \"30-day average (MB/day)\" \"% of pool (today)\""),
+    "ds_lic_chart": ("ds_lic_base", "| eval MB=round(bytes / 1048576, 1) | xyseries _time idx MB | fillnull value=0"),
     "ds_sending": ("ds_devices", "| where n > 0 | stats count as devices"),
     "ds_devices_table": ("ds_devices", "| eval \"Metrics/s\"=round(coalesce(n, 0) / 900, 1), "
                          "\"Last data\"=if(isnull(seen), \"\", strftime(seen, \"%Y-%m-%d %H:%M:%S\")), "
@@ -77,9 +82,8 @@ chains = {  # name: (base, post-process)
 LAST15 = {"earliest": "-15m", "latest": "now"}
 DAYS30 = {"earliest": "-29d@d", "latest": "now"}
 PICKER = {"earliest": "$global_time.earliest$", "latest": "$global_time.latest$"}
-WINDOW = {"ds_tile_metrics": LAST15, "ds_devices": LAST15, "ds_subs": LAST15, "ds_lic_today": {"earliest": "@d", "latest": "now"},
-          "ds_lic_table": DAYS30, "ds_lic_chart": DAYS30, "ds_ingest": PICKER, "ds_storage": PICKER}
-SLOW = {"ds_lic_today", "ds_lic_table", "ds_lic_chart", "ds_storage"}  # license and REST data change slowly: refresh every 5 min
+WINDOW = {"ds_m15": LAST15, "ds_devices": LAST15, "ds_lic_base": DAYS30, "ds_ingest": PICKER, "ds_storage": PICKER}
+SLOW = {"ds_lic_base", "ds_storage"}  # license and REST data change slowly: refresh every 5 min
 
 dataSources = {}
 for k, q in bases.items():
