@@ -1,7 +1,8 @@
 # mdt — Model-Driven Telemetry Pipeline
 
-Collects streaming telemetry from network switches and firewalls over **gNMI dial-in**,
-ships it through a **NATS** message bus, and re-publishes it as **Prometheus** metrics.
+Collects streaming telemetry from network switches and firewalls over **gNMI dial-in**
+(and **gRPC dial-out** from older IOS-XE switches), ships it through a **NATS** message bus
+and an **OpenTelemetry collector**, and stores it in **Splunk**.
 
 The whole stack is built around [gnmic](https://gnmic.openconfig.net/) and runs as a set
 of Podman containers managed with `podman-compose`.
@@ -9,41 +10,51 @@ of Podman containers managed with `podman-compose`.
 ## Architecture
 
 ```
-┌─────────────────┐   gNMI dial-in    ┌────────────┐
-│  Switches /     │    (subscribe)    │  gnmic-1   │
-│  Firewalls      │ ────────────────► │  gnmic-2   │  collectors
-│  (XE / NX-OS /  │                   │ (clustered)│
-│   PAN-OS / WLC) │                   └─────┬──────┘
-└─────────────────┘                         │  publish
-                                            ▼  subject: mdt
-                ┌──────────┐          ┌─────────────┐
-                │  consul  │◄────────►│    NATS     │  message bus
-                │ (locker/ │ cluster  └─────┬───────┘
-                │  leader) │  coord         │ consume
-                └──────────┘                ▼
-                                     ┌──────────────┐
-                                     │ gnmic-output │  :9273 /metrics
-                                     │ (Prometheus) │ ─► Prometheus / scraper
-                                     └──────────────┘
-                                            ▲
-                                            │ query
-                                     ┌──────────────┐
-                                     │   monitor    │  :8080 web UI
-                                     │ (health/     │
-                                     │  status)     │
-                                     └──────────────┘
+┌──────────────────────┐  gNMI dial-in   ┌────────────┐  publish     ┌─────────────┐
+│ gNMI targets         │   (subscribe)   │  gnmic-1   │  subject mdt │    NATS     │
+│ IOS-XE 17.x, NX-OS,  │ ──────────────► │  gnmic-2   │ ───────────► │ message bus │
+│ PAN-OS, WLC          │                 │ (clustered)│              └──────┬──────┘
+└──────────────────────┘                 └─────┬──────┘                     │ consume
+                                               │ locker / leader            ▼
+                                         ┌─────┴──────┐              ┌──────────────┐
+                                         │   consul   │              │ gnmic-output │ :9273 /metrics
+                                         └────────────┘              └──────┬───────┘
+                                                                            │ scrape (30s / 60s / 300s jobs)
+┌──────────────────────┐  gRPC dial-out                                     ▼
+│ Dial-out switches    │  :57000 (yang_grpc)                 ┌────────────────────────────┐
+│ IOS-XE < 17.12 (sw11,│ ──────────────────────────────────► │       otel-collector       │
+│ sw12, sw13, seminar) │                                     │ yang_grpc · prometheus ·   │ :9464 /metrics
+└──────────────────────┘                                     │ udp_log · hostmetrics      │ (dial-out devices)
+┌──────────────────────┐  syslog UDP :9514                   │                            │
+│ Switches (XE, NX-OS) │ ──────────────────────────────────► │                            │
+└──────────────────────┘                                     └─────────────┬──────────────┘
+                                                                           │ HEC
+                                                                           ▼
+                                                     ┌───────────────────────────────────────┐
+                                                     │ Splunk  cisco_metrics · cisco_syslog  │
+                                                     │ (app mdt_infra_monitoring)            │
+                                                     └───────────────────────────────────────┘
+                         ┌──────────────┐
+                         │   monitor    │ :8080 web UI / JSON: queries gnmic, NATS, consul, config
+                         └──────────────┘
 ```
 
-1. **Collection** — `gnmic-1` / `gnmic-2` subscribe to each target's gNMI streams
+1. **Collection (gNMI)** — `gnmic-1` / `gnmic-2` subscribe to each target's gNMI streams
    (interface, CPU, memory, PoE, CDP, MAC, wireless, firewall sessions, …).
-2. **Clustering** — Consul acts as the locker so the two collectors split the target
+2. **Collection (dial-out)** — IOS-XE switches before 17.12 stay off gnmic dial-in: they push the
+   same data (same subscriptions and intervals, [gnmic/config/dialout-iosxe.yaml](gnmic/config/dialout-iosxe.yaml))
+   over gRPC dial-out to the OTel collector's `yang_grpc` receiver on `:57000`.
+3. **Syslog** — the switches send syslog to the OTel collector (`udp_log`, `:9514`).
+4. **Clustering** — Consul acts as the locker so the two collectors split the target
    list between them (one owns each target) and fail over automatically.
-3. **Processing** — incoming gNMI updates are normalized/filtered/renamed by gnmic
-   event processors, then published to the NATS subject `mdt`.
-4. **Output** — `gnmic-output` consumes from NATS and exposes everything as Prometheus
-   metrics on `:9273/metrics`, ready to be scraped by Prometheus (or any compatible
-   scraper / OTel collector).
-5. **Monitoring** — the `monitor` service queries the collectors, NATS server, Consul,
+5. **Processing** — gnmic event processors normalize/filter/rename gNMI updates and publish
+   them to the NATS subject `mdt`; `gnmic-output` consumes them and exposes them as Prometheus
+   metrics on `:9273/metrics`. The OTel collector filters and renames the dial-out data to
+   the same metric names (`filter/cisco`, `transform/cisco`).
+6. **Export** — the OTel collector scrapes `gnmic-output` (one job per sample interval) and
+   its host metrics, and sends everything to Splunk HEC: metrics to `cisco_metrics`, syslog to
+   `cisco_syslog`. Dial-out device metrics are also on `:9464/metrics`.
+7. **Monitoring** — the `monitor` service queries the collectors, NATS server, Consul,
    and the configuration file to assemble a live status view of the entire pipeline,
    exposed as both a web UI and a JSON API on `:8080`.
 
@@ -80,7 +91,7 @@ Subscriptions are grouped by platform:
   (`aggregation/switched-vlan`: interface mode, access VLAN, restricted trunk VLANs; empty trunk list = all VLANs).
 
 IOS-XE switches that are not gnmic targets send the same data by gRPC dial-out to the OTel collector
-(port 57000). Their subscriptions are defined in [config/dialout-iosxe.yaml](config/dialout-iosxe.yaml)
+(port 57000). Their subscriptions are defined in [gnmic/config/dialout-iosxe.yaml](gnmic/config/dialout-iosxe.yaml)
 and applied over gNMI with `scripts/mdthost 'scripts/dialout-apply [switch ...]'`, which owns subscription
 IDs 57001-57099 on the switch (running config only). **Dial-in and dial-out carry the same subscriptions:**
 a change to an `xe_*` subscription in `mdt.yaml` gets the same change in `dialout-iosxe.yaml` and, for new
