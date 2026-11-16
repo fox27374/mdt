@@ -61,7 +61,8 @@ phase() {  # phase <name> <minutes> <none|v3|v2c>
   { rc=0; sudo timeout -s INT "$((mins * 60))" tcpdump -i "$iface" -e -tt -nn -l -s 96 \
     "host $switch and (tcp port 57400 or tcp port 22 or udp port 161)" 2>"$dir/tcpdump.err" || rc=$?; [ "$rc" = 0 ] || [ "$rc" = 124 ]; } \
     | python3 "$here/wire_capture.py" --switch "$switch" --out "$dir/wire.jsonl" & pids+=($!)
-  python3 "$here/podman_stats.py" --until "$end" --out "$dir/podman.jsonl" & pids+=($!)
+  python3 "$here/collector_cpu.py" --names gnmic-1,gnmic-2,gnmic-output,nats,bench-snmp-poller --until "$end" \
+    --out "$dir/collector.jsonl" & pids+=($!)
   if [ "$poll" != none ]; then
     podman run --rm --name bench-snmp-poller --network host --env-file "$envf" -v "$dir:/out" "$image" \
       python3 /app/poller.py --mode "$poll" --host "$switch" --until "$end" --out /out/walks.jsonl \

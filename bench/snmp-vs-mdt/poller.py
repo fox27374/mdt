@@ -71,8 +71,8 @@ def walk(mode, host, oids, vlan=None):
     return lines, err
 
 
-def run_dataset(name, mode, host, due):
-    interval, subtrees, per_vlan = DATASETS[name]
+def run_dataset(name, mode, host, due, interval):
+    _, subtrees, per_vlan = DATASETS[name]
     t0 = time.time()
     varbinds, calls, errors, vlans = 0, 0, [], None
 
@@ -112,14 +112,21 @@ def main():
     ap.add_argument("--until", type=float)
     ap.add_argument("--out")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--only", choices=list(DATASETS), help="walk one data set only (stress sweep)")
+    ap.add_argument("--interval", type=float, help="with --only: override that data set's interval (s)")
     a = ap.parse_args()
+    if a.interval and not a.only:
+        ap.error("--interval needs --only")
     if a.mode == "v3":
         snmp_conf()
     if a.check:
         lines, err = walk(a.mode, a.host, [SYSDESCR])
         print("ok" if lines and not err else f"fail: {err or 'no answer'}")
         return 0 if lines and not err else 1
-    names = list(DATASETS)
+    names = [a.only] if a.only else list(DATASETS)
+    interval = {n: DATASETS[n][0] for n in names}
+    if a.interval:
+        interval[a.only] = a.interval
     due = {n: time.time() for n in names}  # every data set is due at start
     with open(a.out, "a") as out:
         while True:
@@ -127,10 +134,10 @@ def main():
             if due[n] >= a.until:
                 break
             time.sleep(max(0.0, due[n] - time.time()))
-            rec = run_dataset(n, a.mode, a.host, due[n])
+            rec = run_dataset(n, a.mode, a.host, due[n], interval[n])
             out.write(json.dumps(rec) + "\n")
             out.flush()
-            due[n] += DATASETS[n][0]
+            due[n] += interval[n]
             due[n] = max(due[n], time.time())  # overran: next walk now, lag_ms shows it
     return 0
 
