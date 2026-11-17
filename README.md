@@ -64,19 +64,19 @@ flowchart LR
 
 | File | Purpose |
 |------|---------|
-| [compose.yaml](compose.yaml) | Main Compose stack: Consul, two clustered gnmic collectors, gnmic output, NATS, and the OpenTelemetry collector. |
-| [compose-debug.yaml](compose-debug.yaml) | Identical stack to `compose.yaml` but with `--debug` added to every gnmic command — used for troubleshooting. |
-| [config/mdt.yaml](config/mdt.yaml) | The core gnmic **collector** config: global auth, clustering, targets, subscriptions, processors, and the NATS output. |
-| [config/output.yaml](config/output.yaml) | The gnmic **output** config: reads from NATS and exposes the Prometheus endpoint. |
-| [config/otel.yaml](config/otel.yaml) | The OpenTelemetry **collector** config: receives Cisco model-driven telemetry (`yang_grpc`), scrapes gnmic-output and host metrics, and exports to Splunk HEC. |
-| [config/ca.pem](config/ca.pem) | CA certificate used to verify the NX-OS switch gRPC endpoints. |
-| [gnmic_env.template](gnmic_env.template) | Template for device credentials. Copy to `gnmic_env` and fill in. |
+| [compose.yaml](gnmic/compose.yaml) | Main Compose stack: Consul, two clustered gnmic collectors, gnmic output, NATS, and the OpenTelemetry collector. |
+| [compose-debug.yaml](gnmic/compose-debug.yaml) | Identical stack to `compose.yaml` but with `--debug` added to every gnmic command — used for troubleshooting. |
+| [config/mdt.yaml](gnmic/config/mdt.yaml) | The core gnmic **collector** config: global auth, clustering, targets, subscriptions, processors, and the NATS output. |
+| [config/output.yaml](gnmic/config/output.yaml) | The gnmic **output** config: reads from NATS and exposes the Prometheus endpoint. |
+| [config/otel.yaml](gnmic/config/otel.yaml) | The OpenTelemetry **collector** config: receives Cisco model-driven telemetry (`yang_grpc`), scrapes gnmic-output and host metrics, and exports to Splunk HEC. |
+| [config/ca.pem](gnmic/config/ca.pem) | CA certificate used to verify the NX-OS switch gRPC endpoints. |
+| [gnmic_env.template](gnmic/gnmic_env.template) | Template for device credentials. Copy to `gnmic_env` and fill in. |
 | `gnmic_env` | Actual device credentials (git-ignored). |
 | [otel_env.template](gnmic/otel_env.template) | Template for the collector's Splunk HEC token (`SPLUNK_HEC_TOKEN`). Copy to `otel_env` and fill in. |
 | `otel_env` | Actual Splunk HEC token for the collector (git-ignored). |
-| [monitor/](monitor/) | The gnmic-monitor web service: health status and health API for the entire stack. |
+| [monitor/](gnmic/monitor/) | The gnmic-monitor web service: health status and health API for the entire stack. |
 
-> **Note:** The Compose files mount this repo's `config/` directory straight into the
+> **Note:** The Compose files mount this repo's `gnmic/config/` directory straight into the
 > containers (`volumes: ./config:/app/config:z`). The `:z` suffix relabels the content
 > for SELinux so the rootless Podman containers can read it — harmless on non-SELinux
 > hosts.
