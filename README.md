@@ -385,7 +385,7 @@ A host's overall level is the worst of its metrics.
 To monitor a host other than `docker-host`, run `node_exporter` on that host (for example, version v1.12.1 from `docker.io/prom/node-exporter`), then add it to `HOSTS`:
 
 ```bash
-export MONITOR_HOSTS="$(hostname)=http://host.containers.internal:9100,other-host=http://10.0.0.2:9100"
+export MONITOR_HOSTS="$(hostname)=http://host.containers.internal:9100,other-host=http://192.0.2.10:9100"
 podman-compose up -d
 ```
 
