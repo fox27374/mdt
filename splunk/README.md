@@ -26,6 +26,27 @@ then in Splunk Web go to **Apps > Manage Apps > Install app from file**, pick th
 
 The built visualization bundle is committed, so installing needs no Node.js.
 
+## Dashboards
+
+Lab names, addresses and MACs are blurred in the screenshots.
+
+**Network Overview**: the topology from CDP, links coloured by port health (green ok, yellow MTU/CRC errors, red duplex
+mismatch), click a node or link to drill down.
+
+![Network Overview](../docs/screenshots/network-overview.png)
+
+**Switch Details**: port faceplate, CPU, memory, PoE, top interfaces by utilization and errors, throughput and errors over time.
+
+![Switch Details](../docs/screenshots/switch-details.png)
+
+**Interface Details**: one port with its status, error kinds and the far end of its CDP link side by side.
+
+![Interface Details](../docs/screenshots/interface-details.png)
+
+**Telemetry Ingest**: metrics per second by pipeline, devices sending or silent, subscriptions and licence use.
+
+![Telemetry Ingest](../docs/screenshots/telemetry-ingest.png)
+
 ## Index names
 
 Every search reads the indexes through two macros in `default/macros.conf`:
