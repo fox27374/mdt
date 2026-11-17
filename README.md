@@ -9,34 +9,36 @@ of Podman containers managed with `podman-compose`.
 
 ## Architecture
 
-```
-┌──────────────────────┐  gNMI dial-in   ┌────────────┐  publish     ┌─────────────┐
-│ gNMI targets         │   (subscribe)   │  gnmic-1   │  subject mdt │    NATS     │
-│ IOS-XE 17.x, NX-OS,  │ ──────────────► │  gnmic-2   │ ───────────► │ message bus │
-│ PAN-OS, WLC          │                 │ (clustered)│              └──────┬──────┘
-└──────────────────────┘                 └─────┬──────┘                     │ consume
-                                               │ locker / leader            ▼
-                                         ┌─────┴──────┐              ┌──────────────┐
-                                         │   consul   │              │ gnmic-output │ :9273 /metrics
-                                         └────────────┘              └──────┬───────┘
-                                                                            │ scrape (30s / 60s / 300s jobs)
-┌──────────────────────┐  gRPC dial-out                                     ▼
-│ Dial-out switches    │  :57000 (yang_grpc)                 ┌────────────────────────────┐
-│ IOS-XE < 17.12 (sw11,│ ──────────────────────────────────► │       otel-collector       │
-│ sw12, sw13, seminar) │                                     │ yang_grpc · prometheus ·   │ :9464 /metrics
-└──────────────────────┘                                     │ udp_log · hostmetrics      │ (dial-out devices)
-┌──────────────────────┐  syslog UDP :9514                   │                            │
-│ Switches (XE, NX-OS) │ ──────────────────────────────────► │                            │
-└──────────────────────┘                                     └─────────────┬──────────────┘
-                                                                           │ HEC
-                                                                           ▼
-                                                     ┌───────────────────────────────────────┐
-                                                     │ Splunk  cisco_metrics · cisco_syslog  │
-                                                     │ (app mdt_infra_monitoring)            │
-                                                     └───────────────────────────────────────┘
-                         ┌──────────────┐
-                         │   monitor    │ :8080 web UI / JSON: queries gnmic, NATS, consul, config
-                         └──────────────┘
+```mermaid
+flowchart LR
+  subgraph sources[Network devices]
+    targets["gNMI targets<br/>IOS-XE 17.12+, NX-OS, PAN-OS, WLC"]
+    dialout["Dial-out switches<br/>IOS-XE before 17.12<br/>sw11, sw12, sw13, seminar"]
+    syslogsrc["Switches<br/>IOS-XE, NX-OS"]
+  end
+
+  subgraph stack[Podman stack]
+    gnmic["gnmic-1 / gnmic-2<br/>clustered collectors"]
+    consul[("consul<br/>locker / leader")]
+    nats[["NATS<br/>subject mdt"]]
+    output["gnmic-output<br/>:9273/metrics"]
+    otel["otel-collector<br/>yang_grpc · prometheus<br/>udp_log · hostmetrics<br/>:9464/metrics"]
+    monitor["monitor<br/>:8080 web UI / JSON"]
+  end
+
+  splunk[("Splunk<br/>cisco_metrics · cisco_syslog<br/>app mdt_infra_monitoring")]
+
+  targets -- "gNMI dial-in<br/>subscribe" --> gnmic
+  gnmic <-. "target ownership" .-> consul
+  gnmic -- publish --> nats
+  nats -- consume --> output
+  output -- "scrape<br/>30 s / 60 s / 300 s jobs" --> otel
+  dialout -- "gRPC dial-out<br/>:57000" --> otel
+  syslogsrc -- "syslog UDP<br/>:9514" --> otel
+  otel -- HEC --> splunk
+  monitor -. queries .-> gnmic
+  monitor -.-> nats
+  monitor -.-> consul
 ```
 
 1. **Collection (gNMI)** — `gnmic-1` / `gnmic-2` subscribe to each target's gNMI streams
