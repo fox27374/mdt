@@ -8,7 +8,7 @@ Scope: one switch, `ibk-lab-sw98` (172.24.80.240, Catalyst IOS-XE 17.18, gnmic d
 are a config change (see "Running on another switch"). No Splunk, no dashboard, no report page: the output is
 `summary.json` and `summary.txt`.
 
-Report of the 16 Nov 2026 runs: [MDT vs SNMP on sw98](https://claude.ai/artifact/7Pbn6GKFwvbgJauDJ68qYs).
+Report of the 16 Nov 2026 runs: [REPORT.md](REPORT.md).
 
 ## What runs where
 
