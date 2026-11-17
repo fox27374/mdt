@@ -13,7 +13,7 @@ of Podman containers managed with `podman-compose`.
 flowchart LR
   subgraph sources[Network devices]
     targets["gNMI targets<br/>IOS-XE 17.12+, NX-OS, PAN-OS, WLC"]
-    dialout["Dial-out switches<br/>IOS-XE before 17.12<br/>sw11, sw12, sw13, seminar"]
+    dialout["Dial-out switches<br/>IOS-XE before 17.12"]
     syslogsrc["Switches<br/>IOS-XE, NX-OS"]
   end
 
@@ -162,7 +162,7 @@ default is used up: any further subscription or Get fails with
 rpc error: code = ResourceExhausted desc = Max worker thread limit reached: 8
 ```
 
-Raise the limit to the maximum on every Nexus target (ntsnxsw01 and ntsnxsw02 run with 16 since 2026-10-27):
+Raise the limit to the maximum on every Nexus target:
 
 ```
 configure terminal
@@ -206,7 +206,7 @@ their state, VLANs and the CDP neighbours of the members. Data:
 The Splunk macros `mdt_lag_members`, `mdt_lag_vlans` and `mdt_lag_speed` read these metrics and name the
 port-channel the same way as the interfaces (`mdt_ifkey`: `port-channel103`, `eth1/3`).
 
-**IOS-XE 16.12 dial-out (sw11, sw12, sw13, seminar).** `xe_lag_info` is in `dialout-iosxe.yaml` (57010, 57011), with
+**IOS-XE 16.12 dial-out.** `xe_lag_info` is in `dialout-iosxe.yaml` (57010, 57011), with
 two differences from gnmic:
 - 16.12 takes openconfig xpaths only with the short module prefixes (`/oc-if:interfaces/interface/oc-eth:ethernet/...`);
   the full module names are "Invalid XPath filter".
@@ -418,7 +418,7 @@ Do not enable `podman.socket` as well; both bind the same path. Check with `curl
 ## Splunk app
 
 [splunk/mdt_infra_monitoring/](splunk/mdt_infra_monitoring/) is the Splunk app **MDT Infrastructure
-Monitoring** on the Splunk host (`ibk-free-splunk`, 172.24.89.194). It holds the dashboards Network
+Monitoring** on the Splunk host. It holds the dashboards Network
 Overview (the start page), Switch Overview, Switch Details, Wireless Overview and Wireless Client
 Details, one XML file per dashboard in `default/data/ui/views/`.
 Install it, package it or change it: see [splunk/README.md](splunk/README.md).
@@ -490,8 +490,8 @@ the edited view into the repo, delete it on the host, then deploy.
 
 ## MDT vs SNMP benchmark
 
-[bench/snmp-vs-mdt](bench/snmp-vs-mdt/) measures MDT streaming against SNMPv3 polling of the same data on one switch
-(`ibk-lab-sw98`): switch CPU per process, wire bytes and packets, sample delivery, rate accuracy and collector CPU, at
+[bench/snmp-vs-mdt](bench/snmp-vs-mdt/) measures MDT streaming against SNMPv3 polling of the same data on one
+Catalyst switch: switch CPU per process, wire bytes and packets, sample delivery, rate accuracy and collector CPU, at
 the production intervals and in a 30 s to 1 s sweep. Results: [REPORT.md](bench/snmp-vs-mdt/REPORT.md). In short: on this switch MDT
 costs more switch CPU than polling and drops samples below 10 s; it wins on exact (switch-timestamped) rates and
 fewer packets.
