@@ -485,3 +485,11 @@ the edited view into the repo, delete it on the host, then deploy.
 | 8080 | monitor | Monitor web UI and `/api/status` |
 | 57400 | targets | gNMI dial-in port on switches |
 | 9339 | targets | gNMI dial-in port on Palo Alto firewalls |
+
+## MDT vs SNMP benchmark
+
+[bench/snmp-vs-mdt](bench/snmp-vs-mdt/) measures MDT streaming against SNMPv3 polling of the same data on one switch
+(`ibk-lab-sw98`): switch CPU per process, wire bytes and packets, sample delivery, rate accuracy and collector CPU, at
+the production intervals and in a 30 s to 1 s sweep. Results: [MDT vs SNMP on sw98](https://claude.ai/artifact/7Pbn6GKFwvbgJauDJ68qYs). In short: on this switch MDT
+costs more switch CPU than polling and drops samples below 10 s; it wins on exact (switch-timestamped) rates and
+fewer packets.
