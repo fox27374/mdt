@@ -6,19 +6,19 @@ This directory contains live data samples captured from the running MDT (Streami
 
 ### 1. NATS Events
 
-The payload is a JSON **array** (one array per NATS message). The subscription name is stored in the tag key `subscription-name` (e.g., `"subscription-name": "xe_mem_stats"`). The target is identified by the tag key `source`, which contains the configured target name (e.g., `"source": "ibk-lab-sw98"`). The `timestamp` field is in nanoseconds since epoch (e.g., `1791390138349328000`).
+The payload is a JSON **array** (one array per NATS message). The subscription name is stored in the tag key `subscription-name` (e.g., `"subscription-name": "xe_mem_stats"`). The target is identified by the tag key `source`, which contains the configured target name (e.g., `"source": "switch01"`). The `timestamp` field is in nanoseconds since epoch (e.g., `1791390138349328000`).
 
 ### 2. Collector API `/api/v1/targets`
 
-The top-level JSON object is keyed by target name (e.g., `{"Lab-IBK-PA560-2": {...}, "ibk-lab-ewlc01": {...}}`). Within each target, the `config` object contains the `name` (configured name), `address` (IP:port), and `subscriptions` (array of subscription names). The `sample-interval` is a number representing nanoseconds (e.g., `30000000000` for 30 seconds). Each collector instance lists only the targets it owns; gnmic-1 lists different targets than gnmic-2 based on the clustering/locking mechanism.
+The top-level JSON object is keyed by target name (e.g., `{"firewall01": {...}, "wlc01": {...}}`). Within each target, the `config` object contains the `name` (configured name), `address` (IP:port), and `subscriptions` (array of subscription names). The `sample-interval` is a number representing nanoseconds (e.g., `30000000000` for 30 seconds). Each collector instance lists only the targets it owns; gnmic-1 lists different targets than gnmic-2 based on the clustering/locking mechanism.
 
 ### 3. gnmic Metrics
 
-The label values of `name` in metrics like `gnmic_target_up` and `gnmic_target_connection_state` contain the target's configured name (e.g., `Lab-IBK-PA560-2`, `ibk-lab-sw98`, `ibk-lab-ewlc01`). The labels `source` and `subscription` in `gnmic_subscribe_number_of_failed_subscribe_request_messages_total` contain the target's configured name (e.g., `source="ibk-lab-sw99"`) and subscription name (e.g., `subscription="xe_if_stats"`).
+The label values of `name` in metrics like `gnmic_target_up` and `gnmic_target_connection_state` contain the target's configured name (e.g., `firewall01`, `switch01`, `wlc01`). The labels `source` and `subscription` in `gnmic_subscribe_number_of_failed_subscribe_request_messages_total` contain the target's configured name (e.g., `source="switch01"`) and subscription name (e.g., `subscription="xe_if_stats"`).
 
 ### 4. Consul Service Registration
 
-The registered service name is `mdt-gnmic-api`. The tags include `instance-name=gnmic-1` (or `gnmic-2`), `cluster-name=mdt`, and `__protocol=http`. Target lock keys in Consul KV follow the pattern `gnmic/mdt/targets/<target-name>` (e.g., `gnmic/mdt/targets/ibk-lab-sw98`), plus a leader election key at `gnmic/mdt/leader`.
+The registered service name is `mdt-gnmic-api`. The tags include `instance-name=gnmic-1` (or `gnmic-2`), `cluster-name=mdt`, and `__protocol=http`. Target lock keys in Consul KV follow the pattern `gnmic/mdt/targets/<target-name>` (e.g., `gnmic/mdt/targets/switch01`), plus a leader election key at `gnmic/mdt/leader`.
 
 ### 5. NATS Server Info
 

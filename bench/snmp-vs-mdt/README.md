@@ -4,7 +4,7 @@ Measures what it costs to collect the same data from one switch over SNMPv3 (and
 existing gNMI/MDT streaming: collection time, switch CPU per process, bytes and packets on the wire, collector
 CPU and memory, and how fresh the data is at the collector.
 
-Scope: one switch, `ibk-lab-sw98` (172.24.80.240, Catalyst IOS-XE 17.18, gnmic dial-in on :57400). Other switches
+Scope: one test switch (Catalyst IOS-XE 17.18, gnmic dial-in on :57400; address `BENCH_SWITCH`, default in `run.sh`). Other switches
 are a config change (see "Running on another switch"). No Splunk, no dashboard, no report page: the output is
 `summary.json` and `summary.txt`.
 
@@ -12,7 +12,7 @@ Report of the 16 Nov 2026 runs: [REPORT.md](REPORT.md).
 
 ## What runs where
 
-Everything runs on the test host `kof-ibk-debian4` (172.24.89.69, user `claude`). The switches are reachable only
+Everything runs on the test host. The switches are reachable only
 from there. The bench is deployed to `/home/claude/bench/snmp-vs-mdt` (not the `mdthost` work copy, which is wiped on
 every `mdthost` call).
 
@@ -21,7 +21,7 @@ every `mdthost` call).
 | `switch-snmp.sh` | host | `apply` / `remove` / `show` the SNMP config on the switch (ACL: test host only) |
 | `switch_ssh.sh` | host | IOS-XE CLI over SSH, same method as `scripts/swcli`, used by the sampler and the SNMP script |
 | `Dockerfile`, `poller.py` | container `bench-snmp-poller` | net-snmp `snmpbulkwalk`, one walk per MDT data set at its interval |
-| `nats_sub.py` | host | passive NATS subscriber on gnmic's `mdt` subject, records sw98 messages |
+| `nats_sub.py` | host | passive NATS subscriber on gnmic's `mdt` subject, records the test switch's messages |
 | `cpu_sampler.py` | host | one SSH session per minute: switch clock and CPU per process |
 | `wire_capture.py` | host | reads `tcpdump` on stdin, bytes and packets per minute per class and direction |
 | `collector_cpu.py` | host | cgroup v2 CPU time and memory of gnmic-1, gnmic-2, gnmic-output, nats, bench-gnmic, bench-snmp-poller, once a minute |
@@ -39,7 +39,7 @@ every `mdthost` call).
 - Deploy: from the repo root on the laptop
 
   ```
-  tar -C bench/snmp-vs-mdt --exclude=__pycache__ -cf - . | ssh claude@172.24.89.69 \
+  tar -C bench/snmp-vs-mdt --exclude=__pycache__ -cf - . | ssh <user>@<test-host> \
     'mkdir -p /home/claude/bench/snmp-vs-mdt && tar -C /home/claude/bench/snmp-vs-mdt -xf - && chmod +x /home/claude/bench/snmp-vs-mdt/*.sh /home/claude/bench/snmp-vs-mdt/*.py'
   ```
 
@@ -48,7 +48,7 @@ every `mdthost` call).
 `switch-snmp.sh apply` pushes exactly this, all names prefixed `BENCH-` or `benchsnmp`:
 
 ```
-ip access-list standard BENCH-SNMP            ! 10 permit 172.24.89.69 (the test host) only
+ip access-list standard BENCH-SNMP            ! 10 permit <test-host> only
 snmp-server view BENCH-VIEW iso included       ! read-only
 snmp-server group BENCH-V3 v3 priv read BENCH-VIEW access BENCH-SNMP
 snmp-server group BENCH-V3 v3 priv context vlan- match prefix read BENCH-VIEW access BENCH-SNMP
@@ -74,13 +74,13 @@ snmp-server community <community> view BENCH-VIEW RO BENCH-SNMP
 Smoke run (5 min baseline + 5 min SNMP):
 
 ```
-ssh claude@172.24.89.69 'cd /home/claude/bench/snmp-vs-mdt && setsid nohup ./run.sh --baseline-min 5 --snmp-min 5 >/home/claude/bench/smoke-launch.log 2>&1 </dev/null &'
+ssh <user>@<test-host> 'cd /home/claude/bench/snmp-vs-mdt && setsid nohup ./run.sh --baseline-min 5 --snmp-min 5 >/home/claude/bench/smoke-launch.log 2>&1 </dev/null &'
 ```
 
 Full run, 60 min each (about 2 h), detached so it survives the session:
 
 ```
-ssh claude@172.24.89.69 'cd /home/claude/bench/snmp-vs-mdt && setsid nohup ./run.sh >/home/claude/bench/full-launch.log 2>&1 </dev/null &'
+ssh <user>@<test-host> 'cd /home/claude/bench/snmp-vs-mdt && setsid nohup ./run.sh >/home/claude/bench/full-launch.log 2>&1 </dev/null &'
 ```
 
 Options: `--baseline-min N`, `--snmp-min N`, `--v2c` (adds an `snmp-v2c` phase, needs the community in the config),
@@ -92,7 +92,7 @@ Progress: `/home/claude/bench/runs/<timestamp>/run.log`. Results: `/home/claude/
 ```
 run.json  run.log  summary.json  summary.txt
 <phase>/phase.json       start, end, poll mode
-<phase>/nats.jsonl       one row per NATS message for sw98: switch and receive time, bytes, subscription
+<phase>/nats.jsonl       one row per NATS message for the test switch: switch and receive time, bytes, subscription
 <phase>/cpu.jsonl        one row per minute: switch clock offset, CPU per process (raw output kept)
 <phase>/wire.jsonl       one row per minute, class (gnmi/snmp/ssh/other) and direction: packets, bytes
 <phase>/collector.jsonl  one row per container per minute: cgroup CPU time and memory (raw counters)
@@ -112,7 +112,7 @@ Phases, one after another, never two bench loads at once:
 | Phase | Load | Length (default) |
 |---|---|---|
 | `baseline` | none (live stack only) | 30 min |
-| `mdt-double` | bench gnmic: an identical second copy of all ten sw98 subscriptions | 30 min |
+| `mdt-double` | bench gnmic: an identical second copy of all ten subscriptions of the test switch | 30 min |
 | `mdt-30s`, `mdt-10s`, `mdt-5s`, `mdt-1s` | bench gnmic: `xe_if_stats` only, at that sample interval | 15 min each |
 | `snmp-30s`, `snmp-10s`, `snmp-5s`, `snmp-1s` | SNMPv3 poller: `xe_if_stats` only, walked at that interval | 15 min each |
 
@@ -120,7 +120,7 @@ Launch (about 3 h for the defaults; `--baseline-min`, `--double-min` and `--step
 run is `--baseline-min 2 --double-min 2 --step-min 2`):
 
 ```
-ssh claude@172.24.89.69 'cd /home/claude/bench/snmp-vs-mdt && setsid nohup ./stress.sh >/home/claude/bench/stress-launch.log 2>&1 </dev/null &'
+ssh <user>@<test-host> 'cd /home/claude/bench/snmp-vs-mdt && setsid nohup ./stress.sh >/home/claude/bench/stress-launch.log 2>&1 </dev/null &'
 ```
 
 Progress: `/home/claude/bench/runs/stress-<timestamp>/run.log`. Results in the same run dir: `summary.json`,
@@ -135,7 +135,7 @@ Progress: `/home/claude/bench/runs/stress-<timestamp>/run.log`. Results in the s
 ```
 
 **Bench gnmic.** Container `bench-gnmic`, image `ghcr.io/openconfig/gnmic:0.46.0` (the live image), `--network host`,
-credentials from `/opt/gnmic/gnmic_env` through `--env-file` (read only). One target, sw98, with the subscriptions
+credentials from `/opt/gnmic/gnmic_env` through `--env-file` (read only). One target, the test switch, with the subscriptions
 copied from the live `gnmic/config/mdt.yaml` on the host (`BENCH_MDT_YAML`, default
 `/home/claude/mdt/gnmic/config/mdt.yaml`, the file gnmic-1 runs). Output is a file, not NATS: nothing is published to
 the live `mdt` subject, so Splunk and the dashboards do not see the bench. The file output has no processors, so the
@@ -159,10 +159,10 @@ SNMP:
 
 A sample from the switch arrives as a burst of gNMI messages a few tens of milliseconds apart (IOS-XE splits one sample
 into several messages, each with a different group of leaves). `analyze.py` therefore counts a new sample only after a gap
-longer than half the nominal interval. Measured on sw98 at 1 s: a burst every second, about five messages per burst.
+longer than half the nominal interval. Measured on the test switch at 1 s: a burst every second, about five messages per burst.
 
 **mdt-double.** The second copy of all ten subscriptions (`<name>_copy`, same paths, modes and intervals) runs for 30
-min against a 30-min baseline. The deltas are the cost of one MDT set of sw98 subscriptions: the switch CPU of ndbmand,
+min against a 30-min baseline. The deltas are the cost of one MDT set of the test switch's subscriptions: the switch CPU of ndbmand,
 pubd, gnmib, IOSd and platform, and the gnmi wire rates.
 
 **Rate accuracy.** Computed in `analyze.py`, no extra phase. Two error bounds, in percent of the rate, per interval:
@@ -191,7 +191,7 @@ stream, nominal 30 s) by re-running `analyze.py` on that run dir.
 
 ## Data sets and MIB mapping
 
-Each MDT subscription in `gnmic/config/mdt.yaml` on sw98 is one data set. The poller walks it at the same interval
+Each MDT subscription in `gnmic/config/mdt.yaml` for the test switch is one data set. The poller walks it at the same interval
 (`DATASETS` in `poller.py`). Each walk is a full subtree walk: SNMP has no per-leaf subscription, so the cost of
 the whole table is what it costs.
 
@@ -225,7 +225,7 @@ cut the request count, so the numbers here are for the defaults.
   gRPC/MDT/telemetry, and `show processes cpu platform sorted` for pubd, ndbmand, dmiauthd, gnmib and confd. Values
   are 5 s, 1 min and 5 min percent. `analyze.py` reports the 1-min column (mean and max) and the delta against
   baseline.
-- **Wire** (`wire.jsonl`): `tcpdump -e` frame length, Ethernet header included, for traffic to and from 172.24.80.240
+- **Wire** (`wire.jsonl`): `tcpdump -e` frame length, Ethernet header included, for traffic to and from the switch
   on TCP 57400 (gNMI), UDP 161 (SNMP) and TCP 22 (the CPU sampler's SSH).
 - **Collector** (`collector.jsonl`): cgroup v2 `cpu.stat` usage_usec and `memory.current` for the gnmic/NATS containers
   and the poller, read once a minute through the container's init PID. `analyze.py` turns the difference between two
@@ -256,7 +256,7 @@ cut the request count, so the numbers here are for the defaults.
 
 Set `BENCH_SWITCH=<ip>` for `run.sh` and `switch-snmp.sh`. `BENCH_SRC_IP` sets the one address the ACL permits (the
 test host). The `mgmt_ip` filter in `nats_sub.py` is the `--mgmt-ip` argument (set by `run.sh`). The data-set mapping
-assumes the same subscriptions as sw98: check the subscriptions in `gnmic/config/mdt.yaml` for that switch and
+assumes the same subscriptions as the test switch: check the subscriptions in `gnmic/config/mdt.yaml` for that switch and
 adjust `DATASETS` in `poller.py` if they differ. Platform-specific MIB subtrees (CISCO-VTP, CISCO-PROCESS) need to
 exist on that platform. Note that `switch-snmp.sh` uses the same `BENCH-*` names on every switch.
 
