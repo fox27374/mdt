@@ -1,6 +1,6 @@
 # Node Exporter Fixtures
 
-This directory contains fixtures captured from the Prometheus node_exporter running on the test host (kof-ibk-debian4). The fixtures were captured on 2026-10-08.
+This directory contains fixtures captured from the Prometheus node_exporter running on the test host. The fixtures were captured on 2026-10-08.
 
 ## Image Tag and Podman Command
 

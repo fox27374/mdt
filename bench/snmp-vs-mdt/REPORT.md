@@ -1,6 +1,6 @@
-# MDT vs SNMP on sw98
+# MDT vs SNMP on one switch
 
-Measurement on `ibk-lab-sw98` (Catalyst, IOS-XE 17.18), 16 Nov 2026. The same data from one switch, collected two
+Measurement on one lab switch (Catalyst, IOS-XE 17.18), 16 Nov 2026. The same data from one switch, collected two
 ways: gNMI streaming (MDT) and SNMPv3 authPriv (SHA/AES) polling of the matching MIBs.
 
 - **Run 2** (`stress-20261116-143829`) pushes interface counters to 30, 10, 5 and 1 s, MDT alone and SNMP alone, and
@@ -152,10 +152,10 @@ one IOS-XE release: do not generalise.
 
 ## Method
 
-- Data sets match the ten gnmic subscriptions of sw98; the MIB mapping is in [README.md](README.md#data-sets-and-mib-mapping).
+- Data sets match the ten gnmic subscriptions of the test switch; the MIB mapping is in [README.md](README.md#data-sets-and-mib-mapping).
 - Poller: net-snmp `snmpbulkwalk` in a container on the collector host, read-only SNMP access limited to that host by ACL.
 - Switch CPU: `show processes cpu` and `show processes cpu platform` once a minute over SSH; the 1-minute column.
 - Run 1 measured the production MDT stream passively from NATS. Run 2 used a separate bench gnmic writing to a file
-  (never to the production NATS), so the production stream for sw98 kept running unchanged as a constant background.
+  (never to the production NATS), so the production stream for the test switch kept running unchanged as a constant background.
 - Collector CPU in Run 2 from cgroup counters. Clocks NTP-synced.
 - Code: this directory. Runs `20261116-103628` (Run 1) and `stress-20261116-143829` (Run 2) on the test host.

@@ -1,6 +1,6 @@
 # Podman Exporter Fixtures
 
-This directory contains fixtures captured from prometheus-podman-exporter running on the test host (kof-ibk-debian4). The fixtures were captured on 2026-10-09.
+This directory contains fixtures captured from prometheus-podman-exporter running on the test host. The fixtures were captured on 2026-10-09.
 
 ## Image and Run Command
 

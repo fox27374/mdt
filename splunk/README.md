@@ -83,7 +83,7 @@ prefix). A device that goes silent shows as silent in the picked range.
 
 Device roles (core, distribution, access, wlc, firewall, server, hidden) are entries in the KV store collection
 `mdt_device_roles`. It starts empty: open **Network Overview > Topology settings** and add patterns (`*` is a wildcard,
-for example `ibk-lab-sw*`). Writing needs the `power` or `admin` role.
+for example `core-sw*`). Writing needs the `power` or `admin` role.
 
 ## Maintaining the dashboards
 
