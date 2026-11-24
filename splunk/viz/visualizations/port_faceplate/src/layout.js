@@ -4,6 +4,16 @@
 
 const PATH = /^\D+(\d+(?:\/\d+)+)/;
 const NX_OS = /^(Ethernet|eth)\d/; // NX-OS names: Ethernet1/1, eth1/1 (case-sensitive: PAN-OS ethernet1/3 is copper)
+// Firewall models drawn as their front panel: ports 1..ports on member 1, groups of four (two columns each), ports
+// from sfpFrom are SFP (fibre) in their own block. Matched on the row model; switch models never match.
+const MODEL_PROFILES = {
+  'PA-550': { ports: 24, sfpFrom: 17 },
+  'PA-560': { ports: 24, sfpFrom: 17 },
+};
+const profileOf = (model) => {
+  const m = String(model ?? '').trim();
+  return Object.hasOwn(MODEL_PROFILES, m) ? MODEL_PROFILES[m] : null;
+};
 
 // Units are SVG user units; the SVG scales to the panel.
 const PITCH = 30; // column pitch: two ports per column (odd port top, even port bottom)
@@ -37,8 +47,11 @@ export function portKind(row) {
   if (row.state === "admin down") return "admin";
   if (row.state !== "up") return "down";
   const p = parseInterface(row.interface);
-  const fibre = !!p && (p.module !== 0 || NX_OS.test(row.interface) || FIBRE.test(row.interface));
-  const full = Number(row.speed) >= (fibre ? 1e10 : 1e9);
+  const profile = profileOf(row.model);
+  const fibre = profile ? p?.port >= profile.sfpFrom : (!!p && (p.module !== 0 || NX_OS.test(row.interface) || FIBRE.test(row.interface)));
+  // An up port with no speed (empty, SPEED_UNKNOWN) is drawn full: the link is up.
+  const bps = Number(row.speed);
+  const full = !(bps > 0) || bps >= (fibre ? 1e10 : 1e9);
   return (fibre ? "fibre" : "copper") + (full ? "" : "-slow");
 }
 
@@ -64,7 +77,35 @@ const slotY = (port) => (port % 2 === 1 ? 0 : ROW);
 
 // rows: [{interface, ...}]. Returns {items, labels, heads, skipped, width, height}.
 // items: {index, x, y, size} with index into rows; labels: {text, x, y}; heads: {text, x, y}.
+// A known firewall model draws every profile port: items without a row have index null and carry port.
 export function layoutFaceplate(rows) {
+  const row = rows.find((r) => profileOf(r.model));
+  return row ? profileLayout(rows, profileOf(row.model), row.model) : switchLayout(rows);
+}
+
+function profileLayout(rows, profile, model) {
+  const slotOf = new Map(); // port number -> row index
+  let skipped = 0;
+  rows.forEach((row, index) => {
+    const p = parseInterface(row.interface);
+    if (p && p.member === 1 && p.module === 0 && p.lane === null && p.port >= 1 && p.port <= profile.ports) slotOf.set(p.port, index);
+    else skipped += 1;
+  });
+  const items = [];
+  const labels = [];
+  let width = 0;
+  for (let port = 1; port <= profile.ports; port += 1) {
+    const group = Math.floor((port - 1) / 4);
+    const x = (2 * group + Math.floor(((port - 1) % 4) / 2)) * PITCH + group * GROUP_GAP + (port >= profile.sfpFrom ? BLOCK_GAP : 0);
+    const y = HEAD + slotY(port);
+    items.push({ index: slotOf.get(port) ?? null, port, x, y, size: SQ });
+    labels.push({ text: String(port), x: x + SQ / 2, y: y + LABEL });
+    width = Math.max(width, x + SQ);
+  }
+  return { items, labels, heads: [{ text: memberLabel(1, model), x: 0, y: 11 }], skipped, width, height: STRIP + HEAD };
+}
+
+function switchLayout(rows) {
   const members = new Map();
   const models = new Map();
   let skipped = 0;
