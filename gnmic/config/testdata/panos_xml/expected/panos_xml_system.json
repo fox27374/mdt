@@ -1,0 +1,25 @@
+[
+  {
+    "name": "panos_xml_system",
+    "timestamp": 1795518949000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_system"
+    },
+    "values": {
+      "app_release": 1795475474,
+      "app_version": "9178-10373",
+      "av_release": 1795438813,
+      "av_version": "5754-6282",
+      "sw_version": "12.1.10-h4",
+      "threat_release": 1795475474,
+      "threat_version": "9178-10373",
+      "uptime": 647382,
+      "url_version": "20261124.20169",
+      "wildfire_release": 1795521457,
+      "wildfire_version": "1138197-1142923"
+    }
+  }
+]

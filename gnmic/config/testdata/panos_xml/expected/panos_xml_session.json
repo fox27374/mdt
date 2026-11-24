@@ -1,0 +1,23 @@
+[
+  {
+    "name": "panos_xml_session",
+    "timestamp": 1795518940000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_session"
+    },
+    "values": {
+      "cps": 4,
+      "kbps": 9566,
+      "num_active": 654,
+      "num_icmp": 8,
+      "num_installed": 10277760,
+      "num_max": 600000,
+      "num_tcp": 416,
+      "num_udp": 217,
+      "pps": 1408
+    }
+  }
+]

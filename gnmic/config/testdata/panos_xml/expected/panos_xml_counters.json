@@ -1,0 +1,722 @@
+[
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "packet",
+      "counter": "pkt_session_closed_fastpath",
+      "desc": "Packets dropped: flow closed at fastpath",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 1
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "packet",
+      "counter": "pkt_lldp_sent_intf_down",
+      "desc": "LLDP Packets sent are dropped because the interface is down",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 21574
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_rcv_err",
+      "desc": "Packets dropped: flow stage receive error",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 15879
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_rcv_dot1q_tag_err",
+      "desc": "Packets dropped: 802.1q tag not configured",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 373136
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_no_interface",
+      "desc": "Packets dropped: invalid interface",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 373136
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_ipv6_disabled",
+      "desc": "Packets dropped: IPv6 disabled on interface",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 20200
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_policy_nofwd",
+      "desc": "Session setup: no destination zone from forwarding",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 1597
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_policy_deny",
+      "desc": "Session setup: denied by policy",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 4181042
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_policy_nat",
+      "desc": "Session setup: source NAT IP/port allocation error",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 118
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_tcp_non_syn_drop",
+      "desc": "Packets dropped: non-SYN TCP without session match",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 554172
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_fwd_l3_bcast_drop",
+      "desc": "Packets dropped: unhandled IP broadcast",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 4681
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_fwd_l3_mcast_drop",
+      "desc": "Packets dropped: no route for IP multicast",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 472488
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_icmp_err_not_passing_thru",
+      "desc": "ICMP error packet dropped: no IP configured on the interface",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 53179
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_fwd_l3_ttl_zero",
+      "desc": "Packets dropped: IP TTL reaches zero",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 100954
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_fwd_l3_noarp",
+      "desc": "Packets dropped: no ARP",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 7871
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_fwd_zonechange",
+      "desc": "Packets dropped: forwarded to different zone",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 1
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_fwd_ip_df_drop",
+      "desc": "Packets dropped: exceeded MTU but DF bit present",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 3225
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_xmt_platform_encap_err",
+      "desc": "Packets dropped: Platform encapsulation error",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 21612
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_pred_conv_dos_slowpath_non_syn",
+      "desc": "predict convert failed non SYN tcp in DOS slowpath.",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 12658
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_action_close",
+      "desc": "TCP sessions closed via injecting RST",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 208
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_action_reset",
+      "desc": "TCP clients reset via responding RST",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 29
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_ager_predict_race_detected",
+      "desc": "concurrent access attempt of predict session detected",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 30
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_arp_rcv_err",
+      "desc": "ARP receive error",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 235
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_nd_entry_not_found",
+      "desc": "ND entry not found for na",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 2
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_mld_rcv_err",
+      "desc": "MLD receive error",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 12799
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_host_rcv_err",
+      "desc": "Packets dropped: receive error from control plane",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 173
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_host_decap_err",
+      "desc": "Packets dropped: decapsulation error from control plane",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 29291
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_host_service_deny",
+      "desc": "Device management session denied",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 16108
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_host_service_unknown",
+      "desc": "Session discarded: unknown application to control plane",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 197
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_host_ha_decap_err",
+      "desc": "Packets dropped: decapsulation error from control plane's HA agent",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 5
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_tunnel_natt_nomatch",
+      "desc": "Packet dropped: IPSec NATT packet without SPI match",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 31
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_host_slowpath_drop",
+      "desc": "ESP/AH host bound packet comes before tunnel finishes installation",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 2
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_gre_tunnel_decap_not_found",
+      "desc": "GRE Tunnel IPs don't match configuration",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 133
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_bfd_tx_fail",
+      "desc": "BFD packet tx failed",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 12
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_predict_convert_runsetup_err",
+      "desc": "Predict conversion run setup failed",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 12658
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "ctd",
+      "counter": "ctd_zip_decompress_failure",
+      "desc": "Zip decompress failures",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 12
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "ctd",
+      "counter": "ctd_filter_decode_failure_zip",
+      "desc": "Number of decode filter failure for zip",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 12
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "ctd",
+      "counter": "ctd_dns_wait_pkt_drop",
+      "desc": "DNS packet drop when waiting",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 2
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "ctd",
+      "counter": "ctd_dns_wait_pkt_drop_response",
+      "desc": "DNS response packet drop when waiting",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 2
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "ctd",
+      "counter": "ctd_dns_sess_state_verify_failed",
+      "desc": "DNS packet drop due to session state invalid",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 74
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "url",
+      "counter": "url_request_pkt_drop",
+      "desc": "The number of packets get dropped because of waiting for url category request",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 401
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "url",
+      "counter": "url_session_not_in_wait",
+      "desc": "The session is not waiting for url",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 449
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "nat",
+      "counter": "nat_lookup_match",
+      "desc": "Total number of persistent translation matches",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 220
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "flow",
+      "counter": "flow_ingress_ifp_lookup_invalid_mode",
+      "desc": "Packets dropped: invalid port mode",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 362339
+    }
+  },
+  {
+    "name": "panos_xml_counters",
+    "timestamp": 1795518947000000000,
+    "tags": {
+      "category": "ssl",
+      "counter": "ssl_tls13_connection_error",
+      "desc": "TLS13: Unrecoverable error in openssl statemachine",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_counters"
+    },
+    "values": {
+      "value": 437
+    }
+  }
+]

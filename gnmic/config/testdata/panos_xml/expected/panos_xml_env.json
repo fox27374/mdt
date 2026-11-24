@@ -1,0 +1,141 @@
+[
+  {
+    "name": "panos_xml_env",
+    "timestamp": 1795518948000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "sensor": "CPU die Temperature",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_env"
+    },
+    "values": {
+      "temp_c": 34.875
+    }
+  },
+  {
+    "name": "panos_xml_env",
+    "timestamp": 1795518948000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "sensor": "Inlet temperature",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_env"
+    },
+    "values": {
+      "temp_c": 21.6375
+    }
+  },
+  {
+    "name": "panos_xml_env",
+    "timestamp": 1795518948000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "sensor": "DDR module temperature",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_env"
+    },
+    "values": {
+      "temp_c": 24.3625
+    }
+  },
+  {
+    "name": "panos_xml_env",
+    "timestamp": 1795518948000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "sensor": "Outlet temperature",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_env"
+    },
+    "values": {
+      "temp_c": 23.9875
+    }
+  },
+  {
+    "name": "panos_xml_env",
+    "timestamp": 1795518948000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "sensor": "Switch temperature",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_env"
+    },
+    "values": {
+      "temp_c": 24.875
+    }
+  },
+  {
+    "name": "panos_xml_env",
+    "timestamp": 1795518948000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "sensor": "Fan-1",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_env"
+    },
+    "values": {
+      "rpm": 6410
+    }
+  },
+  {
+    "name": "panos_xml_env",
+    "timestamp": 1795518948000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "sensor": "Fan-2",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_env"
+    },
+    "values": {
+      "rpm": 6720
+    }
+  },
+  {
+    "name": "panos_xml_env",
+    "timestamp": 1795518948000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "sensor": "Power Supply #1",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_env"
+    },
+    "values": {
+      "status": "OK"
+    }
+  },
+  {
+    "name": "panos_xml_env",
+    "timestamp": 1795518948000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "sensor": "Power Supply #2",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_env"
+    },
+    "values": {
+      "status": "OK"
+    }
+  },
+  {
+    "name": "panos_xml_env",
+    "timestamp": 1795518948000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_env"
+    },
+    "values": {
+      "alarms": 0
+    }
+  }
+]

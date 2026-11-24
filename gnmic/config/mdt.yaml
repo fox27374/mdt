@@ -279,7 +279,13 @@ targets:
     subscriptions:
       - panos_if_stats
       - panos_if_info
-      - panos_session_stats
+      - panos_xml_session
+      - panos_xml_dp
+      - panos_xml_ha
+      - panos_xml_counters
+      - panos_xml_env
+      - panos_xml_system
+      - panos_xml_license
 
   172.24.88.157:9339:
     name: "Lab-IBK-PA560-2"
@@ -291,7 +297,13 @@ targets:
     subscriptions:
       - panos_if_stats
       - panos_if_info
-      - panos_session_stats
+      - panos_xml_session
+      - panos_xml_dp
+      - panos_xml_ha
+      - panos_xml_counters
+      - panos_xml_env
+      - panos_xml_system
+      - panos_xml_license
 
 ###################################
 # Subscriptions
@@ -685,11 +697,75 @@ subscriptions:
     outputs:
       - nats
 
-  panos_session_stats:
+  # PAN-OS XML API over gNMI. Every pan/xmlapi path needs a cmd key: a keyless subscribe crashed the firewall's gNMI
+  # service. Requires the PAN-OS OpenConfig plugin >= 2.1.1. The replies are parsed by the panos-xmlapi processor.
+  panos_xml_session:
     paths:
-      - "/pan/session/state"
+      - "pan/xmlapi[cmd=show session info]"
     mode: stream
+    encoding: proto
+    stream-mode: sample
     sample-interval: 60s
+    outputs:
+      - nats
+
+  panos_xml_dp:
+    paths:
+      - "pan/xmlapi[cmd=show running resource-monitor]"
+    mode: stream
+    encoding: proto
+    stream-mode: sample
+    sample-interval: 60s
+    outputs:
+      - nats
+
+  panos_xml_ha:
+    paths:
+      - "pan/xmlapi[cmd=show high-availability state]"
+    mode: stream
+    encoding: proto
+    stream-mode: sample
+    sample-interval: 60s
+    outputs:
+      - nats
+
+  panos_xml_counters:
+    paths:
+      - "pan/xmlapi[cmd=show counter global]"
+    mode: stream
+    encoding: proto
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
+  panos_xml_env:
+    paths:
+      - "pan/xmlapi[cmd=show system environmentals]"
+    mode: stream
+    encoding: proto
+    stream-mode: sample
+    sample-interval: 300s
+    outputs:
+      - nats
+
+  panos_xml_system:
+    paths:
+      - "pan/xmlapi[cmd=show system info]"
+    mode: stream
+    encoding: proto
+    stream-mode: sample
+    sample-interval: 3600s
+    outputs:
+      - nats
+
+  panos_xml_license:
+    paths:
+      - "pan/xmlapi[cmd=request license info]"
+    mode: stream
+    encoding: proto
+    stream-mode: sample
+    sample-interval: 3600s
     outputs:
       - nats
 
@@ -882,6 +958,87 @@ processors:
              values: {"run-latency": .["run-latency"]}}
         else $ev end
 
+  # PAN-OS XML API replies (pan/xmlapi[cmd=...]): the reply is JSON text in /pan/xmlapi/message. One processor for all
+  # panos_xml_* subscriptions; each branch keeps the values that the dashboards use, as numbers, strings or epoch seconds.
+  # A reply that is not success is dropped. Each reply can produce several events (one per sensor, counter, license...).
+  # shortcut: system release dates have no time zone handling (CET/CEST read as UTC), so they are off by up to 2 hours; fine for day-level ages.
+  panos-xmlapi:
+    event-jq:
+      expression: |
+        .[] | . as $ev |
+        def emit($vals; $tags): {name: $ev.name, timestamp: $ev.timestamp, tags: ($ev.tags + $tags), values: ($vals | with_entries(select(.value != null)))};
+        def arr: if type == "array" then . else [.] end;
+        # Older PAN-OS replies: "2026/11/23 23:11:14 CET"; the zone is not parsed (see shortcut above).
+        def slash_epoch: try (split(" ") | .[0:2] | join(" ") | strptime("%Y/%m/%d %H:%M:%S") | mktime) catch null;
+        # License expiry: "February 03, 2027".
+        def long_epoch: try (strptime("%B %d, %Y") | mktime) catch null;
+        # Uptime: "7 days, 11:04:14" or "11:04:14".
+        def uptime_s: try (capture("^(?:(?P<d>[0-9]+) days?, )?(?P<h>[0-9]+):(?P<m>[0-9]+):(?P<s>[0-9]+)$")
+          | ((.d // "0") | tonumber) * 86400 + (.h | tonumber) * 3600 + (.m | tonumber) * 60 + (.s | tonumber)) catch null;
+        # Resource monitor lists are comma separated, newest value first.
+        def newest: split(",") | .[0] | tonumber;
+        . as $ev
+        | if (($ev.tags["subscription-name"] // "") | startswith("panos_xml_")) | not then $ev else
+          (try ($ev.values["/pan/xmlapi/message"] | fromjson | .response) catch null) as $r
+          | if $r == null or $r["-status"] != "success" then empty else
+            $r.result as $res
+            | ($ev.tags["subscription-name"]) as $sn
+            | if $sn == "panos_xml_session" then
+                emit({num_active: ($res["num-active"] | tonumber), num_max: ($res["num-max"] | tonumber),
+                      num_tcp: ($res["num-tcp"] | tonumber), num_udp: ($res["num-udp"] | tonumber),
+                      num_icmp: ($res["num-icmp"] | tonumber), cps: ($res.cps | tonumber), pps: ($res.pps | tonumber),
+                      kbps: ($res.kbps | tonumber), num_installed: ($res["num-installed"] | tonumber)}; {})
+              elif $sn == "panos_xml_ha" then
+                ($res.group) as $g | ($g["local-info"]) as $l | ($g["peer-info"]) as $p
+                | emit({state: $l.state, priority: ($l.priority | tonumber), state_duration: ($l["state-duration"] | tonumber),
+                        build_rel: $l["build-rel"], serial: $l["serial-num"]}; {unit: "local"}),
+                  emit({state: $p.state, priority: ($p.priority | tonumber), state_duration: ($p["state-duration"] | tonumber),
+                        build_rel: $p["build-rel"], serial: $p["serial-num"],
+                        ha1_status: $p["conn-ha1"]["conn-status"], ha1_backup_status: $p["conn-ha1-backup"]["conn-status"],
+                        ha2_status: $p["conn-ha2"]["conn-status"], conn_status: $p["conn-status"]}; {unit: "peer"}),
+                  # Compat fields: only the ones that are not Match (OC and DLP have no -compat suffix).
+                  (($l | to_entries | map(select((.key | test("-compat$|^(OC|DLP)$")) and .value != "Match")
+                        | {key: ((if (.key | test("-compat$")) then .key else .key + "-compat" end) | gsub("-"; "_")), value: .value})
+                        | from_entries) as $compat
+                   | emit({running_sync: $g["running-sync"], state_sync: $l["state-sync"], mode: $g.mode} + $compat; {}))
+              elif $sn == "panos_xml_dp" then
+                # Minute window. Data processors: the cpu values are mean (avg) / max over all cores of all data
+                # processors; resource-utilization is the max over data processors (dp0 on the PA-560).
+                [$res["resource-monitor"]["data-processors"][] | .minute | select(. != null)] as $mins
+                | def ru($name): [$mins[] | .["resource-utilization"].entry[] | select(.name == $name) | .value | newest] | max;
+                  [$mins[] | .["cpu-load-average"].entry[] | .value | newest] as $avgs
+                | emit({cpu_avg: (if ($avgs | length) > 0 then (($avgs | add) / ($avgs | length)) else null end),
+                        cpu_max: ([$mins[] | .["cpu-load-maximum"].entry[] | .value | newest] | max),
+                        session_avg: ru("session (average)"), session_max: ru("session (maximum)"),
+                        packet_buffer_avg: ru("packet buffer (average)"), packet_buffer_max: ru("packet buffer (maximum)"),
+                        packet_descriptor_avg: ru("packet descriptor (average)"), packet_descriptor_max: ru("packet descriptor (maximum)"),
+                        sw_tags_avg: ru("sw tags descriptor (average)"), sw_tags_max: ru("sw tags descriptor (maximum)")}; {})
+              elif $sn == "panos_xml_env" then
+                def entries($sec): [($res[$sec] // {}) | .[] | .entry | arr | .[]];
+                (entries("thermal")[] | emit({temp_c: (.DegreesC | tonumber)}; {sensor: .description})),
+                (entries("fans")[] | emit({rpm: (.RPMs | tonumber)}; {sensor: .description})),
+                (entries("power-supply")[] | emit({status: .Status}; {sensor: .description})),
+                emit({alarms: ([entries("power"), entries("thermal"), entries("fans"), entries("power-supply")] | add
+                        | map(select(.alarm == "True")) | length)}; {})
+              elif $sn == "panos_xml_system" then
+                ($res.system) as $s
+                | emit({sw_version: $s["sw-version"], uptime: ($s.uptime | uptime_s),
+                        app_version: $s["app-version"], app_release: ($s["app-release-date"] | slash_epoch),
+                        threat_version: $s["threat-version"], threat_release: ($s["threat-release-date"] | slash_epoch),
+                        av_version: $s["av-version"], av_release: ($s["av-release-date"] | slash_epoch),
+                        wildfire_version: $s["wildfire-version"], wildfire_release: ($s["wildfire-release-date"] | slash_epoch),
+                        url_version: $s["url-filtering-version"]}; {})
+              elif $sn == "panos_xml_license" then
+                ($res.licenses.entry | arr | .[]) | select((.feature // .description) != null)
+                | emit({expired: .expired, expires: (.expires | long_epoch)}; {feature: (.feature // .description)})
+              elif $sn == "panos_xml_counters" then
+                ($res.global.counters.entry | arr | .[])
+                | select(.severity == "drop" or .severity == "error")
+                | emit({value: (.value | tonumber)}; {counter: .name, category: .category, desc: (.desc // "")})
+              else empty end
+            end
+          end
+
 
 ###################################
 # Outputs
@@ -902,5 +1059,6 @@ outputs:
       - drop-xe-lag-empty
       - drop-xe-inventory-non-chassis
       - trim-xe-inventory
+      - panos-xmlapi
       - rename-metrics
 

@@ -106,8 +106,27 @@ metric names, in `filter/cisco` and `transform/cisco` in `otel.yaml`.
   (uses `config/ca.pem` for TLS).
 - **Cisco Catalyst WLC** (`wl_*`) — wireless client signal/SNR/retries, AP utilization
   and noise, client/AP/SSID mappings, and client roaming history (`wl_client_roam`).
-- **Palo Alto firewalls** (`panos_*`) — interface counters and session stats (Firewall Details
-  dashboard). No CPU: PAN-OS reports 0 on the openconfig CPU path.
+- **Palo Alto firewalls** (`panos_*`) — interface counters (`panos_if_stats`, 30s) and negotiated speed/duplex
+  (`panos_if_info`, 5 min), plus the **PAN-OS XML API over gNMI** (`panos_xml_*`, Firewall Details dashboard):
+  - Needs the PAN-OS OpenConfig plugin **2.1.1 or later**.
+  - Each subscription is `pan/xmlapi[cmd=<CLI command>]` (encoding PROTO, stream sample). The commands and intervals:
+
+    | Subscription | Command | Interval | Feeds |
+    |---|---|---|---|
+    | `panos_xml_session` | `show session info` | 60s | sessions, cps, kbps/pps, installed sessions |
+    | `panos_xml_dp` | `show running resource-monitor` | 60s | dataplane CPU, packet buffer, descriptor and session % |
+    | `panos_xml_ha` | `show high-availability state` | 60s | HA state, priority, links, sync and compatibility |
+    | `panos_xml_counters` | `show counter global` | 5 min | drop and error counters (severity drop or error) |
+    | `panos_xml_env` | `show system environmentals` | 5 min | temperatures, fans, power supplies, alarm count |
+    | `panos_xml_system` | `show system info` | 1 h | software and signature versions and release dates, uptime |
+    | `panos_xml_license` | `request license info` | 1 h | licence expiry |
+
+  - **Warning:** every `pan/xmlapi` path must carry a `cmd` key. A subscribe without one crashed the firewall's gNMI service.
+    Only use the commands above: keyword-value commands are rejected by the firewall.
+  - The replies are JSON text. The `panos-xmlapi` processor (below) turns them into metrics `mdt_panos_xml_<sub>_<field>`.
+    Strings (state, versions, sensor status) are value-1 series with the string as a label.
+  - Test the processor against the recorded replies: `gnmic/config/testdata/panos_xml/check.sh` (needs podman; on the
+    test host `scripts/mdthost 'gnmic/config/testdata/panos_xml/check.sh'`).
 
 Each subscription streams in `sample` mode at its own interval (30s for interface
 counters, up to 1h for slow-changing info like CDP/inventory). MAC and ARP tables sample every 5 min.
@@ -131,6 +150,8 @@ event. The dial-out subscription is `57009` in `dialout-iosxe.yaml`.
 - **`rename-metrics`** — shortens metric names to their leaf (`path-base`).
 - **`delete-nx-cdp-fields`** — strips noisy NX-OS CDP fields.
 - **`delete-nx-if-stats-fields`** — drops the NX-OS pause and MAC control frame counters.
+- **`panos-xmlapi`** — parses the PAN-OS XML API replies (`panos_xml_*`): one event per sensor, counter, licence or HA unit,
+  numbers as numbers, text as labels, dates as epoch seconds. Replies that are not `success` are dropped.
 - **`wl-split-roam-history`** — splits the WLC client roaming history into one event per association,
   with client MAC, AP, BSSID, radio slot, roam type and association time as labels and `run-latency` (ms)
   as the only metric (`mdt_wl_client_roam_run_latency`). Identity is the association time, not the list index.
