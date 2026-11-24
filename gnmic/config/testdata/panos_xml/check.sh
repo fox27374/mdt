@@ -3,7 +3,7 @@
 # output with expected/<name>.json (keys sorted). Each panos_xml_<name>.jsonl is one NATS message: a JSON array of
 # events, as gnmic emits it. Runs the gnmic image the stack uses, so jq (gojq) and strptime are the ones in production.
 #   gnmic/config/testdata/panos_xml/check.sh               (needs podman and jq)
-#   scripts/mdthost 'gnmic/config/testdata/panos_xml/check.sh'   (the container test host)
+#   scripts/mdthost 'bash gnmic/config/testdata/panos_xml/check.sh'   (the container test host)
 set -euo pipefail
 dir=$(cd "$(dirname "$0")" && pwd)
 cfg=$(cd "$dir/../.." && pwd)

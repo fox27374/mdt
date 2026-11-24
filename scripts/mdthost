@@ -2,8 +2,10 @@
 # Run a command on the container test host (kof-ibk-debian4) inside a fresh copy of this repo.
 # The test environment is only reachable from that host, so containers for this repo run there.
 #
-#   scripts/mdthost '<command>'     e.g. scripts/mdthost 'cd gnmic && podman-compose up -d'
+#   scripts/mdthost '<command>'     e.g. scripts/mdthost 'bash gnmic/config/testdata/panos_xml/check.sh'
 #
+# The copy is deleted and rebuilt on every run: never start long-running containers from it. The live stack runs
+# from /home/claude/mdt/gnmic (scripts/gnmic-deploy). The script refuses to run while a running container mounts the copy.
 # The command runs in the repo root of the copy (/home/claude/work/mdt) with HOME=/home/claude
 # (the real home; podman storage lives there). gnmic/gnmic_env is copied host-side from /opt/gnmic/gnmic_env.
 # gnmic/otel_env (Splunk HEC token for otel-collector) is copied from /home/claude/mdt/gnmic/otel_env if it exists.
@@ -18,4 +20,7 @@ if [ -n "${MDTHOST_PASS:-}" ]; then
 fi
 root=$(git rev-parse --show-toplevel)
 COPYFILE_DISABLE=1 tar -C "$root" --exclude=.git --exclude=.DS_Store --exclude=gnmic-monitor -czf - . |
-  "${ssh_cmd[@]}" "set -e; export HOME=/home/claude LC_ALL=C; rm -rf $dir; mkdir -p $dir; tar -xzf - -C $dir; cp /opt/gnmic/gnmic_env $dir/gnmic/gnmic_env; [ -f /home/claude/mdt/gnmic/otel_env ] && cp /home/claude/mdt/gnmic/otel_env $dir/gnmic/otel_env; cd $dir; $1" 2> >(grep -v -E 'setlocale|chdir|Warning: Permanently|extended header' >&2)
+  "${ssh_cmd[@]}" "set -e; export HOME=/home/claude LC_ALL=C XDG_RUNTIME_DIR=/run/user/\$(id -u)
+    used=\$(podman ps -q | xargs -r podman inspect --format '{{.Name}}: {{range .Mounts}}{{.Source}} {{end}}' | grep -e ' $dir/' -e ' $dir ' || true)
+    if [ -n \"\$used\" ]; then echo 'mdthost: refusing, running containers mount $dir (recreate them from /home/claude/mdt/gnmic):' >&2; echo \"\$used\" >&2; exit 1; fi
+    rm -rf $dir; mkdir -p $dir; tar -xzf - -C $dir; cp /opt/gnmic/gnmic_env $dir/gnmic/gnmic_env; [ -f /home/claude/mdt/gnmic/otel_env ] && cp /home/claude/mdt/gnmic/otel_env $dir/gnmic/otel_env; cd $dir; $1" 2> >(grep -v -E 'setlocale|chdir|Warning: Permanently|extended header' >&2)
