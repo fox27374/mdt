@@ -126,7 +126,7 @@ metric names, in `filter/cisco` and `transform/cisco` in `otel.yaml`.
   - The replies are JSON text. The `panos-xmlapi` processor (below) turns them into metrics `mdt_panos_xml_<sub>_<field>`.
     Strings (state, versions, sensor status) are value-1 series with the string as a label.
   - Test the processor against the recorded replies: `gnmic/config/testdata/panos_xml/check.sh` (needs podman; on the
-    test host `scripts/mdthost 'gnmic/config/testdata/panos_xml/check.sh'`).
+    test host `scripts/mdthost 'bash gnmic/config/testdata/panos_xml/check.sh'`).
 
 Each subscription streams in `sample` mode at its own interval (30s for interface
 counters, up to 1h for slow-changing info like CDP/inventory). MAC and ARP tables sample every 5 min.
