@@ -15,6 +15,10 @@ assert.deepEqual(parseInterface('Ethernet1/1'), { member: 1, module: 0, port: 1,
 assert.deepEqual(parseInterface('Ethernet1/49/3'), { member: 1, module: 0, port: 49, lane: 3 });
 assert.deepEqual(parseInterface('eth1/49/4'), { member: 1, module: 0, port: 49, lane: 4 });
 assert.deepEqual(parseInterface('eth1/12'), { member: 1, module: 0, port: 12, lane: null });
+// PAN-OS names are lowercase ethernet1/x: copper, not NX-OS.
+assert.deepEqual(parseInterface('ethernet1/3'), { member: 1, module: 0, port: 3, lane: null });
+assert.equal(portKind({ interface: 'ethernet1/3', state: 'up', speed: 1e9 }), 'copper');
+assert.equal(portKind({ interface: 'Ethernet1/1', state: 'up', speed: 1e10 }), 'fibre');
 assert.equal(parseInterface('Vlan10'), null);
 assert.equal(parseInterface('Port-channel1'), null);
 assert.equal(parseInterface('Ethernet1/1/1/1'), null);
