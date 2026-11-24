@@ -154,6 +154,14 @@
     ]
    }
   },
+  "viz_ports": {
+   "type": "mdt_infra_monitoring.port_faceplate",
+   "title": "Ports",
+   "dataSources": {
+    "primary": "ds_fw_ports"
+   },
+   "options": {}
+  },
   "viz_in_total": {
    "type": "splunk.singlevalue",
    "title": "Total in (5 min average)",
@@ -485,6 +493,13 @@
     "query": "| mstats latest(mdt_panos_if_stats_in_octets) as in_octets latest(mdt_panos_if_stats_out_octets) as out_octets latest(mdt_panos_if_stats_in_errors) as in_errors latest(mdt_panos_if_stats_out_errors) as out_errors WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=1m BY extracted_source interface_name | eval node=extracted_source, interface=interface_name | fields - extracted_source interface_name | `mdt_if_rates` | bin _time span=5m | stats avg(in_bps) as in_bps avg(out_bps) as out_bps sum(in_errs) as in_errs sum(out_errs) as out_errs by _time interface | where _time + 300 <= now()"
    }
   },
+  "ds_fw_ports": {
+   "type": "ds.search",
+   "name": "fw_ports",
+   "options": {
+    "query": "| mstats latest_time(_value) as t WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_if_info_oper_status earliest=-15m BY interface_name oper_status | sort 0 - t | dedup interface_name | fields interface_name oper_status | append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_if_info_admin_status earliest=-15m BY interface_name admin_status | sort 0 - t | dedup interface_name | fields interface_name admin_status] | append [| mstats latest_time(_value) as t WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_if_info_negotiated_port_speed earliest=-15m BY interface_name negotiated_port_speed | sort 0 - t | dedup interface_name | fields interface_name negotiated_port_speed] | stats values(oper_status) as oper_status values(admin_status) as admin_status values(negotiated_port_speed) as speed by interface_name | where match(interface_name, \"^ethernet\\d+/\\d+$\") | rename interface_name as interface | join type=left interface [| mstats latest(mdt_panos_if_stats_in_octets) as in_octets latest(mdt_panos_if_stats_out_octets) as out_octets latest(mdt_panos_if_stats_in_errors) as in_errors latest(mdt_panos_if_stats_out_errors) as out_errors WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=1m BY extracted_source interface_name | eval node=extracted_source, interface=interface_name | fields - extracted_source interface_name | `mdt_if_rates` | bin _time span=5m | stats avg(in_bps) as in_bps avg(out_bps) as out_bps sum(in_errs) as in_errs sum(out_errs) as out_errs by _time interface | where _time + 300 <= now() | stats sum(in_errs) as in_errs sum(out_errs) as out_errs by interface] | rex field=speed \"SPEED_(?<n>\\d+)(?<unit>[GM])B\" | eval speed=if(isnull(n), null(), n * if(unit==\"G\", 1000000000, 1000000)), state=case(lower(admin_status)==\"down\", \"admin down\", lower(oper_status)==\"up\", \"up\", true(), \"down\"), neighbour=\"\", macs=0, mac_list=\"\", poe_w=\"\", poe_state=\"\", pd_class=\"\", port_channel=\"\", model=\"\" | fillnull value=0 in_errs out_errs | fields interface state speed in_errs out_errs neighbour macs mac_list poe_w poe_state pd_class port_channel model"
+   }
+  },
   "ds_sessions": {
    "type": "ds.search",
    "name": "sessions",
@@ -783,7 +798,7 @@
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 1860
+     "height": 2070
     },
     "structure": [
      {
@@ -847,11 +862,21 @@
       }
      },
      {
-      "item": "viz_in_total",
+      "item": "viz_ports",
       "type": "block",
       "position": {
        "x": 0,
        "y": 110,
+       "w": 1440,
+       "h": 200
+      }
+     },
+     {
+      "item": "viz_in_total",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 320,
        "w": 480,
        "h": 110
       }
@@ -861,7 +886,7 @@
       "type": "block",
       "position": {
        "x": 480,
-       "y": 110,
+       "y": 320,
        "w": 480,
        "h": 110
       }
@@ -871,7 +896,7 @@
       "type": "block",
       "position": {
        "x": 960,
-       "y": 110,
+       "y": 320,
        "w": 480,
        "h": 110
       }
@@ -881,7 +906,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 220,
+       "y": 430,
        "w": 720,
        "h": 320
       }
@@ -891,7 +916,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 220,
+       "y": 430,
        "w": 720,
        "h": 320
       }
@@ -901,7 +926,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 540,
+       "y": 750,
        "w": 720,
        "h": 300
       }
@@ -911,7 +936,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 540,
+       "y": 750,
        "w": 720,
        "h": 300
       }
@@ -921,7 +946,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 840,
+       "y": 1050,
        "w": 720,
        "h": 300
       }
@@ -931,7 +956,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 840,
+       "y": 1050,
        "w": 720,
        "h": 300
       }
@@ -941,7 +966,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1140,
+       "y": 1350,
        "w": 720,
        "h": 300
       }
@@ -951,7 +976,7 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 1140,
+       "y": 1350,
        "w": 720,
        "h": 300
       }
@@ -961,7 +986,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1440,
+       "y": 1650,
        "w": 1440,
        "h": 420
       }

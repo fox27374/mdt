@@ -107,7 +107,7 @@ metric names, in `filter/cisco` and `transform/cisco` in `otel.yaml`.
 - **Cisco Catalyst WLC** (`wl_*`) — wireless client signal/SNR/retries, AP utilization
   and noise, client/AP/SSID mappings, and client roaming history (`wl_client_roam`).
 - **Palo Alto firewalls** (`panos_*`) — interface counters (`panos_if_stats`, 30s) and negotiated speed/duplex
-  (`panos_if_info`, 5 min), plus the **PAN-OS XML API over gNMI** (`panos_xml_*`, Firewall Details dashboard):
+  and link state (`panos_if_info`, 5 min; the Firewall Details port faceplate), plus the **PAN-OS XML API over gNMI** (`panos_xml_*`, Firewall Details dashboard):
   - Needs the PAN-OS OpenConfig plugin **2.1.1 or later**.
   - Each subscription is `pan/xmlapi[cmd=<CLI command>]` (encoding PROTO, stream sample). The commands and intervals:
 

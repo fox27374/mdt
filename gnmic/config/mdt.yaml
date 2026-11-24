@@ -691,6 +691,9 @@ subscriptions:
       - "oc-if:/interfaces/interface/ethernet/state/negotiated-duplex-mode"
       - "oc-if:/interfaces/interface/ethernet/state/auto-negotiate"
       - "oc-if:/interfaces/interface/state/mtu"
+      # Link state per port for the Firewall Details faceplate (strings: value-1 series, label oper_status / admin_status).
+      - "oc-if:/interfaces/interface/state/oper-status"
+      - "oc-if:/interfaces/interface/state/admin-status"
     mode: stream
     stream-mode: sample
     sample-interval: 300s

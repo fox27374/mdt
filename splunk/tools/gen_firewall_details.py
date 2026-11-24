@@ -1,7 +1,7 @@
 # Generates the Firewall Details dashboard (Dashboard Studio JSON in views/firewall_details.xml).
 # Edit this script, not the XML:  python3 splunk/tools/gen_firewall_details.py  then scripts/splunk-deploy
-# Data: gnmic PAN-OS subscriptions. Interfaces: panos_if_stats (30s counters per interface), panos_if_info (300s negotiated
-# speed, duplex, auto-negotiation). PAN-OS XML API over gNMI (panos_xml_*, parsed by the panos-xmlapi processor in mdt.yaml):
+# Data: gnmic PAN-OS subscriptions. Interfaces: panos_if_stats (30s counters per interface), panos_if_info (300s link state,
+# negotiated speed, duplex, auto-negotiation). PAN-OS XML API over gNMI (panos_xml_*, parsed by the panos-xmlapi processor in mdt.yaml):
 # session (60s), dp (60s), ha (60s), counters (300s), env (300s), system and license (3600s).
 import json, os, sys
 
@@ -33,6 +33,25 @@ bases = {
     "ds_fws": "| mstats count(_value) WHERE `mdt_metrics_index` site=\"$site$\" metric_name=mdt_panos_* BY extracted_source "
               "| rename extracted_source as node | fields node | sort node",
     "ds_flow": FLOW,
+    # One row per front-panel port (ethernet<x>/<y>) for the port_faceplate viz: link state (panos_if_info, 300s: latest
+    # label within 15 min), negotiated speed in bit/s, and errors over the time range. Fields the firewall does not
+    # report are empty or 0 so the tooltip does not break.
+    "ds_fw_ports": ("| mstats latest_time(_value) as t WHERE " + IDX + " metric_name=mdt_panos_if_info_oper_status earliest=-15m "
+                    "BY interface_name oper_status | sort 0 - t | dedup interface_name | fields interface_name oper_status "
+                    "| append [| mstats latest_time(_value) as t WHERE " + IDX + " metric_name=mdt_panos_if_info_admin_status earliest=-15m "
+                    "BY interface_name admin_status | sort 0 - t | dedup interface_name | fields interface_name admin_status] "
+                    "| append [| mstats latest_time(_value) as t WHERE " + IDX + " metric_name=mdt_panos_if_info_negotiated_port_speed earliest=-15m "
+                    "BY interface_name negotiated_port_speed | sort 0 - t | dedup interface_name | fields interface_name negotiated_port_speed] "
+                    "| stats values(oper_status) as oper_status values(admin_status) as admin_status values(negotiated_port_speed) as speed "
+                    "by interface_name | where match(interface_name, \"^ethernet\\d+/\\d+$\") "
+                    "| rename interface_name as interface "
+                    "| join type=left interface [" + FLOW + " | stats sum(in_errs) as in_errs sum(out_errs) as out_errs by interface] "
+                    "| rex field=speed \"SPEED_(?<n>\\d+)(?<unit>[GM])B\" "
+                    "| eval speed=if(isnull(n), null(), n * if(unit==\"G\", 1000000000, 1000000)), "
+                    "state=case(lower(admin_status)==\"down\", \"admin down\", lower(oper_status)==\"up\", \"up\", true(), \"down\"), "
+                    "neighbour=\"\", macs=0, mac_list=\"\", poe_w=\"\", poe_state=\"\", pd_class=\"\", port_channel=\"\", model=\"\" "
+                    "| fillnull value=0 in_errs out_errs "
+                    "| fields interface state speed in_errs out_errs neighbour macs mac_list poe_w poe_state pd_class port_channel model"),
     # Session counters (panos_xml_session, 60s) and the 5-minute buckets the session charts use.
     "ds_sessions": "| mstats latest(mdt_panos_xml_session_num_active) as active latest(mdt_panos_xml_session_num_max) as max "
                    "WHERE " + IDX + " span=5m",
@@ -217,6 +236,7 @@ viz = {
     "viz_cpu": tile("Dataplane CPU", "ds_cpu_now", ([70, 90], [GREEN, AMBER, RED]), unit="%", unitPosition="after"),
     "viz_health": tile("Health issues", "ds_health", ([1], [GREEN, RED])),
     # Traffic.
+    "viz_ports": {"type": "mdt_infra_monitoring.port_faceplate", "title": "Ports", "dataSources": {"primary": "ds_fw_ports"}, "options": {}},
     "viz_in_total": tile("Total in (5 min average)", "ds_in_total", unit="Mb/s", unitPosition="after"),
     "viz_out_total": tile("Total out (5 min average)", "ds_out_total", unit="Mb/s", unitPosition="after"),
     "viz_err_ifs": tile("Interfaces with errors", "ds_err_ifs"),
@@ -268,12 +288,13 @@ TOP = [("viz_ha_role", 0), ("viz_active", 240), ("viz_util", 480), ("viz_cps", 7
 # (item, x, y, w, h). Every tab starts with the top row.
 tab_rows = {
     "layout_traffic": [
-        ("viz_in_total", 0, 110, 480, 110), ("viz_out_total", 480, 110, 480, 110), ("viz_err_ifs", 960, 110, 480, 110),
-        ("viz_in", 0, 220, 720, 320), ("viz_out", 720, 220, 720, 320),
-        ("viz_errs", 0, 540, 720, 300), ("viz_sessions", 720, 540, 720, 300),
-        ("viz_proto", 0, 840, 720, 300), ("viz_new_sess", 720, 840, 720, 300),
-        ("viz_cps_chart", 0, 1140, 720, 300), ("viz_kbps", 720, 1140, 720, 300),
-        ("viz_table", 0, 1440, 1440, 420),
+        ("viz_ports", 0, 110, 1440, 200),
+        ("viz_in_total", 0, 320, 480, 110), ("viz_out_total", 480, 320, 480, 110), ("viz_err_ifs", 960, 320, 480, 110),
+        ("viz_in", 0, 430, 720, 320), ("viz_out", 720, 430, 720, 320),
+        ("viz_errs", 0, 750, 720, 300), ("viz_sessions", 720, 750, 720, 300),
+        ("viz_proto", 0, 1050, 720, 300), ("viz_new_sess", 720, 1050, 720, 300),
+        ("viz_cps_chart", 0, 1350, 720, 300), ("viz_kbps", 720, 1350, 720, 300),
+        ("viz_table", 0, 1650, 1440, 420),
     ],
     "layout_health": [
         ("viz_cpu_chart", 0, 110, 720, 300), ("viz_dp_pb", 720, 110, 720, 300),
