@@ -51,7 +51,7 @@ bases = {
                     "state=case(lower(admin_status)==\"down\", \"admin down\", lower(oper_status)==\"up\", \"up\", true(), \"down\"), "
                     "neighbour=\"\", macs=0, mac_list=\"\", poe_w=\"\", poe_state=\"\", pd_class=\"\", port_channel=\"\" "
                     # Model from panos_xml_system (60 min+ series): joined on a constant key, one value for the firewall.
-                    "| eval k=1 | join type=left k [| mstats latest(_value) as v WHERE " + IDX + " metric_name=mdt_panos_xml_system_model "
+                    "| eval k=1 | join type=left k [| mstats latest(_value) as v WHERE " + IDX + " metric_name=mdt_panos_xml_system_model extracted_source=\"$tk_fw$\" "
                     "earliest=-2d BY model | head 1 | eval k=1 | fields k model] | fillnull value=\"\" model "
                     "| fillnull value=0 in_errs out_errs "
                     "| fields interface state speed in_errs out_errs neighbour macs mac_list poe_w poe_state pd_class port_channel model"),
