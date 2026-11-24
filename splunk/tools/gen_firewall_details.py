@@ -278,15 +278,18 @@ tab_rows = {
     "layout_health": [
         ("viz_cpu_chart", 0, 110, 720, 300), ("viz_dp_pb", 720, 110, 720, 300),
         ("viz_dp_sess", 0, 410, 720, 260), ("viz_ha_table", 720, 410, 720, 260),
-        ("viz_ha_sync", 0, 670, 720, 260), ("viz_alarms", 720, 670, 720, 110), ("viz_psu", 720, 780, 720, 150),
-        ("viz_temps", 0, 930, 480, 300), ("viz_fans", 480, 930, 480, 300), ("viz_versions", 960, 930, 480, 300),
-        ("viz_sigs", 0, 1230, 720, 260), ("viz_lic", 720, 1230, 720, 260),
+        ("viz_ha_sync", 0, 670, 720, 260), ("viz_versions", 720, 670, 720, 260),
+        ("viz_sigs", 0, 930, 720, 260), ("viz_lic", 720, 930, 720, 260),
+    ],
+    "layout_env": [
+        ("viz_alarms", 0, 110, 1440, 110),
+        ("viz_psu", 0, 220, 480, 300), ("viz_temps", 480, 220, 480, 300), ("viz_fans", 960, 220, 480, 300),
     ],
     "layout_drops": [
         ("viz_drop_chart", 0, 110, 1440, 380), ("viz_drop_table", 0, 490, 1440, 620),
     ],
 }
-tabs = [("Traffic", "layout_traffic"), ("Health", "layout_health"), ("Drops", "layout_drops")]
+tabs = [("Traffic", "layout_traffic"), ("Health", "layout_health"), ("Environment", "layout_env"), ("Drops", "layout_drops")]
 
 
 def grid(rows):
