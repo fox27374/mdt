@@ -1031,6 +1031,7 @@ processors:
                         av_version: $s["av-version"], av_release: ($s["av-release-date"] | slash_epoch),
                         wildfire_version: $s["wildfire-version"], wildfire_release: ($s["wildfire-release-date"] | slash_epoch),
                         url_version: $s["url-filtering-version"],
+                        model: $s.model,
                         # PAN-OS gives no URL release date: the version starts with the date (20261118.20006 -> 2026-11-18).
                         url_release: ($s["url-filtering-version"] | try (.[0:8] | strptime("%Y%m%d") | mktime) catch null)}; {})
               elif $sn == "panos_xml_license" then

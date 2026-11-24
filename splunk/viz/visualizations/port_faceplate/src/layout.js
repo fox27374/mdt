@@ -3,7 +3,7 @@
 // x/y/z on NX-OS Ethernet names (breakout lane z of slot y). x is the stack member.
 
 const PATH = /^\D+(\d+(?:\/\d+)+)/;
-const NX_OS = /^(Ethernet|eth)\d/i; // lowercase eth1/x is used on some NX-OS switches
+const NX_OS = /^(Ethernet|eth)\d/; // NX-OS names: Ethernet1/1, eth1/1 (case-sensitive: PAN-OS ethernet1/3 is copper)
 
 // Units are SVG user units; the SVG scales to the panel.
 const PITCH = 30; // column pitch: two ports per column (odd port top, even port bottom)
