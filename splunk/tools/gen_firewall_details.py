@@ -25,7 +25,7 @@ FLOW = ("| mstats latest(mdt_panos_if_stats_in_octets) as in_octets latest(mdt_p
 # of the same name (state="active"); a series exists only while its value is current (the gnmic output expires it).
 COMPAT = [("vpnclient", "VPN client"), ("app", "App"), ("threat", "Threat"), ("av", "Antivirus"), ("url", "URL filtering"),
           ("gpclient", "GlobalProtect client"), ("build", "Build"), ("iot", "IoT"), ("dlp", "DLP"), ("oc", "OpenConfig")]
-SIGS = [("app", "App"), ("threat", "Threat"), ("av", "Antivirus"), ("wildfire", "WildFire")]
+SIGS = [("app", "App"), ("threat", "Threat"), ("av", "Antivirus"), ("url", "URL filtering"), ("wildfire", "WildFire")]
 VERSIONS = [("sw", "Software"), ("app", "App"), ("threat", "Threat"), ("av", "Antivirus"), ("wildfire", "WildFire"), ("url", "URL filtering")]
 
 bases = {
@@ -103,7 +103,7 @@ for f, title in COMPAT:
                      + f + "_compat | eval Item=\"" + title + " compat\", Value=" + f + "_compat | fields Item Value")
 bases["ds_ha_sync"] = sync_rows[0] + "".join(" | append [" + r + "]" for r in sync_rows[1:]) + " | table Item Value"
 
-# Versions and signature ages (system, 3600s). URL filtering has no release date in PAN-OS: only its version.
+# Versions and signature ages (system, 3600s). URL release date comes from the processor (version prefix).
 ver_rows = [("| mstats latest(_value) as v WHERE " + IDX + " metric_name=mdt_panos_xml_system_" + f + "_version earliest=-2d BY "
              + f + "_version | sort 0 -_time | head 1 | eval Item=\"" + name + "\", Version=" + f + "_version | fields Item Version")
             for f, name in VERSIONS]

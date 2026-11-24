@@ -1027,7 +1027,9 @@ processors:
                         threat_version: $s["threat-version"], threat_release: ($s["threat-release-date"] | slash_epoch),
                         av_version: $s["av-version"], av_release: ($s["av-release-date"] | slash_epoch),
                         wildfire_version: $s["wildfire-version"], wildfire_release: ($s["wildfire-release-date"] | slash_epoch),
-                        url_version: $s["url-filtering-version"]}; {})
+                        url_version: $s["url-filtering-version"],
+                        # PAN-OS gives no URL release date: the version starts with the date (20261118.20006 -> 2026-11-18).
+                        url_release: ($s["url-filtering-version"] | try (.[0:8] | strptime("%Y%m%d") | mktime) catch null)}; {})
               elif $sn == "panos_xml_license" then
                 ($res.licenses.entry | arr | .[]) | select((.feature // .description) != null)
                 | emit({expired: .expired, expires: (.expires | long_epoch)}; {feature: (.feature // .description)})
