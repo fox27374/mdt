@@ -972,7 +972,7 @@
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 1490
+     "height": 1190
     },
     "structure": [
      {
@@ -1086,53 +1086,13 @@
       }
      },
      {
-      "item": "viz_alarms",
+      "item": "viz_versions",
       "type": "block",
       "position": {
        "x": 720,
        "y": 670,
        "w": 720,
-       "h": 110
-      }
-     },
-     {
-      "item": "viz_psu",
-      "type": "block",
-      "position": {
-       "x": 720,
-       "y": 780,
-       "w": 720,
-       "h": 150
-      }
-     },
-     {
-      "item": "viz_temps",
-      "type": "block",
-      "position": {
-       "x": 0,
-       "y": 930,
-       "w": 480,
-       "h": 300
-      }
-     },
-     {
-      "item": "viz_fans",
-      "type": "block",
-      "position": {
-       "x": 480,
-       "y": 930,
-       "w": 480,
-       "h": 300
-      }
-     },
-     {
-      "item": "viz_versions",
-      "type": "block",
-      "position": {
-       "x": 960,
-       "y": 930,
-       "w": 480,
-       "h": 300
+       "h": 260
       }
      },
      {
@@ -1140,7 +1100,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 1230,
+       "y": 930,
        "w": 720,
        "h": 260
       }
@@ -1150,9 +1110,118 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 1230,
+       "y": 930,
        "w": 720,
        "h": 260
+      }
+     }
+    ]
+   },
+   "layout_env": {
+    "type": "grid",
+    "options": {
+     "width": 1440,
+     "height": 520
+    },
+    "structure": [
+     {
+      "item": "viz_ha_role",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_active",
+      "type": "block",
+      "position": {
+       "x": 240,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_util",
+      "type": "block",
+      "position": {
+       "x": 480,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_cps",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_cpu",
+      "type": "block",
+      "position": {
+       "x": 960,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_health",
+      "type": "block",
+      "position": {
+       "x": 1200,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_alarms",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 110,
+       "w": 1440,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_psu",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 220,
+       "w": 480,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_temps",
+      "type": "block",
+      "position": {
+       "x": 480,
+       "y": 220,
+       "w": 480,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_fans",
+      "type": "block",
+      "position": {
+       "x": 960,
+       "y": 220,
+       "w": 480,
+       "h": 300
       }
      }
     ]
@@ -1256,6 +1325,10 @@
     {
      "label": "Health",
      "layoutId": "layout_health"
+    },
+    {
+     "label": "Environment",
+     "layoutId": "layout_env"
     },
     {
      "label": "Drops",
