@@ -87,6 +87,12 @@ function renderPorts(rows) {
         .join('');
     const ports = layout.items
         .map((it) => {
+            // Profile port with no row: outline only, no click (no viz-port class, no data-i).
+            if (it.index == null) {
+                return `<g class="viz-port-empty"><title>${escapeHtml(`Port ${it.port} · not configured`)}</title>` +
+                    `<rect x="${it.x}" y="${it.y}" width="${it.size}" height="${it.size}" rx="3" fill="none" ` +
+                    `stroke="${colors.outline}" stroke-width="1" stroke-dasharray="3 2"/></g>`;
+            }
             const row = rows[it.index];
             const mark = poeMark(row);
             const bolt = mark

@@ -111,6 +111,39 @@ assert.equal(kind('Ethernet1/3', 'up', 1e9), 'fibre-slow');
 assert.equal(kind('GigabitEthernet1/0/2', 'admin down', 0), 'admin');
 assert.equal(kind('GigabitEthernet1/0/2', 'down', 0), 'down');
 
+// Known firewall model (PA-550 / PA-560): all 24 ports drawn; ports with a row fill their slot, the rest are placeholders.
+const paRows = ['ethernet1/3', 'ethernet1/4', 'ethernet1/15', 'ethernet1/16', 'ethernet1/22']
+  .map((name) => ({ interface: name, model: 'PA-560', state: 'up', speed: '1000000000' }));
+const pa = layoutFaceplate(paRows);
+assert.equal(pa.items.length, 24);
+assert.equal(new Set(pa.items.map((it) => it.port)).size, 24, 'every profile port once');
+assert.equal(pa.items.filter((it) => it.index !== null).length, 5);
+assert.equal(pa.items.filter((it) => it.index === null).length, 19);
+assert.equal(pa.skipped, 0);
+assert.deepEqual(pa.heads.map((h) => h.text), ['PA-560']);
+const paBoxes = pa.items.map((it) => ({ ...it, x2: it.x + it.size, y2: it.y + it.size }));
+for (let i = 0; i < paBoxes.length; i++) for (let j = i + 1; j < paBoxes.length; j++) {
+  const a = paBoxes[i], b = paBoxes[j];
+  assert.ok(!(a.x < b.x2 && b.x < a.x2 && a.y < b.y2 && b.y < a.y2), `overlap ports ${a.port} and ${b.port}`);
+}
+const paPort = (n) => pa.items.find((it) => it.port === n);
+assert.ok(paPort(17).x - paPort(15).x > 18, 'extra gap between port 16 and the SFP block (group gap is 18)');
+// Odd ports on the top row, even ports on the bottom row, each pair in one column.
+assert.ok(paPort(3).y < paPort(4).y, 'even port on the bottom row');
+assert.equal(paPort(3).x, paPort(4).x, 'ports 3 and 4 share a column');
+assert.equal(layoutFaceplate([{ interface: 'ethernet1/25', model: 'PA-560' }]).skipped, 1, 'port outside the profile is counted');
+// Firewall port colours: profile fibre for 17..24, copper below; an up port with no speed is full.
+assert.equal(portKind({ interface: 'ethernet1/3', state: 'up', speed: '1000000000', model: 'PA-560' }), 'copper');
+assert.equal(portKind({ interface: 'ethernet1/22', state: 'up', speed: '', model: 'PA-560' }), 'fibre');
+assert.equal(portKind({ interface: 'ethernet1/22', state: 'up', speed: 'SPEED_UNKNOWN', model: 'PA-560' }), 'fibre');
+assert.equal(portKind({ interface: 'ethernet1/3', state: 'down', speed: '', model: 'PA-560' }), 'down');
+// Switch rows keep the switch layout and colours (model is not a firewall profile).
+const sw = layoutFaceplate([{ interface: 'GigabitEthernet1/0/1', model: 'C9300-24P' }, { interface: 'GigabitEthernet1/0/2', model: 'C9300-24P' }]);
+assert.equal(sw.items.length, 2);
+assert.ok(sw.items.every((it) => it.index !== null));
+assert.deepEqual(sw.heads.map((h) => h.text), ['C9300-24P']);
+assert.equal(portKind({ interface: 'GigabitEthernet1/0/1', state: 'up', speed: '', model: 'C9300-24P' }), 'copper');
+
 // PoE bolt: on while drawing power (state ok, watts above 0), deny when refused, nothing otherwise.
 assert.equal(poeMark({ poe_state: 'ok', poe_w: '6.5' }), 'on');
 assert.equal(poeMark({ state: 'down', poe_state: 'ok', poe_w: '5' }), 'on', 'a down port still drawing shows the bolt');

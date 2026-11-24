@@ -3,6 +3,7 @@
 Dashboard Studio custom visualizations for the `mdt_infra_monitoring` app (`splunk/mdt_infra_monitoring`).
 
 - `port_faceplate`: Switch Details dashboard. One square per switch port, coloured by state; click opens Interface Details.
+  Also draws the PA-550/PA-560 front panel (ports 1-24, 17-24 SFP) with outlined placeholders for ports that have no row; profiles in `layout.js` (`MODEL_PROFILES`).
   - `visualizations/port_faceplate/src/layout.js`: interface name to faceplate slot, and SVG layout (pure JS).
   - `visualizations/port_faceplate/src/visualization.js`: data, theme and click handling (`@splunk/dashboard-studio-extension`).
 - `roam_timeline`: Client Details dashboard (Wireless tab). One lane per AP, bars = time on the AP coloured by band,
