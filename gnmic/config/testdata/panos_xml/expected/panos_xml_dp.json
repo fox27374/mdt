@@ -1,0 +1,24 @@
+[
+  {
+    "name": "panos_xml_dp",
+    "timestamp": 1795518946000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_dp"
+    },
+    "values": {
+      "cpu_avg": 0.0625,
+      "cpu_max": 1,
+      "packet_buffer_avg": 4,
+      "packet_buffer_max": 4,
+      "packet_descriptor_avg": 0,
+      "packet_descriptor_max": 0,
+      "session_avg": 0,
+      "session_max": 0,
+      "sw_tags_avg": 3,
+      "sw_tags_max": 5
+    }
+  }
+]

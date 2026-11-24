@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark">
     <label>Firewall Details</label>
-    <description>One Palo Alto firewall: sessions, throughput and errors per interface</description>
+    <description>One Palo Alto firewall: sessions, dataplane health, HA, sensors, versions and licences (PAN-OS XML API over gNMI), throughput and errors per interface, and drop counters</description>
     <definition><![CDATA[
 {
  "title": "Firewall Details",
- "description": "One Palo Alto firewall: sessions, throughput and errors per interface.",
+ "description": "One Palo Alto firewall: sessions, dataplane health, HA, sensors, versions and licences (PAN-OS XML API over gNMI), throughput and errors per interface, and drop counters",
  "inputs": {
   "input_site": {
    "type": "input.dropdown",
@@ -62,6 +62,16 @@
   }
  },
  "visualizations": {
+  "viz_ha_role": {
+   "type": "splunk.singlevalue",
+   "title": "HA role (this unit)",
+   "dataSources": {
+    "primary": "ds_ha_role"
+   },
+   "options": {
+    "majorColor": "#708794"
+   }
+  },
   "viz_active": {
    "type": "splunk.singlevalue",
    "title": "Active sessions",
@@ -81,7 +91,67 @@
    "options": {
     "majorColor": "#708794",
     "unit": "%",
-    "unitPosition": "after"
+    "unitPosition": "after",
+    "colorMode": "block",
+    "rangeValues": [
+     80,
+     90
+    ],
+    "rangeColors": [
+     "#65A637",
+     "#F8BE34",
+     "#D93F3C"
+    ]
+   }
+  },
+  "viz_cps": {
+   "type": "splunk.singlevalue",
+   "title": "Connections/s",
+   "dataSources": {
+    "primary": "ds_cps_now"
+   },
+   "options": {
+    "majorColor": "#708794"
+   }
+  },
+  "viz_cpu": {
+   "type": "splunk.singlevalue",
+   "title": "Dataplane CPU",
+   "dataSources": {
+    "primary": "ds_cpu_now"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "unit": "%",
+    "unitPosition": "after",
+    "colorMode": "block",
+    "rangeValues": [
+     70,
+     90
+    ],
+    "rangeColors": [
+     "#65A637",
+     "#F8BE34",
+     "#D93F3C"
+    ]
+   }
+  },
+  "viz_health": {
+   "type": "splunk.singlevalue",
+   "title": "Health issues",
+   "dataSources": {
+    "primary": "ds_health"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "colorMode": "block",
+    "rangeValues": [
+     1
+    ],
+    "rangeColors": [
+     "#65A637",
+     "#D93F3C"
+    ]
    }
   },
   "viz_in_total": {
@@ -169,6 +239,53 @@
     }
    }
   },
+  "viz_proto": {
+   "type": "splunk.line",
+   "title": "Active sessions by protocol",
+   "dataSources": {
+    "primary": "ds_proto"
+   },
+   "options": {
+    "legendDisplay": "bottom",
+    "nullValueDisplay": "gaps"
+   },
+   "showProgressBar": true
+  },
+  "viz_new_sess": {
+   "type": "splunk.column",
+   "title": "New sessions per 5 min",
+   "dataSources": {
+    "primary": "ds_new_sess"
+   },
+   "options": {
+    "legendDisplay": "off"
+   },
+   "showProgressBar": true
+  },
+  "viz_cps_chart": {
+   "type": "splunk.line",
+   "title": "Connections per second",
+   "dataSources": {
+    "primary": "ds_cps"
+   },
+   "options": {
+    "legendDisplay": "off",
+    "nullValueDisplay": "gaps"
+   },
+   "showProgressBar": true
+  },
+  "viz_kbps": {
+   "type": "splunk.line",
+   "title": "Throughput (kbps) and packets per second",
+   "dataSources": {
+    "primary": "ds_kbps"
+   },
+   "options": {
+    "legendDisplay": "bottom",
+    "nullValueDisplay": "gaps"
+   },
+   "showProgressBar": true
+  },
   "viz_table": {
    "type": "splunk.table",
    "title": "Interfaces, whole time range",
@@ -177,6 +294,171 @@
    },
    "options": {
     "count": 30
+   },
+   "showProgressBar": true
+  },
+  "viz_cpu_chart": {
+   "type": "splunk.line",
+   "title": "Dataplane CPU %, average and max over cores (minute window)",
+   "dataSources": {
+    "primary": "ds_cpu"
+   },
+   "options": {
+    "legendDisplay": "bottom",
+    "nullValueDisplay": "gaps"
+   },
+   "showProgressBar": true
+  },
+  "viz_dp_pb": {
+   "type": "splunk.line",
+   "title": "Packet buffer and descriptor %",
+   "dataSources": {
+    "primary": "ds_dp_pb"
+   },
+   "options": {
+    "legendDisplay": "bottom",
+    "nullValueDisplay": "gaps"
+   },
+   "showProgressBar": true
+  },
+  "viz_dp_sess": {
+   "type": "splunk.line",
+   "title": "Session table % (dataplane)",
+   "dataSources": {
+    "primary": "ds_dp_sess"
+   },
+   "options": {
+    "legendDisplay": "bottom",
+    "nullValueDisplay": "gaps"
+   },
+   "showProgressBar": true
+  },
+  "viz_ha_table": {
+   "type": "splunk.table",
+   "title": "HA: local vs peer",
+   "dataSources": {
+    "primary": "ds_ha_table"
+   },
+   "options": {
+    "count": 20
+   },
+   "showProgressBar": true
+  },
+  "viz_ha_sync": {
+   "type": "splunk.table",
+   "title": "HA sync and compatibility (only mismatches are listed)",
+   "dataSources": {
+    "primary": "ds_ha_sync"
+   },
+   "options": {
+    "count": 20
+   },
+   "showProgressBar": true
+  },
+  "viz_alarms": {
+   "type": "splunk.singlevalue",
+   "title": "Sensors in alarm",
+   "dataSources": {
+    "primary": "ds_alarms"
+   },
+   "options": {
+    "majorColor": "#708794",
+    "colorMode": "block",
+    "rangeValues": [
+     1
+    ],
+    "rangeColors": [
+     "#65A637",
+     "#D93F3C"
+    ]
+   }
+  },
+  "viz_psu": {
+   "type": "splunk.table",
+   "title": "Power supplies",
+   "dataSources": {
+    "primary": "ds_psu"
+   },
+   "options": {
+    "count": 10
+   },
+   "showProgressBar": true
+  },
+  "viz_temps": {
+   "type": "splunk.table",
+   "title": "Temperatures (C)",
+   "dataSources": {
+    "primary": "ds_temps"
+   },
+   "options": {
+    "count": 20
+   },
+   "showProgressBar": true
+  },
+  "viz_fans": {
+   "type": "splunk.table",
+   "title": "Fans (rpm)",
+   "dataSources": {
+    "primary": "ds_fans"
+   },
+   "options": {
+    "count": 20
+   },
+   "showProgressBar": true
+  },
+  "viz_versions": {
+   "type": "splunk.table",
+   "title": "Versions and uptime",
+   "dataSources": {
+    "primary": "ds_versions"
+   },
+   "options": {
+    "count": 20
+   },
+   "showProgressBar": true
+  },
+  "viz_sigs": {
+   "type": "splunk.table",
+   "title": "Signature ages (warn: threat, app, av over 7 days; WildFire over 1 day)",
+   "dataSources": {
+    "primary": "ds_sigs"
+   },
+   "options": {
+    "count": 10
+   },
+   "showProgressBar": true
+  },
+  "viz_lic": {
+   "type": "splunk.table",
+   "title": "Licences (days left; expired when below 0)",
+   "dataSources": {
+    "primary": "ds_lic"
+   },
+   "options": {
+    "count": 30
+   },
+   "showProgressBar": true
+  },
+  "viz_drop_chart": {
+   "type": "splunk.column",
+   "title": "Top 10 drop and error counters, change per 5 min",
+   "dataSources": {
+    "primary": "ds_drop_chart"
+   },
+   "options": {
+    "stackMode": "stacked",
+    "legendDisplay": "bottom"
+   },
+   "showProgressBar": true
+  },
+  "viz_drop_table": {
+   "type": "splunk.table",
+   "title": "Drop and error counters, whole time range (total since boot)",
+   "dataSources": {
+    "primary": "ds_drop_table"
+   },
+   "options": {
+    "count": 100
    },
    "showProgressBar": true
   }
@@ -207,7 +489,133 @@
    "type": "ds.search",
    "name": "sessions",
    "options": {
-    "query": "| mstats latest(mdt_panos_session_stats_active) as active latest(mdt_panos_session_stats_max) as max WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=5m"
+    "query": "| mstats latest(mdt_panos_xml_session_num_active) as active latest(mdt_panos_xml_session_num_max) as max WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=5m"
+   }
+  },
+  "ds_sess_proto": {
+   "type": "ds.search",
+   "name": "sess_proto",
+   "options": {
+    "query": "| mstats latest(mdt_panos_xml_session_num_tcp) as tcp latest(mdt_panos_xml_session_num_udp) as udp latest(mdt_panos_xml_session_num_icmp) as icmp WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=5m"
+   }
+  },
+  "ds_sess_rate": {
+   "type": "ds.search",
+   "name": "sess_rate",
+   "options": {
+    "query": "| mstats latest(mdt_panos_xml_session_cps) as cps latest(mdt_panos_xml_session_kbps) as kbps latest(mdt_panos_xml_session_pps) as pps WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=5m"
+   }
+  },
+  "ds_installed": {
+   "type": "ds.search",
+   "name": "installed",
+   "options": {
+    "query": "| mstats latest(mdt_panos_xml_session_num_installed) as inst WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=5m"
+   }
+  },
+  "ds_dp": {
+   "type": "ds.search",
+   "name": "dp",
+   "options": {
+    "query": "| mstats latest(mdt_panos_xml_dp_cpu_avg) as cpu_avg latest(mdt_panos_xml_dp_cpu_max) as cpu_max WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=5m"
+   }
+  },
+  "ds_dp_res": {
+   "type": "ds.search",
+   "name": "dp_res",
+   "options": {
+    "query": "| mstats latest(mdt_panos_xml_dp_session_avg) as session_avg latest(mdt_panos_xml_dp_session_max) as session_max latest(mdt_panos_xml_dp_packet_buffer_avg) as packet_buffer_avg latest(mdt_panos_xml_dp_packet_buffer_max) as packet_buffer_max latest(mdt_panos_xml_dp_packet_descriptor_avg) as packet_descriptor_avg latest(mdt_panos_xml_dp_packet_descriptor_max) as packet_descriptor_max WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" span=5m"
+   }
+  },
+  "ds_drops": {
+   "type": "ds.search",
+   "name": "drops",
+   "options": {
+    "query": "| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_counters_value span=5m BY counter"
+   }
+  },
+  "ds_drop_table": {
+   "type": "ds.search",
+   "name": "drop_table",
+   "options": {
+    "query": "| mstats earliest(_value) as first latest(_value) as total WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_counters_value BY counter desc | eval change=total-first | sort 0 -change | rename counter as Counter, desc as Description, change as \"Change in range\", total as \"Total since boot\" | table Counter Description \"Change in range\" \"Total since boot\""
+   }
+  },
+  "ds_ha_role": {
+   "type": "ds.search",
+   "name": "ha_role",
+   "options": {
+    "query": "| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_state span=1m BY unit state | sort 0 -_time | dedup unit | where unit=\"local\" | eval \"HA role\"=state | fields \"HA role\""
+   }
+  },
+  "ds_alarms": {
+   "type": "ds.search",
+   "name": "alarms",
+   "options": {
+    "query": "| mstats latest(_value) as alarms WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_env_alarms earliest=-15m | rename alarms as \"Sensors in alarm\" | fields \"Sensors in alarm\""
+   }
+  },
+  "ds_temps": {
+   "type": "ds.search",
+   "name": "temps",
+   "options": {
+    "query": "| mstats latest(_value) as Reading WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_env_temp_c earliest=-15m BY sensor | rename sensor as Sensor | sort Sensor | table Sensor Reading"
+   }
+  },
+  "ds_fans": {
+   "type": "ds.search",
+   "name": "fans",
+   "options": {
+    "query": "| mstats latest(_value) as RPM WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_env_rpm earliest=-15m BY sensor | rename sensor as Fan | sort Fan | table Fan RPM"
+   }
+  },
+  "ds_psu": {
+   "type": "ds.search",
+   "name": "psu",
+   "options": {
+    "query": "| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_env_status earliest=-15m BY sensor status | rename sensor as \"Power supply\" | table \"Power supply\" status"
+   }
+  },
+  "ds_lic": {
+   "type": "ds.search",
+   "name": "lic",
+   "options": {
+    "query": "| mstats latest(_value) as exp WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_license_expires earliest=-2d BY feature | eval Expires=strftime(exp, \"%Y-%m-%d\"), days_left=round((exp - now()) / 86400, 0) | sort days_left | rename feature as Feature, days_left as \"Days left\" | table Feature Expires \"Days left\""
+   }
+  },
+  "ds_ha_table": {
+   "type": "ds.search",
+   "name": "ha_table",
+   "options": {
+    "query": "| mstats latest(_value) as val WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_state span=1m BY unit state | sort 0 -_time | dedup unit | eval Item=\"State\", val=state | fields unit Item val | append [| mstats latest(_value) as val WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_priority earliest=-6m BY unit | eval Item=\"Priority\" | fields unit Item val] | append [| mstats latest(_value) as val WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_state_duration earliest=-6m BY unit | eval Item=\"Time in state (s)\" | fields unit Item val] | append [| mstats latest(_value) as val WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_serial span=1m BY unit serial | sort 0 -_time | dedup unit | eval Item=\"Serial\", val=serial | fields unit Item val] | append [| mstats latest(_value) as val WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_build_rel span=1m BY unit build_rel | sort 0 -_time | dedup unit | eval Item=\"Build\", val=build_rel | fields unit Item val] | append [| mstats latest(_value) as val WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_ha1_status span=1m BY unit ha1_status | sort 0 -_time | dedup unit | eval Item=\"Link ha1\", val=ha1_status | fields unit Item val] | append [| mstats latest(_value) as val WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_ha1_backup_status span=1m BY unit ha1_backup_status | sort 0 -_time | dedup unit | eval Item=\"Link ha1-backup\", val=ha1_backup_status | fields unit Item val] | append [| mstats latest(_value) as val WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_ha2_status span=1m BY unit ha2_status | sort 0 -_time | dedup unit | eval Item=\"Link ha2\", val=ha2_status | fields unit Item val] | append [| mstats latest(_value) as val WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_conn_status span=1m BY unit conn_status | sort 0 -_time | dedup unit | eval Item=\"Peer connection\", val=conn_status | fields unit Item val] | chart values(val) as val over Item by unit | eval ord=case(Item=\"State\", 1, Item=\"Priority\", 2, Item=\"Time in state (s)\", 3, Item=\"Serial\", 4, Item=\"Build\", 5, Item=\"Link ha1\", 6, Item=\"Link ha1-backup\", 7, Item=\"Link ha2\", 8, Item=\"Peer connection\", 9) | sort 0 ord | fields - ord | rename local as Local, peer as Peer | table Item Local Peer"
+   }
+  },
+  "ds_ha_sync": {
+   "type": "ds.search",
+   "name": "ha_sync",
+   "options": {
+    "query": "| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_mode span=1m BY mode | sort 0 -_time | head 1 | eval Item=\"Mode\", Value=mode | fields Item Value | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_running_sync span=1m BY running_sync | sort 0 -_time | head 1 | eval Item=\"Running sync\", Value=running_sync | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_state_sync span=1m BY state_sync | sort 0 -_time | head 1 | eval Item=\"State sync\", Value=state_sync | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_vpnclient_compat earliest=-6m BY vpnclient_compat | eval Item=\"VPN client compat\", Value=vpnclient_compat | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_app_compat earliest=-6m BY app_compat | eval Item=\"App compat\", Value=app_compat | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_threat_compat earliest=-6m BY threat_compat | eval Item=\"Threat compat\", Value=threat_compat | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_av_compat earliest=-6m BY av_compat | eval Item=\"Antivirus compat\", Value=av_compat | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_url_compat earliest=-6m BY url_compat | eval Item=\"URL filtering compat\", Value=url_compat | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_gpclient_compat earliest=-6m BY gpclient_compat | eval Item=\"GlobalProtect client compat\", Value=gpclient_compat | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_build_compat earliest=-6m BY build_compat | eval Item=\"Build compat\", Value=build_compat | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_iot_compat earliest=-6m BY iot_compat | eval Item=\"IoT compat\", Value=iot_compat | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_dlp_compat earliest=-6m BY dlp_compat | eval Item=\"DLP compat\", Value=dlp_compat | fields Item Value] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_oc_compat earliest=-6m BY oc_compat | eval Item=\"OpenConfig compat\", Value=oc_compat | fields Item Value] | table Item Value"
+   }
+  },
+  "ds_versions": {
+   "type": "ds.search",
+   "name": "versions",
+   "options": {
+    "query": "| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_sw_version earliest=-2d BY sw_version | sort 0 -_time | head 1 | eval Item=\"Software\", Version=sw_version | fields Item Version | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_app_version earliest=-2d BY app_version | sort 0 -_time | head 1 | eval Item=\"App\", Version=app_version | fields Item Version] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_threat_version earliest=-2d BY threat_version | sort 0 -_time | head 1 | eval Item=\"Threat\", Version=threat_version | fields Item Version] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_av_version earliest=-2d BY av_version | sort 0 -_time | head 1 | eval Item=\"Antivirus\", Version=av_version | fields Item Version] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_wildfire_version earliest=-2d BY wildfire_version | sort 0 -_time | head 1 | eval Item=\"WildFire\", Version=wildfire_version | fields Item Version] | append [| mstats latest(_value) as v WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_url_version earliest=-2d BY url_version | sort 0 -_time | head 1 | eval Item=\"URL filtering\", Version=url_version | fields Item Version] | append [| mstats latest(_value) as up WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_uptime earliest=-2d | eval Item=\"Uptime (days)\", Version=round(up / 86400, 1) | fields Item Version] | table Item Version"
+   }
+  },
+  "ds_sigs": {
+   "type": "ds.search",
+   "name": "sigs",
+   "options": {
+    "query": "| mstats latest(_value) as rel WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_app_release earliest=-2d | eval Signature=\"App\", Released=strftime(rel, \"%Y-%m-%d %H:%M\"), age=round((now() - rel) / 86400, 1) | fields Signature Released age | append [| mstats latest(_value) as rel WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_threat_release earliest=-2d | eval Signature=\"Threat\", Released=strftime(rel, \"%Y-%m-%d %H:%M\"), age=round((now() - rel) / 86400, 1) | fields Signature Released age] | append [| mstats latest(_value) as rel WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_av_release earliest=-2d | eval Signature=\"Antivirus\", Released=strftime(rel, \"%Y-%m-%d %H:%M\"), age=round((now() - rel) / 86400, 1) | fields Signature Released age] | append [| mstats latest(_value) as rel WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_url_release earliest=-2d | eval Signature=\"URL filtering\", Released=strftime(rel, \"%Y-%m-%d %H:%M\"), age=round((now() - rel) / 86400, 1) | fields Signature Released age] | append [| mstats latest(_value) as rel WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_wildfire_release earliest=-2d | eval Signature=\"WildFire\", Released=strftime(rel, \"%Y-%m-%d %H:%M\"), age=round((now() - rel) / 86400, 1) | fields Signature Released age] | rename age as \"Age (days)\" | table Signature Released \"Age (days)\""
+   }
+  },
+  "ds_health": {
+   "type": "ds.search",
+   "name": "health",
+   "options": {
+    "query": "| makeresults | eval grp=\"seed\", n=0 | fields grp n | append [| mstats count(_value) as n WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_*_compat earliest=-6m | eval n=if(n > 0, 1, 0), grp=\"HA\" | fields grp n] | append [| mstats count(_value) as n WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_running_sync running_sync!=\"synchronized\" earliest=-6m | eval n=if(n > 0, 1, 0), grp=\"HA\" | fields grp n] | append [| mstats count(_value) as n WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_ha1_status ha1_status!=\"up\" earliest=-6m | eval n=if(n > 0, 1, 0), grp=\"HA\" | fields grp n] | append [| mstats count(_value) as n WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_ha1_backup_status ha1_backup_status!=\"up\" earliest=-6m | eval n=if(n > 0, 1, 0), grp=\"HA\" | fields grp n] | append [| mstats count(_value) as n WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_ha2_status ha2_status!=\"up\" earliest=-6m | eval n=if(n > 0, 1, 0), grp=\"HA\" | fields grp n] | append [| mstats count(_value) as n WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_ha_conn_status conn_status!=\"up\" earliest=-6m | eval n=if(n > 0, 1, 0), grp=\"HA\" | fields grp n] | append [| mstats latest(_value) as n WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_env_alarms earliest=-15m | where n > 0 | stats count as n | eval grp=\"Alarms\"] | append [| mstats latest(_value) as exp WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_license_expires earliest=-2d BY feature | where exp < now() + 30 * 86400 | stats count as n | eval grp=\"Licences\"] | append [| mstats latest(_value) as rel WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_app_release earliest=-2d | where rel < now() - 604800 | stats count as n | eval grp=\"Signatures\"] | append [| mstats latest(_value) as rel WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_threat_release earliest=-2d | where rel < now() - 604800 | stats count as n | eval grp=\"Signatures\"] | append [| mstats latest(_value) as rel WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_av_release earliest=-2d | where rel < now() - 604800 | stats count as n | eval grp=\"Signatures\"] | append [| mstats latest(_value) as rel WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_url_release earliest=-2d | where rel < now() - 604800 | stats count as n | eval grp=\"Signatures\"] | append [| mstats latest(_value) as rel WHERE `mdt_metrics_index` extracted_source=\"$tk_fw$\" metric_name=mdt_panos_xml_system_wildfire_release earliest=-2d | where rel < now() - 86400 | stats count as n | eval grp=\"Signatures\"] | stats max(n) as n by grp | stats sum(n) as \"Health issues\""
    }
   },
   "ds_active": {
@@ -224,6 +632,86 @@
    "options": {
     "extend": "ds_sessions",
     "query": "| eval \"Session table %\"=round(active / max * 100, 2) | fields _time \"Session table %\""
+   }
+  },
+  "ds_proto": {
+   "type": "ds.chain",
+   "name": "proto",
+   "options": {
+    "extend": "ds_sess_proto",
+    "query": "| timechart span=5m max(tcp) as TCP max(udp) as UDP max(icmp) as ICMP"
+   }
+  },
+  "ds_cps": {
+   "type": "ds.chain",
+   "name": "cps",
+   "options": {
+    "extend": "ds_sess_rate",
+    "query": "| timechart span=5m max(cps) as \"Connections/s\""
+   }
+  },
+  "ds_kbps": {
+   "type": "ds.chain",
+   "name": "kbps",
+   "options": {
+    "extend": "ds_sess_rate",
+    "query": "| timechart span=5m max(kbps) as \"kbps\" max(pps) as \"pps\""
+   }
+  },
+  "ds_new_sess": {
+   "type": "ds.chain",
+   "name": "new_sess",
+   "options": {
+    "extend": "ds_installed",
+    "query": "| sort 0 _time | delta inst as d | where d >= 0 | eval \"New sessions per 5 min\"=d | fields _time \"New sessions per 5 min\""
+   }
+  },
+  "ds_cps_now": {
+   "type": "ds.chain",
+   "name": "cps_now",
+   "options": {
+    "extend": "ds_sess_rate",
+    "query": "| sort 0 _time | tail 1 | eval \"Connections/s\"=cps | fields \"Connections/s\""
+   }
+  },
+  "ds_cpu_now": {
+   "type": "ds.chain",
+   "name": "cpu_now",
+   "options": {
+    "extend": "ds_dp",
+    "query": "| sort 0 _time | tail 1 | eval \"Dataplane CPU %\"=round(cpu_avg, 1) | fields \"Dataplane CPU %\""
+   }
+  },
+  "ds_cpu": {
+   "type": "ds.chain",
+   "name": "cpu",
+   "options": {
+    "extend": "ds_dp",
+    "query": "| timechart span=5m max(cpu_avg) as \"CPU avg %\" max(cpu_max) as \"CPU max %\""
+   }
+  },
+  "ds_dp_pb": {
+   "type": "ds.chain",
+   "name": "dp_pb",
+   "options": {
+    "extend": "ds_dp_res",
+    "query": "| timechart span=5m max(packet_buffer_avg) as \"Packet buffer avg %\" max(packet_buffer_max) as \"Packet buffer max %\" max(packet_descriptor_avg) as \"Descriptor avg %\" max(packet_descriptor_max) as \"Descriptor max %\""
+   }
+  },
+  "ds_dp_sess": {
+   "type": "ds.chain",
+   "name": "dp_sess",
+   "options": {
+    "extend": "ds_dp_res",
+    "query": "| timechart span=5m max(session_avg) as \"Session avg %\" max(session_max) as \"Session max %\""
+   }
+  },
+  "ds_drop_chart": {
+   "type": "ds.chain",
+   "name": "drop_chart",
+   "options": {
+    "extend": "ds_drops",
+    "query": "| sort 0 counter _time | streamstats current=f window=1 last(v) as prev by counter | eval change=v - prev | where change >= 0 | timechart span=5m sum(change) by counter limit=10 useother=f"
    }
   },
   "ds_in_total": {
@@ -291,20 +779,30 @@
    "input_fw"
   ],
   "layoutDefinitions": {
-   "layout_1": {
+   "layout_traffic": {
     "type": "grid",
     "options": {
      "width": 1440,
-     "height": 1150
+     "height": 1860
     },
     "structure": [
      {
-      "item": "viz_active",
+      "item": "viz_ha_role",
       "type": "block",
       "position": {
        "x": 0,
        "y": 0,
-       "w": 288,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_active",
+      "type": "block",
+      "position": {
+       "x": 240,
+       "y": 0,
+       "w": 240,
        "h": 110
       }
      },
@@ -312,9 +810,39 @@
       "item": "viz_util",
       "type": "block",
       "position": {
-       "x": 288,
+       "x": 480,
        "y": 0,
-       "w": 288,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_cps",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_cpu",
+      "type": "block",
+      "position": {
+       "x": 960,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_health",
+      "type": "block",
+      "position": {
+       "x": 1200,
+       "y": 0,
+       "w": 240,
        "h": 110
       }
      },
@@ -322,9 +850,9 @@
       "item": "viz_in_total",
       "type": "block",
       "position": {
-       "x": 576,
-       "y": 0,
-       "w": 288,
+       "x": 0,
+       "y": 110,
+       "w": 480,
        "h": 110
       }
      },
@@ -332,9 +860,9 @@
       "item": "viz_out_total",
       "type": "block",
       "position": {
-       "x": 864,
-       "y": 0,
-       "w": 288,
+       "x": 480,
+       "y": 110,
+       "w": 480,
        "h": 110
       }
      },
@@ -342,9 +870,9 @@
       "item": "viz_err_ifs",
       "type": "block",
       "position": {
-       "x": 1152,
-       "y": 0,
-       "w": 288,
+       "x": 960,
+       "y": 110,
+       "w": 480,
        "h": 110
       }
      },
@@ -353,7 +881,7 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 110,
+       "y": 220,
        "w": 720,
        "h": 320
       }
@@ -363,27 +891,67 @@
       "type": "block",
       "position": {
        "x": 720,
-       "y": 110,
+       "y": 220,
        "w": 720,
        "h": 320
-      }
-     },
-     {
-      "item": "viz_sessions",
-      "type": "block",
-      "position": {
-       "x": 0,
-       "y": 430,
-       "w": 720,
-       "h": 300
       }
      },
      {
       "item": "viz_errs",
       "type": "block",
       "position": {
+       "x": 0,
+       "y": 540,
+       "w": 720,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_sessions",
+      "type": "block",
+      "position": {
        "x": 720,
-       "y": 430,
+       "y": 540,
+       "w": 720,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_proto",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 840,
+       "w": 720,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_new_sess",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 840,
+       "w": 720,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_cps_chart",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 1140,
+       "w": 720,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_kbps",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 1140,
        "w": 720,
        "h": 300
       }
@@ -393,9 +961,287 @@
       "type": "block",
       "position": {
        "x": 0,
-       "y": 730,
+       "y": 1440,
        "w": 1440,
        "h": 420
+      }
+     }
+    ]
+   },
+   "layout_health": {
+    "type": "grid",
+    "options": {
+     "width": 1440,
+     "height": 1490
+    },
+    "structure": [
+     {
+      "item": "viz_ha_role",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_active",
+      "type": "block",
+      "position": {
+       "x": 240,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_util",
+      "type": "block",
+      "position": {
+       "x": 480,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_cps",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_cpu",
+      "type": "block",
+      "position": {
+       "x": 960,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_health",
+      "type": "block",
+      "position": {
+       "x": 1200,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_cpu_chart",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 110,
+       "w": 720,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_dp_pb",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 110,
+       "w": 720,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_dp_sess",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 410,
+       "w": 720,
+       "h": 260
+      }
+     },
+     {
+      "item": "viz_ha_table",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 410,
+       "w": 720,
+       "h": 260
+      }
+     },
+     {
+      "item": "viz_ha_sync",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 670,
+       "w": 720,
+       "h": 260
+      }
+     },
+     {
+      "item": "viz_alarms",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 670,
+       "w": 720,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_psu",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 780,
+       "w": 720,
+       "h": 150
+      }
+     },
+     {
+      "item": "viz_temps",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 930,
+       "w": 480,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_fans",
+      "type": "block",
+      "position": {
+       "x": 480,
+       "y": 930,
+       "w": 480,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_versions",
+      "type": "block",
+      "position": {
+       "x": 960,
+       "y": 930,
+       "w": 480,
+       "h": 300
+      }
+     },
+     {
+      "item": "viz_sigs",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 1230,
+       "w": 720,
+       "h": 260
+      }
+     },
+     {
+      "item": "viz_lic",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 1230,
+       "w": 720,
+       "h": 260
+      }
+     }
+    ]
+   },
+   "layout_drops": {
+    "type": "grid",
+    "options": {
+     "width": 1440,
+     "height": 1110
+    },
+    "structure": [
+     {
+      "item": "viz_ha_role",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_active",
+      "type": "block",
+      "position": {
+       "x": 240,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_util",
+      "type": "block",
+      "position": {
+       "x": 480,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_cps",
+      "type": "block",
+      "position": {
+       "x": 720,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_cpu",
+      "type": "block",
+      "position": {
+       "x": 960,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_health",
+      "type": "block",
+      "position": {
+       "x": 1200,
+       "y": 0,
+       "w": 240,
+       "h": 110
+      }
+     },
+     {
+      "item": "viz_drop_chart",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 110,
+       "w": 1440,
+       "h": 380
+      }
+     },
+     {
+      "item": "viz_drop_table",
+      "type": "block",
+      "position": {
+       "x": 0,
+       "y": 490,
+       "w": 1440,
+       "h": 620
       }
      }
     ]
@@ -404,8 +1250,16 @@
   "tabs": {
    "items": [
     {
-     "label": "Firewall",
-     "layoutId": "layout_1"
+     "label": "Traffic",
+     "layoutId": "layout_traffic"
+    },
+    {
+     "label": "Health",
+     "layoutId": "layout_health"
+    },
+    {
+     "label": "Drops",
+     "layoutId": "layout_drops"
     }
    ]
   }

@@ -1,0 +1,182 @@
+[
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "Advanced DNS Security",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "Advanced IP Defense",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "Advanced Threat Prevention",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "Advanced URL Filtering",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "Advanced WildFire License",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "GlobalProtect Gateway",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "Logging Service",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1920844800
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "PAN-DB URL Filtering",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "SD WAN",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "Standard",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "Threat Prevention",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  },
+  {
+    "name": "panos_xml_license",
+    "timestamp": 1795518951000000000,
+    "tags": {
+      "feature": "WildFire License",
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_license"
+    },
+    "values": {
+      "expired": "no",
+      "expires": 1803600000
+    }
+  }
+]

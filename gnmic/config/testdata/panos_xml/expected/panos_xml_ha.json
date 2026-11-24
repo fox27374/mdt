@@ -1,0 +1,58 @@
+[
+  {
+    "name": "panos_xml_ha",
+    "timestamp": 1795518945000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_ha",
+      "unit": "local"
+    },
+    "values": {
+      "build_rel": "12.1.10-h4",
+      "priority": 100,
+      "serial": "044109001296",
+      "state": "active",
+      "state_duration": 557650
+    }
+  },
+  {
+    "name": "panos_xml_ha",
+    "timestamp": 1795518945000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_ha",
+      "unit": "peer"
+    },
+    "values": {
+      "build_rel": "12.1.10-h4",
+      "conn_status": "up",
+      "ha1_backup_status": "up",
+      "ha1_status": "up",
+      "ha2_status": "up",
+      "priority": 80,
+      "serial": "044109001346",
+      "state": "passive",
+      "state_duration": 557549
+    }
+  },
+  {
+    "name": "panos_xml_ha",
+    "timestamp": 1795518945000000000,
+    "tags": {
+      "mgmt_ip": "172.24.88.157",
+      "site": "ibk-lab",
+      "source": "172.24.88.157:9339",
+      "subscription-name": "panos_xml_ha"
+    },
+    "values": {
+      "mode": "Active-Passive",
+      "running_sync": "not synchronized",
+      "state_sync": "Complete",
+      "url_compat": "Mismatch"
+    }
+  }
+]
