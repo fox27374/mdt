@@ -152,23 +152,6 @@ targets:
       - xe_lag_info
       - xe_inventory
 
-  10.20.0.7:57400:
-    name: "ibk-lab-edge03"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "10.20.0.7"
-    subscriptions:
-      - xe_if_stats
-      - xe_cpu_stats
-      - xe_mem_stats
-      - xe_poe_stats
-      - xe_if_info
-      - xe_cdp_info
-      - xe_mac_info
-      - xe_arp_info
-      - xe_lag_info
-      - xe_inventory
-
   # NX-OS Switches
   # crypto ca trustpoint NTSRootCA
   #   enrollment terminal
