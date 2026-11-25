@@ -149,7 +149,7 @@ NetBox is then the only target source. To switch back, restore the `targets:` bl
 NetBox needs:
 
 - Device tag `monitoring` and status `active`.
-- Device custom field `mdt_profile` (selection): `iosxe`, `iosxe-nopoe`, `nxos`, `wlc` or `panos`. The profile sets the
+- Device custom field `telemetry_profile` (selection): `iosxe`, `iosxe-nopoe`, `nxos`, `wlc` or `panos`. The profile sets the
   port, the subscriptions and the credentials, as in [config/netbox-targets.tmpl](gnmic/config/netbox-targets.tmpl).
 - Device `primary_ip4` is the gNMI address. For the edge switches use the Loopback0 address.
 - Device site: the site slug is the `site` event tag, except `nts-innsbruck-lab`, which is written as `ibk-lab`.
@@ -157,7 +157,7 @@ NetBox needs:
 
 Behaviour:
 
-- The target list refreshes every 5 minutes. Devices without `primary_ip4` or `mdt_profile` are skipped.
+- The target list refreshes every 5 minutes. Devices without `primary_ip4` or `telemetry_profile` are skipped.
 - If NetBox is down, answers with an error, or returns no device, gnmic logs the error and keeps the last target list.
 - The loader's TLS check is `skip-verify: true`, because the NetBox certificate does not match its host name.
 
