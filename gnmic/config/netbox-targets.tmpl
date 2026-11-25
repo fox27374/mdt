@@ -1,8 +1,8 @@
 {{/*
 NetBox devices -> gnmic targets, the loader template behind `loader:` in mdt.yaml.
 Input: NetBox GET /api/dcim/devices/ (the JSON is unmarshalled, so numbers are float64).
-Output: a JSON map keyed by device name, one target per device that has a primary_ip4 and a known mdt_profile.
-Other devices are skipped, so the mdt_profile table below decides which devices are monitored.
+Output: a JSON map keyed by device name, one target per device that has a primary_ip4 and a known telemetry_profile (NetBox returns a selection as {value, label}).
+Other devices are skipped, so the telemetry_profile table below decides which devices are monitored.
 gnmic's JSON func names are inverted: fromJSON marshals a value to JSON text, toJSON parses it.
 Profile -> port, subscriptions and extra fields: the same values as the static targets this replaced.
 No device rendered (count 0 included): the output is deliberately invalid JSON, so gnmic logs an error and
@@ -13,7 +13,7 @@ keeps the last target list. An empty list would stop every target.
   {{- $ip := "" -}}
   {{- with .primary_ip4 -}}{{- $ip = index (split .address "/") 0 -}}{{- end -}}
   {{- $profile := "" -}}
-  {{- with .custom_fields -}}{{- with .mdt_profile -}}{{- $profile = . -}}{{- end -}}{{- end -}}
+  {{- with .custom_fields -}}{{- with .telemetry_profile -}}{{- $profile = .value -}}{{- end -}}{{- end -}}
   {{- $port := 57400 -}}
   {{- $subs := "" -}}
   {{- $extra := "" -}}

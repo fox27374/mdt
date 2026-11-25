@@ -43,7 +43,7 @@ func TestNetBoxTemplateTargets(t *testing.T) {
 		t.Fatalf("output is not valid JSON: %v\n%s", err, out)
 	}
 
-	// Skipped: ibk-lab-spare01 (no primary_ip4), ibk-lab-noprofile01 (no mdt_profile).
+	// Skipped: ibk-lab-spare01 (no primary_ip4), ibk-lab-noprofile01 (no telemetry_profile).
 	if len(targets) != 7 {
 		t.Fatalf("expected 7 targets, got %d: %v", len(targets), targets)
 	}
