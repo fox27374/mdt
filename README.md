@@ -140,8 +140,8 @@ event. The dial-out subscription is `57009` in `dialout-iosxe.yaml`.
 ### NetBox target source (optional)
 
 gnmic can read the dial-in targets from NetBox (the `loader:` block in `config/mdt.yaml`) in addition to the static
-`targets:` list. The lab runs with the loader on; the static list keeps only the devices that are not in NetBox yet
-(the WLCs). Never list a device in both: gnmic runs the loader and the static targets side by side.
+`targets:` list. The lab runs with the loader on and every static target commented out; a device not in NetBox can go
+back into the static list. Never list a device in both: gnmic runs the loader and the static targets side by side.
 
 To switch it on: uncomment the `loader:` block, comment out the static targets that NetBox now provides, set
 `NETBOX_TOKEN` in `gnmic_env` (a NetBox v2 token, `nbt_...`) and deploy with `scripts/gnmic-deploy`. To switch it
