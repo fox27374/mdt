@@ -44,8 +44,8 @@ func TestNetBoxTemplateTargets(t *testing.T) {
 	}
 
 	// Skipped: ibk-lab-spare01 (no primary_ip4), ibk-lab-noprofile01 (no telemetry_profile).
-	if len(targets) != 7 {
-		t.Fatalf("expected 7 targets, got %d: %v", len(targets), targets)
+	if len(targets) != 8 {
+		t.Fatalf("expected 8 targets, got %d: %v", len(targets), targets)
 	}
 	for _, skipped := range []string{"ibk-lab-spare01", "ibk-lab-noprofile01"} {
 		if _, ok := targets[skipped]; ok {
@@ -53,7 +53,7 @@ func TestNetBoxTemplateTargets(t *testing.T) {
 		}
 	}
 
-	// Address, site (nts-innsbruck-lab -> ibk-lab), mgmt_ip and subscription count per profile.
+	// Address, site (nts-innsbruck-lab -> ibk-lab; telemetry_site overrides), mgmt_ip and subscription count per profile.
 	cases := []struct {
 		name, address, site, mgmtIP string
 		subs                        int
@@ -65,6 +65,7 @@ func TestNetBoxTemplateTargets(t *testing.T) {
 		{"ibk-lab-ewlc01", "172.24.89.147:57400", "ibk-lab", "172.24.89.147", 7},
 		{"Lab-IBK-PA560-1", "172.24.88.156:9339", "ibk-lab", "172.24.88.156", 9},
 		{"nk-home-ewlc01", "172.24.88.161:57400", "nk-home", "172.24.88.161", 7},
+		{"C9800-CL-161", "172.24.88.162:57400", "nk-home", "172.24.88.162", 7},
 	}
 	for _, c := range cases {
 		tgt, ok := targets[c.name]

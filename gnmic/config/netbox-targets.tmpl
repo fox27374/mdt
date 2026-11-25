@@ -31,6 +31,8 @@ keeps the last target list. An empty list would stop every target.
   {{- end -}}
   {{- $site := .site.slug -}}
   {{- if eq $site "nts-innsbruck-lab" -}}{{- $site = "ibk-lab" -}}{{- end -}}
+  {{- /* telemetry_site (device text field) overrides the site, e.g. a WLC in Innsbruck serving nk-home */ -}}
+  {{- with .custom_fields -}}{{- with .telemetry_site -}}{{- $site = . -}}{{- end -}}{{- end -}}
   {{- if and $ip $subs -}}
     {{- if $first -}}{{- $first = false -}}{{- "{" -}}{{- else -}},{{- end }}
     {{ .name | fromJSON }}: {

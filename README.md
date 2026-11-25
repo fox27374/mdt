@@ -159,6 +159,8 @@ NetBox needs:
   `iosxe` covers switches without PoE too: they answer the PoE subscription with no data (monitor status `EMPTY`, counted as OK).
 - Device `primary_ip4` is the gNMI address. For the edge switches use the Loopback0 address.
 - Device site: the site slug is the `site` event tag, except `nts-innsbruck-lab`, which is written as `ibk-lab`.
+- Device custom field `telemetry_site` (text, optional): overrides the `site` event tag, for a device whose clients are
+  at another site than the device (e.g. a WLC in `nts-innsbruck-lab` serving `nk-home`).
 - Token user with view on dcim device, site, platform and device role, ipam IP address, and extras tag.
 
 Behaviour:
