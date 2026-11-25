@@ -67,7 +67,7 @@ flowchart LR
 | [compose.yaml](gnmic/compose.yaml) | Main Compose stack: Consul, two clustered gnmic collectors, gnmic output, NATS, and the OpenTelemetry collector. |
 | [compose-debug.yaml](gnmic/compose-debug.yaml) | Identical stack to `compose.yaml` but with `--debug` added to every gnmic command — used for troubleshooting. |
 | [config/mdt.yaml](gnmic/config/mdt.yaml) | The core gnmic **collector** config: global auth, clustering, targets (or the NetBox `loader:`), subscriptions, processors, and the NATS output. |
-| [config/netbox-targets.tmpl](gnmic/config/netbox-targets.tmpl) | Turns the NetBox device list into gnmic targets, for the optional NetBox target source (see [NetBox target source](#netbox-target-source-optional)). |
+| [config/netbox-targets.tmpl](gnmic/config/netbox-targets.tmpl) | Turns the NetBox device list into gnmic targets, for the NetBox target source (see [NetBox target source](#netbox-target-source-optional)). |
 | [config/output.yaml](gnmic/config/output.yaml) | The gnmic **output** config: reads from NATS and exposes the Prometheus endpoint. |
 | [config/otel.yaml](gnmic/config/otel.yaml) | The OpenTelemetry **collector** config: receives Cisco model-driven telemetry (`yang_grpc`), scrapes gnmic-output and host metrics, and exports to Splunk HEC. |
 | [config/ca.pem](gnmic/config/ca.pem) | CA certificate used to verify the NX-OS switch gRPC endpoints. |
@@ -139,12 +139,13 @@ event. The dial-out subscription is `57009` in `dialout-iosxe.yaml`.
 
 ### NetBox target source (optional)
 
-By default the dial-in targets are the static `targets:` list in `config/mdt.yaml`. Instead, gnmic can read them
-from NetBox. This is off by default.
+gnmic can read the dial-in targets from NetBox (the `loader:` block in `config/mdt.yaml`) in addition to the static
+`targets:` list. The lab runs with the loader on; the static list keeps only the devices that are not in NetBox yet
+(the WLCs). Never list a device in both: gnmic runs the loader and the static targets side by side.
 
-To switch it on, in `config/mdt.yaml`: comment out the whole `targets:` block and uncomment the `loader:` block.
-Set `NETBOX_TOKEN` in `gnmic_env` (a NetBox v2 token, `nbt_...`), then deploy with `scripts/gnmic-deploy`.
-NetBox is then the only target source. To switch back, restore the `targets:` block and remove the `loader:` block.
+To switch it on: uncomment the `loader:` block, comment out the static targets that NetBox now provides, set
+`NETBOX_TOKEN` in `gnmic_env` (a NetBox v2 token, `nbt_...`) and deploy with `scripts/gnmic-deploy`. To switch it
+off: comment out `loader:`, restore the static targets, deploy.
 
 NetBox needs:
 
@@ -307,6 +308,9 @@ podman rm -f gnmic-monitor
 podman rm -f podman-exporter
 PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d --no-deps podman-exporter monitor
 ```
+
+With podman-compose 1.3.0 `--no-deps` is ignored: `up` also recreates the services the listed ones depend on
+(for the monitor: consul, nats, node-exporter, gnmic-output, otel-collector), a gap of about 10 s.
 
 On the maintainer test host, `scripts/monitor-deploy` does this for the monitor: it copies `gnmic/monitor/`, tags
 the running image `localhost/gnmic_monitor:rollback`, rebuilds, replaces both containers and waits for `/healthz`.
