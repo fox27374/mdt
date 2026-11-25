@@ -4,7 +4,7 @@
   "previous": null,
   "results": [
     {"id": 1, "name": "ibk-lab-sw98", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.80.240/32"}, "custom_fields": {"telemetry_profile": {"value": "iosxe", "label": "iosxe"}}},
-    {"id": 2, "name": "ibk-lab-border01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.80.231/32"}, "custom_fields": {"telemetry_profile": {"value": "iosxe-nopoe", "label": "iosxe-nopoe"}}},
+    {"id": 2, "name": "ibk-lab-border01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.80.231/32"}, "custom_fields": {"telemetry_profile": {"value": "iosxe", "label": "iosxe"}}},
     {"id": 3, "name": "ibk-lab-edge01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "10.20.0.40/32"}, "custom_fields": {"telemetry_profile": {"value": "iosxe", "label": "iosxe"}}},
     {"id": 4, "name": "ntsnxsw01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.80.195/32"}, "custom_fields": {"telemetry_profile": {"value": "nxos", "label": "nxos"}}},
     {"id": 5, "name": "ibk-lab-ewlc01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.89.147/32"}, "custom_fields": {"telemetry_profile": {"value": "wlc", "label": "wlc"}}},

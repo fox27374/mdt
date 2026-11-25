@@ -149,8 +149,9 @@ NetBox is then the only target source. To switch back, restore the `targets:` bl
 NetBox needs:
 
 - Device tag `monitoring` and status `active`.
-- Device custom field `telemetry_profile` (selection): `iosxe`, `iosxe-nopoe`, `nxos`, `wlc` or `panos`. The profile sets the
+- Device custom field `telemetry_profile` (selection): `iosxe`, `nxos`, `wlc` or `panos`. The profile sets the
   port, the subscriptions and the credentials, as in [config/netbox-targets.tmpl](gnmic/config/netbox-targets.tmpl).
+  `iosxe` covers switches without PoE too: they answer the PoE subscription with no data (monitor status `EMPTY`, counted as OK).
 - Device `primary_ip4` is the gNMI address. For the edge switches use the Loopback0 address.
 - Device site: the site slug is the `site` event tag, except `nts-innsbruck-lab`, which is written as `ibk-lab`.
 - Token user with view on dcim device, site, platform and device role, ipam IP address, and extras tag.
