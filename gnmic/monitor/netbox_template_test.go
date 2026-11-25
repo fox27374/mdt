@@ -10,7 +10,7 @@ import (
 )
 
 // renderNetBoxTemplate renders the gnmic loader template on a NetBox device list, with the gnmic template
-// functions the template uses (split, toJSON) stubbed the way gnmic has them.
+// functions the template uses (split, fromJSON) as gnmic implements them; gnmic's fromJSON marshals (its toJSON parses).
 func renderNetBoxTemplate(t *testing.T, fixture string) string {
 	t.Helper()
 	data, err := os.ReadFile(fixture)
@@ -22,8 +22,8 @@ func renderNetBoxTemplate(t *testing.T, fixture string) string {
 		t.Fatalf("fixture is not JSON: %v", err)
 	}
 	tmpl, err := template.New("netbox-targets.tmpl").Funcs(template.FuncMap{
-		"split":  strings.Split,
-		"toJSON": func(v interface{}) (string, error) { b, err := json.Marshal(v); return string(b), err },
+		"split":    strings.Split,
+		"fromJSON": func(v interface{}) string { b, _ := json.Marshal(v); return string(b) },
 	}).ParseFiles("../config/netbox-targets.tmpl")
 	if err != nil {
 		t.Fatalf("parse template: %v", err)

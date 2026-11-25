@@ -3,6 +3,7 @@ NetBox devices -> gnmic targets, the loader template behind `loader:` in mdt.yam
 Input: NetBox GET /api/dcim/devices/ (the JSON is unmarshalled, so numbers are float64).
 Output: a JSON map keyed by device name, one target per device that has a primary_ip4 and a known mdt_profile.
 Other devices are skipped, so the mdt_profile table below decides which devices are monitored.
+gnmic's JSON func names are inverted: fromJSON marshals a value to JSON text, toJSON parses it.
 Profile -> port, subscriptions and extra fields: the same values as the static targets this replaced.
 No device rendered (count 0 included): the output is deliberately invalid JSON, so gnmic logs an error and
 keeps the last target list. An empty list would stop every target.
@@ -34,10 +35,10 @@ keeps the last target list. An empty list would stop every target.
   {{- if eq $site "nts-innsbruck-lab" -}}{{- $site = "ibk-lab" -}}{{- end -}}
   {{- if and $ip $subs -}}
     {{- if $first -}}{{- $first = false -}}{{- "{" -}}{{- else -}},{{- end }}
-    {{ .name | toJSON }}: {
-      "name": {{ .name | toJSON }},
-      "address": {{ printf "%s:%d" $ip $port | toJSON }},
-      {{ $extra }}"event-tags": {"site": {{ $site | toJSON }}, "mgmt_ip": {{ $ip | toJSON }}},
+    {{ .name | fromJSON }}: {
+      "name": {{ .name | fromJSON }},
+      "address": {{ printf "%s:%d" $ip $port | fromJSON }},
+      {{ $extra }}"event-tags": {"site": {{ $site | fromJSON }}, "mgmt_ip": {{ $ip | fromJSON }}},
       "subscriptions": [{{ $subs }}]
     }
   {{- end -}}
