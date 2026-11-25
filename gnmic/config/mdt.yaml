@@ -27,197 +27,199 @@ clustering:
 # Targets
 ###################################
 
-# NetBox target source (off). To switch on: comment out the whole `targets:` block, uncomment `loader:`, set
-# NETBOX_TOKEN in gnmic_env, deploy. NetBox is then the only target source; the list refreshes every 5 minutes.
-# loader:
-#   type: http
-#   url: "https://netbox.ntslab.loc/api/dcim/devices/?tag=monitoring&status=active&limit=1000"
-#   token: "${NETBOX_TOKEN}"
-#   auth-scheme: Bearer
-#   interval: 5m
-#   timeout: 30s
-#   template-file: /app/config/netbox-targets.tmpl
-#   expand-env: true
-#   tls:
-#     # the NetBox certificate does not match netbox.ntslab.loc (curl: no alternative certificate subject name matches)
-#     skip-verify: true
+# NetBox target source (on): gnmic loads the devices tagged `monitoring` from NetBox every 5 minutes,
+# rendered by netbox-targets.tmpl. The static `targets:` below hold only devices that are not in NetBox yet
+# (the WLCs); the commented ones are now in NetBox. Never list a device in both. Off: comment out `loader:`,
+# uncomment the static targets, deploy.
+loader:
+  type: http
+  url: "https://netbox.ntslab.loc/api/dcim/devices/?tag=monitoring&status=active&limit=1000"
+  token: "${NETBOX_TOKEN}"
+  auth-scheme: Bearer
+  interval: 5m
+  timeout: 30s
+  template-file: /app/config/netbox-targets.tmpl
+  expand-env: true
+  tls:
+    # the NetBox certificate does not match netbox.ntslab.loc (curl: no alternative certificate subject name matches)
+    skip-verify: true
 
 targets:
   # event-tags on every target: site (the Splunk Site dropdown; "ibk-lab" for all targets here) and mgmt_ip, the address
   # gnmic polls, as labels on every series (Switch Details shows it). gnmic has no label for the target address, so
   # mgmt_ip is repeated here: keep it in step with the key.
-  172.24.80.240:57400:
-    name: "ibk-lab-sw98"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "172.24.80.240"
-    subscriptions:
-      - xe_if_stats
-      - xe_cpu_stats
-      - xe_mem_stats
-      - xe_poe_stats
-      - xe_if_info
-      - xe_cdp_info
-      - xe_mac_info
-      - xe_arp_info
-      - xe_lag_info
-      - xe_inventory
+#   172.24.80.240:57400:
+#     name: "ibk-lab-sw98"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "172.24.80.240"
+#     subscriptions:
+#       - xe_if_stats
+#       - xe_cpu_stats
+#       - xe_mem_stats
+#       - xe_poe_stats
+#       - xe_if_info
+#       - xe_cdp_info
+#       - xe_mac_info
+#       - xe_arp_info
+#       - xe_lag_info
+#       - xe_inventory
 
-  172.24.80.244:57400:
-    name: "ibk-lab-sw99"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "172.24.80.244"
-    subscriptions:
-      - xe_if_stats
-      - xe_cpu_stats
-      - xe_mem_stats
-      - xe_poe_stats
-      - xe_if_info
-      - xe_cdp_info
-      - xe_mac_info
-      - xe_arp_info
-      - xe_lag_info
-      - xe_inventory
+#   172.24.80.244:57400:
+#     name: "ibk-lab-sw99"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "172.24.80.244"
+#     subscriptions:
+#       - xe_if_stats
+#       - xe_cpu_stats
+#       - xe_mem_stats
+#       - xe_poe_stats
+#       - xe_if_info
+#       - xe_cdp_info
+#       - xe_mac_info
+#       - xe_arp_info
+#       - xe_lag_info
+#       - xe_inventory
 
-  172.24.80.251:57400:
-    name: "ibk-lab-sw03"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "172.24.80.251"
-    subscriptions:
-      - xe_if_stats
-      - xe_cpu_stats
-      - xe_mem_stats
-      - xe_poe_stats
-      - xe_if_info
-      - xe_cdp_info
-      - xe_mac_info
-      - xe_arp_info
-      - xe_lag_info
-      - xe_inventory
+#   172.24.80.251:57400:
+#     name: "ibk-lab-sw03"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "172.24.80.251"
+#     subscriptions:
+#       - xe_if_stats
+#       - xe_cpu_stats
+#       - xe_mem_stats
+#       - xe_poe_stats
+#       - xe_if_info
+#       - xe_cdp_info
+#       - xe_mac_info
+#       - xe_arp_info
+#       - xe_lag_info
+#       - xe_inventory
 
-  # SD-Access fabric switches (Catalyst Center managed). gNMI uses Catalyst Center's device certificate:
-  # gnxi / gnxi secure-password-auth / gnxi secure-port 57400 / gnxi secure-trustpoint sdn-network-infra-iwan / gnxi secure-server
-  # (the HTTP self-signed TP-self-signed-* trustpoint leaves gNMI in state Default: "Device has not been provisioned").
-  # Borders have no PoE ports: no xe_poe_stats. Edges are reached on their Loopback0.
-  172.24.80.231:57400:
-    name: "ibk-lab-border01"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "172.24.80.231"
-    subscriptions:
-      - xe_if_stats
-      - xe_cpu_stats
-      - xe_mem_stats
-      - xe_if_info
-      - xe_cdp_info
-      - xe_mac_info
-      - xe_arp_info
-      - xe_lag_info
-      - xe_inventory
+#   # SD-Access fabric switches (Catalyst Center managed). gNMI uses Catalyst Center's device certificate:
+#   # gnxi / gnxi secure-password-auth / gnxi secure-port 57400 / gnxi secure-trustpoint sdn-network-infra-iwan / gnxi secure-server
+#   # (the HTTP self-signed TP-self-signed-* trustpoint leaves gNMI in state Default: "Device has not been provisioned").
+#   # Borders have no PoE ports: no xe_poe_stats. Edges are reached on their Loopback0.
+#   172.24.80.231:57400:
+#     name: "ibk-lab-border01"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "172.24.80.231"
+#     subscriptions:
+#       - xe_if_stats
+#       - xe_cpu_stats
+#       - xe_mem_stats
+#       - xe_if_info
+#       - xe_cdp_info
+#       - xe_mac_info
+#       - xe_arp_info
+#       - xe_lag_info
+#       - xe_inventory
 
-  172.24.80.232:57400:
-    name: "ibk-lab-border02"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "172.24.80.232"
-    subscriptions:
-      - xe_if_stats
-      - xe_cpu_stats
-      - xe_mem_stats
-      - xe_if_info
-      - xe_cdp_info
-      - xe_mac_info
-      - xe_arp_info
-      - xe_lag_info
-      - xe_inventory
+#   172.24.80.232:57400:
+#     name: "ibk-lab-border02"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "172.24.80.232"
+#     subscriptions:
+#       - xe_if_stats
+#       - xe_cpu_stats
+#       - xe_mem_stats
+#       - xe_if_info
+#       - xe_cdp_info
+#       - xe_mac_info
+#       - xe_arp_info
+#       - xe_lag_info
+#       - xe_inventory
 
-  10.20.0.40:57400:
-    name: "ibk-lab-edge01"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "10.20.0.40"
-    subscriptions:
-      - xe_if_stats
-      - xe_cpu_stats
-      - xe_mem_stats
-      - xe_poe_stats
-      - xe_if_info
-      - xe_cdp_info
-      - xe_mac_info
-      - xe_arp_info
-      - xe_lag_info
-      - xe_inventory
+#   10.20.0.40:57400:
+#     name: "ibk-lab-edge01"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "10.20.0.40"
+#     subscriptions:
+#       - xe_if_stats
+#       - xe_cpu_stats
+#       - xe_mem_stats
+#       - xe_poe_stats
+#       - xe_if_info
+#       - xe_cdp_info
+#       - xe_mac_info
+#       - xe_arp_info
+#       - xe_lag_info
+#       - xe_inventory
 
-  10.20.0.35:57400:
-    name: "ibk-lab-edge02"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "10.20.0.35"
-    subscriptions:
-      - xe_if_stats
-      - xe_cpu_stats
-      - xe_mem_stats
-      - xe_poe_stats
-      - xe_if_info
-      - xe_cdp_info
-      - xe_mac_info
-      - xe_arp_info
-      - xe_lag_info
-      - xe_inventory
+#   10.20.0.35:57400:
+#     name: "ibk-lab-edge02"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "10.20.0.35"
+#     subscriptions:
+#       - xe_if_stats
+#       - xe_cpu_stats
+#       - xe_mem_stats
+#       - xe_poe_stats
+#       - xe_if_info
+#       - xe_cdp_info
+#       - xe_mac_info
+#       - xe_arp_info
+#       - xe_lag_info
+#       - xe_inventory
 
-  # NX-OS Switches
-  # crypto ca trustpoint NTSRootCA
-  #   enrollment terminal
-  # crypto ca authenticate NTSRootCA
-  # crypto key generate rsa label grpc modulus 2048
-  # crypto ca trustpoint grpc
-  #   rsakeypair grpc
-  #   enrollment terminal
-  # crypto ca authenticate grpc
-  # crypto ca enroll grpc
-  # crypto ca import grpc certificate
-  # feature grpc
-  # grpc port 57400
-  # grpc certificate grpc
-  172.24.80.195:57400:
-    name: "ntsnxsw01"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "172.24.80.195"
-    skip-verify: false
-    tls-ca: /app/config/ca.pem
-    subscriptions:
-      - nx_if_stats
-      - nx_if_errors
-      - nx_cpu_stats
-      - nx_mem_stats
-      - nx_if_info
-      - nx_cdp_info
-      - nx_lldp_info
-      - nx_mac_info
-      - nx_arp_info
-      - nx_lag_info
+#   # NX-OS Switches
+#   # crypto ca trustpoint NTSRootCA
+#   #   enrollment terminal
+#   # crypto ca authenticate NTSRootCA
+#   # crypto key generate rsa label grpc modulus 2048
+#   # crypto ca trustpoint grpc
+#   #   rsakeypair grpc
+#   #   enrollment terminal
+#   # crypto ca authenticate grpc
+#   # crypto ca enroll grpc
+#   # crypto ca import grpc certificate
+#   # feature grpc
+#   # grpc port 57400
+#   # grpc certificate grpc
+#   172.24.80.195:57400:
+#     name: "ntsnxsw01"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "172.24.80.195"
+#     skip-verify: false
+#     tls-ca: /app/config/ca.pem
+#     subscriptions:
+#       - nx_if_stats
+#       - nx_if_errors
+#       - nx_cpu_stats
+#       - nx_mem_stats
+#       - nx_if_info
+#       - nx_cdp_info
+#       - nx_lldp_info
+#       - nx_mac_info
+#       - nx_arp_info
+#       - nx_lag_info
 
-  172.24.80.196:57400:
-    name: "ntsnxsw02"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "172.24.80.196"
-    skip-verify: false
-    tls-ca: /app/config/ca.pem
-    subscriptions:
-      - nx_if_stats
-      - nx_if_errors
-      - nx_cpu_stats
-      - nx_mem_stats
-      - nx_if_info
-      - nx_cdp_info
-      - nx_lldp_info
-      - nx_mac_info
-      - nx_arp_info
-      - nx_lag_info
+#   172.24.80.196:57400:
+#     name: "ntsnxsw02"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "172.24.80.196"
+#     skip-verify: false
+#     tls-ca: /app/config/ca.pem
+#     subscriptions:
+#       - nx_if_stats
+#       - nx_if_errors
+#       - nx_cpu_stats
+#       - nx_mem_stats
+#       - nx_if_info
+#       - nx_cdp_info
+#       - nx_lldp_info
+#       - nx_mac_info
+#       - nx_arp_info
+#       - nx_lag_info
 
   # Enable SSID Stats: conf t --- ap profile <profile-name> --- bssid-stats
   # ibk-lab-ewlc01#sh run | sec ap profile ibk-lab
@@ -266,42 +268,42 @@ targets:
       - wl_radio_info
       - wl_client_roam
 
-  # PaloAlto Firewalls
-  172.24.88.156:9339:
-    name: "Lab-IBK-PA560-1"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "172.24.88.156"
-    username: "${FW_USERNAME}"
-    password: "${FW_PASSWORD}"
-    subscriptions:
-      - panos_if_stats
-      - panos_if_info
-      - panos_xml_session
-      - panos_xml_dp
-      - panos_xml_ha
-      - panos_xml_counters
-      - panos_xml_env
-      - panos_xml_system
-      - panos_xml_license
+#   # PaloAlto Firewalls
+#   172.24.88.156:9339:
+#     name: "Lab-IBK-PA560-1"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "172.24.88.156"
+#     username: "${FW_USERNAME}"
+#     password: "${FW_PASSWORD}"
+#     subscriptions:
+#       - panos_if_stats
+#       - panos_if_info
+#       - panos_xml_session
+#       - panos_xml_dp
+#       - panos_xml_ha
+#       - panos_xml_counters
+#       - panos_xml_env
+#       - panos_xml_system
+#       - panos_xml_license
 
-  172.24.88.157:9339:
-    name: "Lab-IBK-PA560-2"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "172.24.88.157"
-    username: "${FW_USERNAME}"
-    password: "${FW_PASSWORD}"
-    subscriptions:
-      - panos_if_stats
-      - panos_if_info
-      - panos_xml_session
-      - panos_xml_dp
-      - panos_xml_ha
-      - panos_xml_counters
-      - panos_xml_env
-      - panos_xml_system
-      - panos_xml_license
+#   172.24.88.157:9339:
+#     name: "Lab-IBK-PA560-2"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "172.24.88.157"
+#     username: "${FW_USERNAME}"
+#     password: "${FW_PASSWORD}"
+#     subscriptions:
+#       - panos_if_stats
+#       - panos_if_info
+#       - panos_xml_session
+#       - panos_xml_dp
+#       - panos_xml_ha
+#       - panos_xml_counters
+#       - panos_xml_env
+#       - panos_xml_system
+#       - panos_xml_license
 
 ###################################
 # Subscriptions

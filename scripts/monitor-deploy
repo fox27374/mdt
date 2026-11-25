@@ -7,6 +7,8 @@
 # Replaces /home/claude/mdt/gnmic/monitor with this checkout's gnmic/monitor, tags the running image
 # localhost/gnmic_monitor:rollback, rebuilds, then replaces the service as in README "Replacing a single service"
 # (monitor depends on podman-exporter, so both are recreated). Waits for /healthz and prints the served version.
+# shortcut: podman-compose 1.3.0 ignores --no-deps, so `up` also recreates consul, nats, node-exporter, gnmic-output and
+# otel-collector (gnmic-1/2 keep running; ~10 s gap). Upgrade: replace the container with plain podman commands.
 # Rollback: podman tag localhost/gnmic_monitor:rollback localhost/gnmic_monitor:latest, then the same rm/up steps.
 # Env: MDTHOST (default claude@172.24.89.69), MDTHOST_KEY (optional ssh private key).
 set -euo pipefail

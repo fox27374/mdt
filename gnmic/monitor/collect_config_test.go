@@ -141,54 +141,23 @@ func TestParseConfigRealFile(t *testing.T) {
 		t.Fatalf("ParseConfig failed: %v", err)
 	}
 
-	// Find ibk-lab-sw98 target
-	var sw98 *TargetConfig
+	// The static list keeps only devices not in NetBox (the WLCs); the rest come from the NetBox loader.
+	var wlc *TargetConfig
 	for i := range targets {
-		if targets[i].Name == "ibk-lab-sw98" {
-			sw98 = &targets[i]
+		if targets[i].Name == "ibk-lab-ewlc01" {
+			wlc = &targets[i]
 			break
 		}
 	}
-	if sw98 == nil {
-		t.Fatalf("target 'ibk-lab-sw98' not found")
+	if wlc == nil {
+		t.Fatalf("target 'ibk-lab-ewlc01' not found")
 	}
-	if len(sw98.Subs) != 10 {
-		t.Errorf("ibk-lab-sw98: expected 10 subs, got %d", len(sw98.Subs))
+	if len(wlc.Subs) != 7 {
+		t.Errorf("ibk-lab-ewlc01: expected 7 subs, got %d", len(wlc.Subs))
 	}
-	for _, sub := range sw98.Subs {
+	for _, sub := range wlc.Subs {
 		if sub.Interval <= 0 {
-			t.Errorf("ibk-lab-sw98.%s: expected Interval > 0, got %v", sub.Name, sub.Interval)
-		}
-	}
-
-	// Find Lab-IBK-PA560-2 target
-	var pa560 *TargetConfig
-	for i := range targets {
-		if targets[i].Name == "Lab-IBK-PA560-2" {
-			pa560 = &targets[i]
-			break
-		}
-	}
-	if pa560 == nil {
-		t.Fatalf("target 'Lab-IBK-PA560-2' not found")
-	}
-	if len(pa560.Subs) != 9 {
-		t.Errorf("Lab-IBK-PA560-2: expected 9 subs, got %d", len(pa560.Subs))
-	}
-	want := map[string]time.Duration{
-		"panos_if_stats":     30 * time.Second,
-		"panos_if_info":      5 * time.Minute,
-		"panos_xml_session":  time.Minute,
-		"panos_xml_dp":       time.Minute,
-		"panos_xml_ha":       time.Minute,
-		"panos_xml_counters": 5 * time.Minute,
-		"panos_xml_env":      5 * time.Minute,
-		"panos_xml_system":   time.Hour,
-		"panos_xml_license":  time.Hour,
-	}
-	for _, sub := range pa560.Subs {
-		if w, ok := want[sub.Name]; !ok || sub.Interval != w {
-			t.Errorf("Lab-IBK-PA560-2.%s: expected Interval %v, got %v", sub.Name, w, sub.Interval)
+			t.Errorf("ibk-lab-ewlc01.%s: expected Interval > 0, got %v", sub.Name, sub.Interval)
 		}
 	}
 }
