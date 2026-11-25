@@ -147,6 +147,10 @@ To switch it on: uncomment the `loader:` block, comment out the static targets t
 `NETBOX_TOKEN` in `gnmic_env` (a NetBox v2 token, `nbt_...`) and deploy with `scripts/gnmic-deploy`. To switch it
 off: comment out `loader:`, restore the static targets, deploy.
 
+A changed `gnmic_env` needs gnmic-1 and gnmic-2 recreated (see [Replacing a single service](#replacing-a-single-service)):
+`podman restart`, which `scripts/gnmic-deploy` uses, keeps the environment the containers were created with. When
+adding a line to `gnmic_env`, check that the file ends with a newline, or the new line joins the last one.
+
 NetBox needs:
 
 - Device tag `monitoring` and status `active`.
