@@ -144,20 +144,20 @@ func TestParseConfigRealFile(t *testing.T) {
 	// The static list keeps only devices not in NetBox (the WLCs); the rest come from the NetBox loader.
 	var wlc *TargetConfig
 	for i := range targets {
-		if targets[i].Name == "ibk-lab-fabwlc01" {
+		if targets[i].Name == "nk-home-ewlc01" {
 			wlc = &targets[i]
 			break
 		}
 	}
 	if wlc == nil {
-		t.Fatalf("target 'ibk-lab-fabwlc01' not found")
+		t.Fatalf("target 'nk-home-ewlc01' not found")
 	}
 	if len(wlc.Subs) != 7 {
-		t.Errorf("ibk-lab-fabwlc01: expected 7 subs, got %d", len(wlc.Subs))
+		t.Errorf("nk-home-ewlc01: expected 7 subs, got %d", len(wlc.Subs))
 	}
 	for _, sub := range wlc.Subs {
 		if sub.Interval <= 0 {
-			t.Errorf("ibk-lab-fabwlc01.%s: expected Interval > 0, got %v", sub.Name, sub.Interval)
+			t.Errorf("nk-home-ewlc01.%s: expected Interval > 0, got %v", sub.Name, sub.Interval)
 		}
 	}
 }
