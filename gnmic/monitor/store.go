@@ -64,6 +64,29 @@ func (s *Store) SetConfig(source string, targets []TargetConfig) {
 	s.targets[source] = targetsByKey
 }
 
+// collectorTargets returns the targets every collector has set (all sources but "config"), one per key, Owner
+// cleared. NetBox mode (no `targets:` in mdt.yaml) takes these as the intended list.
+func (s *Store) collectorTargets() []TargetConfig {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	byKey := make(map[string]TargetConfig)
+	for source, targets := range s.targets {
+		if source == "config" {
+			continue
+		}
+		for key, t := range targets {
+			t.Owner = ""
+			byKey[key] = t
+		}
+	}
+	var out []TargetConfig
+	for _, t := range byKey {
+		out = append(out, t)
+	}
+	return out
+}
+
 // SetLocks replaces the Consul lock holders (target -> instance). Nil clears them, so owners fall back
 // to the latest SetConfig.
 func (s *Store) SetLocks(locks map[string]string) {

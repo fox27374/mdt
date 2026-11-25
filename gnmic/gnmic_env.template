@@ -3,3 +3,5 @@ SWITCH_USERNAME=admin
 SWITCH_PASSWORD=letmein
 FW_USERNAME=admin
 FW_PASSWORD=letmein
+# NetBox v2 token (nbt_...), read only when the NetBox loader is on (mdt.yaml `loader:`).
+NETBOX_TOKEN=

@@ -122,8 +122,8 @@ func ParseConfig(data []byte) ([]TargetConfig, error) {
 }
 
 // RunConfig reads the file at `path` immediately and then every `every` until ctx is done.
-// On success: st.SetConfig("config", targets). On failure (unreadable file or bad YAML): log one line
-// with the standard `log` package and keep the previous data.
+// On success: st.SetConfig("config", targets); with no `targets:` in the file, the collectors' targets.
+// On failure (unreadable file or bad YAML): log one line with the standard `log` package and keep the previous data.
 func RunConfig(ctx context.Context, st *Store, path string, every time.Duration) {
 	ticker := time.NewTicker(every)
 	defer ticker.Stop()
@@ -140,6 +140,11 @@ func RunConfig(ctx context.Context, st *Store, path string, every time.Duration)
 		if err != nil {
 			log.Printf("failed to parse config file %s: %v", path, err)
 			return
+		}
+
+		// No `targets:` in the file (NetBox mode): the targets the collectors loaded are the intended ones
+		if targets == nil {
+			targets = st.collectorTargets()
 		}
 
 		st.SetConfig("config", targets)

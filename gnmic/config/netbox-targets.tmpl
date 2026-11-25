@@ -1,0 +1,46 @@
+{{/*
+NetBox devices -> gnmic targets, the loader template behind `loader:` in mdt.yaml.
+Input: NetBox GET /api/dcim/devices/ (the JSON is unmarshalled, so numbers are float64).
+Output: a JSON map keyed by device name, one target per device that has a primary_ip4 and a known mdt_profile.
+Other devices are skipped, so the mdt_profile table below decides which devices are monitored.
+Profile -> port, subscriptions and extra fields: the same values as the static targets this replaced.
+No device rendered (count 0 included): the output is deliberately invalid JSON, so gnmic logs an error and
+keeps the last target list. An empty list would stop every target.
+*/}}
+{{- $first := true -}}
+{{- range .results -}}
+  {{- $ip := "" -}}
+  {{- with .primary_ip4 -}}{{- $ip = index (split .address "/") 0 -}}{{- end -}}
+  {{- $profile := "" -}}
+  {{- with .custom_fields -}}{{- with .mdt_profile -}}{{- $profile = . -}}{{- end -}}{{- end -}}
+  {{- $port := 57400 -}}
+  {{- $subs := "" -}}
+  {{- $extra := "" -}}
+  {{- if eq $profile "iosxe" -}}
+    {{- $subs = `"xe_if_stats", "xe_cpu_stats", "xe_mem_stats", "xe_poe_stats", "xe_if_info", "xe_cdp_info", "xe_mac_info", "xe_arp_info", "xe_lag_info", "xe_inventory"` -}}
+  {{- else if eq $profile "iosxe-nopoe" -}}
+    {{- $subs = `"xe_if_stats", "xe_cpu_stats", "xe_mem_stats", "xe_if_info", "xe_cdp_info", "xe_mac_info", "xe_arp_info", "xe_lag_info", "xe_inventory"` -}}
+  {{- else if eq $profile "nxos" -}}
+    {{- $subs = `"nx_if_stats", "nx_if_errors", "nx_cpu_stats", "nx_mem_stats", "nx_if_info", "nx_cdp_info", "nx_lldp_info", "nx_mac_info", "nx_arp_info", "nx_lag_info"` -}}
+    {{- $extra = `"skip-verify": false, "tls-ca": "/app/config/ca.pem", ` -}}
+  {{- else if eq $profile "wlc" -}}
+    {{- $subs = `"xe_cpu_stats", "xe_mem_stats", "wl_client_stats", "wl_ap_stats", "wl_info", "wl_radio_info", "wl_client_roam"` -}}
+  {{- else if eq $profile "panos" -}}
+    {{- $subs = `"panos_if_stats", "panos_if_info", "panos_xml_session", "panos_xml_dp", "panos_xml_ha", "panos_xml_counters", "panos_xml_env", "panos_xml_system", "panos_xml_license"` -}}
+    {{- $port = 9339 -}}
+    {{- $extra = `"username": "${FW_USERNAME}", "password": "${FW_PASSWORD}", ` -}}
+  {{- end -}}
+  {{- $site := .site.slug -}}
+  {{- if eq $site "nts-innsbruck-lab" -}}{{- $site = "ibk-lab" -}}{{- end -}}
+  {{- if and $ip $subs -}}
+    {{- if $first -}}{{- $first = false -}}{{- "{" -}}{{- else -}},{{- end }}
+    {{ .name | toJSON }}: {
+      "name": {{ .name | toJSON }},
+      "address": {{ printf "%s:%d" $ip $port | toJSON }},
+      {{ $extra }}"event-tags": {"site": {{ $site | toJSON }}, "mgmt_ip": {{ $ip | toJSON }}},
+      "subscriptions": [{{ $subs }}]
+    }
+  {{- end -}}
+{{- end }}
+{{- if $first }}netbox returned no monitoring targets{{ else }}
+}{{ end }}

@@ -1,0 +1,16 @@
+{
+  "count": 9,
+  "next": null,
+  "previous": null,
+  "results": [
+    {"id": 1, "name": "ibk-lab-sw98", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.80.240/32"}, "custom_fields": {"mdt_profile": "iosxe"}},
+    {"id": 2, "name": "ibk-lab-border01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.80.231/32"}, "custom_fields": {"mdt_profile": "iosxe-nopoe"}},
+    {"id": 3, "name": "ibk-lab-edge01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "10.20.0.40/32"}, "custom_fields": {"mdt_profile": "iosxe"}},
+    {"id": 4, "name": "ntsnxsw01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.80.195/32"}, "custom_fields": {"mdt_profile": "nxos"}},
+    {"id": 5, "name": "ibk-lab-ewlc01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.89.147/32"}, "custom_fields": {"mdt_profile": "wlc"}},
+    {"id": 6, "name": "Lab-IBK-PA560-1", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.88.156/32"}, "custom_fields": {"mdt_profile": "panos"}},
+    {"id": 7, "name": "nk-home-ewlc01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nk-home"}, "primary_ip4": {"address": "172.24.88.161/32"}, "custom_fields": {"mdt_profile": "wlc"}},
+    {"id": 8, "name": "ibk-lab-spare01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": null, "custom_fields": {"mdt_profile": "iosxe"}},
+    {"id": 9, "name": "ibk-lab-noprofile01", "status": {"value": "active", "label": "Active"}, "site": {"slug": "nts-innsbruck-lab"}, "primary_ip4": {"address": "172.24.80.250/32"}, "custom_fields": {"mdt_profile": null}}
+  ]
+}
