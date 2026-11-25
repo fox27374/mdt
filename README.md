@@ -66,7 +66,8 @@ flowchart LR
 |------|---------|
 | [compose.yaml](gnmic/compose.yaml) | Main Compose stack: Consul, two clustered gnmic collectors, gnmic output, NATS, and the OpenTelemetry collector. |
 | [compose-debug.yaml](gnmic/compose-debug.yaml) | Identical stack to `compose.yaml` but with `--debug` added to every gnmic command — used for troubleshooting. |
-| [config/mdt.yaml](gnmic/config/mdt.yaml) | The core gnmic **collector** config: global auth, clustering, targets, subscriptions, processors, and the NATS output. |
+| [config/mdt.yaml](gnmic/config/mdt.yaml) | The core gnmic **collector** config: global auth, clustering, targets (or the NetBox `loader:`), subscriptions, processors, and the NATS output. |
+| [config/netbox-targets.tmpl](gnmic/config/netbox-targets.tmpl) | Turns the NetBox device list into gnmic targets, for the optional NetBox target source (see [NetBox target source](#netbox-target-source-optional)). |
 | [config/output.yaml](gnmic/config/output.yaml) | The gnmic **output** config: reads from NATS and exposes the Prometheus endpoint. |
 | [config/otel.yaml](gnmic/config/otel.yaml) | The OpenTelemetry **collector** config: receives Cisco model-driven telemetry (`yang_grpc`), scrapes gnmic-output and host metrics, and exports to Splunk HEC. |
 | [config/ca.pem](gnmic/config/ca.pem) | CA certificate used to verify the NX-OS switch gRPC endpoints. |
@@ -136,6 +137,30 @@ Client Search dashboard: the IP of a wired client, joined to its MAC. The switch
 (`mode` = interface on IOS-XE) are dropped in the search, not by gnmic, because the mode leaf is a separate
 event. The dial-out subscription is `57009` in `dialout-iosxe.yaml`.
 
+### NetBox target source (optional)
+
+By default the dial-in targets are the static `targets:` list in `config/mdt.yaml`. Instead, gnmic can read them
+from NetBox. This is off by default.
+
+To switch it on, in `config/mdt.yaml`: comment out the whole `targets:` block and uncomment the `loader:` block.
+Set `NETBOX_TOKEN` in `gnmic_env` (a NetBox v2 token, `nbt_...`), then deploy with `scripts/gnmic-deploy`.
+NetBox is then the only target source. To switch back, restore the `targets:` block and remove the `loader:` block.
+
+NetBox needs:
+
+- Device tag `monitoring` and status `active`.
+- Device custom field `mdt_profile` (selection): `iosxe`, `iosxe-nopoe`, `nxos`, `wlc` or `panos`. The profile sets the
+  port, the subscriptions and the credentials, as in [config/netbox-targets.tmpl](gnmic/config/netbox-targets.tmpl).
+- Device `primary_ip4` is the gNMI address. For the edge switches use the Loopback0 address.
+- Device site: the site slug is the `site` event tag, except `nts-innsbruck-lab`, which is written as `ibk-lab`.
+- Token user with view on dcim device, site, platform and device role, ipam IP address, and extras tag.
+
+Behaviour:
+
+- The target list refreshes every 5 minutes. Devices without `primary_ip4` or `mdt_profile` are skipped.
+- If NetBox is down, answers with an error, or returns no device, gnmic logs the error and keeps the last target list.
+- The loader's TLS check is `skip-verify: true`, because the NetBox certificate does not match its host name.
+
 ### Processors
 
 `config/mdt.yaml` applies these gnmic event processors before publishing to NATS:
@@ -162,7 +187,7 @@ The stack monitors several unrelated networks, called **sites**. Every metric ca
 Splunk), and the Splunk dashboards filter by it through the **Site** dropdown. Today there is one site, `ibk-lab`.
 
 - **Dial-in targets** (gnmic): set `site` in the target's `event-tags` in [config/mdt.yaml](gnmic/config/mdt.yaml), next to `mgmt_ip`.
-  Every target has `site: "ibk-lab"`.
+  Every target has `site: "ibk-lab"`. With the [NetBox target source](#netbox-target-source-optional), the site comes from the NetBox site instead.
 - **Dial-out switches** (OTel yang_grpc): set `site` on every datapoint in `transform/cisco` in [config/otel.yaml](gnmic/config/otel.yaml),
   matched on the switch name. The switches are listed in [config/dialout-iosxe.yaml](gnmic/config/dialout-iosxe.yaml): keep the two in step.
 - **Syslog** has no site. The syslog panels are not filtered by site.
@@ -324,7 +349,7 @@ Target names are blurred in the screenshot.
 The UI and API display:
 
 - **Component health** — live status of Consul, NATS server, NATS consumer, gnmic-output, each gnmic collector (gnmic-1, gnmic-2), and the `otel-collector` (see [OpenTelemetry collector check](#opentelemetry-collector-check)).
-- **Target list** — all targets from the configuration with their owner collector and current status. The owner is the Consul lock holder of the target (`gnmic/<cluster>/targets/<name>`); when no lock is found, the collector that most recently set the target's config.
+- **Target list** — all targets from the configuration (with NetBox as the source, the targets the collectors loaded from NetBox) with their owner collector and current status. The owner is the Consul lock holder of the target (`gnmic/<cluster>/targets/<name>`); when no lock is found, the collector that most recently set the target's config.
 - **Subscription status** — each target's subscriptions with their last-seen timestamp and data-point count.
 
 Status values are:

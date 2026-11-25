@@ -27,6 +27,21 @@ clustering:
 # Targets
 ###################################
 
+# NetBox target source (off). To switch on: comment out the whole `targets:` block, uncomment `loader:`, set
+# NETBOX_TOKEN in gnmic_env, deploy. NetBox is then the only target source; the list refreshes every 5 minutes.
+# loader:
+#   type: http
+#   url: "https://netbox.ntslab.loc/api/dcim/devices/?tag=monitoring&status=active&limit=1000"
+#   token: "${NETBOX_TOKEN}"
+#   auth-scheme: Bearer
+#   interval: 5m
+#   timeout: 30s
+#   template-file: /app/config/netbox-targets.tmpl
+#   expand-env: true
+#   tls:
+#     # the NetBox certificate does not match netbox.ntslab.loc (curl: no alternative certificate subject name matches)
+#     skip-verify: true
+
 targets:
   # event-tags on every target: site (the Splunk Site dropdown; "ibk-lab" for all targets here) and mgmt_ip, the address
   # gnmic polls, as labels on every series (Switch Details shows it). gnmic has no label for the target address, so

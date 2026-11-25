@@ -285,3 +285,38 @@ subscriptions:
 	// Wait a moment for goroutine to exit
 	time.Sleep(50 * time.Millisecond)
 }
+
+// NetBox mode: mdt.yaml has no `targets:`, so the intended targets are the ones the collectors loaded.
+func TestRunConfigNetBoxModeUsesCollectorTargets(t *testing.T) {
+	yaml := `
+subscriptions:
+  sub1:
+    sample-interval: 30s
+`
+	tmpFile, err := os.CreateTemp("", "test-config-netbox-*.yaml")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	if _, err := tmpFile.Write([]byte(yaml)); err != nil {
+		t.Fatalf("failed to write temp file: %v", err)
+	}
+	tmpFile.Close()
+
+	st := NewStore(time.Now())
+	st.SetConfig("gnmic-1", []TargetConfig{{Name: "ibk-lab-sw98", Address: "172.24.80.240:57400", Owner: "gnmic-1",
+		Subs: []SubConfig{{Name: "sub1", Interval: 30 * time.Second}}}})
+
+	// Cancelled context: RunConfig reads the file once and returns
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	RunConfig(ctx, st, tmpFile.Name(), time.Hour)
+
+	cfg := st.targets["config"]
+	if len(cfg) != 1 {
+		t.Fatalf("expected 1 intended target from the collectors, got %d", len(cfg))
+	}
+	if tgt := cfg["ibk-lab-sw98"]; tgt.Owner != "" || tgt.Address != "172.24.80.240:57400" || len(tgt.Subs) != 1 {
+		t.Errorf("unexpected intended target: %+v", tgt)
+	}
+}
