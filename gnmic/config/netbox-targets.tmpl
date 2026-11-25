@@ -19,8 +19,6 @@ keeps the last target list. An empty list would stop every target.
   {{- $extra := "" -}}
   {{- if eq $profile "iosxe" -}}
     {{- $subs = `"xe_if_stats", "xe_cpu_stats", "xe_mem_stats", "xe_poe_stats", "xe_if_info", "xe_cdp_info", "xe_mac_info", "xe_arp_info", "xe_lag_info", "xe_inventory"` -}}
-  {{- else if eq $profile "iosxe-nopoe" -}}
-    {{- $subs = `"xe_if_stats", "xe_cpu_stats", "xe_mem_stats", "xe_if_info", "xe_cdp_info", "xe_mac_info", "xe_arp_info", "xe_lag_info", "xe_inventory"` -}}
   {{- else if eq $profile "nxos" -}}
     {{- $subs = `"nx_if_stats", "nx_if_errors", "nx_cpu_stats", "nx_mem_stats", "nx_if_info", "nx_cdp_info", "nx_lldp_info", "nx_mac_info", "nx_arp_info", "nx_lag_info"` -}}
     {{- $extra = `"skip-verify": false, "tls-ca": "/app/config/ca.pem", ` -}}
