@@ -28,9 +28,9 @@ clustering:
 ###################################
 
 # NetBox target source (on): gnmic loads the devices tagged `monitoring` from NetBox every 5 minutes,
-# rendered by netbox-targets.tmpl. The static `targets:` below hold only devices that are not in NetBox yet
-# (the WLCs); the commented ones are now in NetBox. Never list a device in both. Off: comment out `loader:`,
-# uncomment the static targets, deploy.
+# rendered by netbox-targets.tmpl. Every target comes from NetBox; the static `targets:` below are commented out
+# and kept for switching back. Never list a device in both. Off: comment out `loader:`, uncomment the static
+# targets, deploy.
 loader:
   type: http
   url: "https://netbox.ntslab.loc/api/dcim/devices/?tag=monitoring&status=active&limit=1000"
@@ -44,10 +44,10 @@ loader:
     # the NetBox certificate does not match netbox.ntslab.loc (curl: no alternative certificate subject name matches)
     skip-verify: true
 
-targets:
-  # event-tags on every target: site (the Splunk Site dropdown; "ibk-lab" for all targets here) and mgmt_ip, the address
-  # gnmic polls, as labels on every series (Switch Details shows it). gnmic has no label for the target address, so
-  # mgmt_ip is repeated here: keep it in step with the key.
+# targets:
+#   # event-tags on every target: site (the Splunk Site dropdown; "ibk-lab" for all targets here) and mgmt_ip, the address
+#   # gnmic polls, as labels on every series (Switch Details shows it). gnmic has no label for the target address, so
+#   # mgmt_ip is repeated here: keep it in step with the key.
 #   172.24.80.240:57400:
 #     name: "ibk-lab-sw98"
 #     event-tags:
@@ -253,20 +253,20 @@ targets:
 #       - wl_radio_info
 #       - wl_client_roam
 
-  # nk-home WLC (C9800-CL 17.18, hostname C9800-CL-161). bssid-stats is on in ap profile AP_JOIN_NK_Home.
-  172.24.88.161:57400:
-    name: "nk-home-ewlc01"
-    event-tags:
-      site: "nk-home"
-      mgmt_ip: "172.24.88.161"
-    subscriptions:
-      - xe_cpu_stats
-      - xe_mem_stats
-      - wl_client_stats
-      - wl_ap_stats
-      - wl_info
-      - wl_radio_info
-      - wl_client_roam
+#   # nk-home WLC (C9800-CL 17.18, hostname C9800-CL-161). bssid-stats is on in ap profile AP_JOIN_NK_Home.
+#   172.24.88.161:57400:
+#     name: "nk-home-ewlc01"
+#     event-tags:
+#       site: "nk-home"
+#       mgmt_ip: "172.24.88.161"
+#     subscriptions:
+#       - xe_cpu_stats
+#       - xe_mem_stats
+#       - wl_client_stats
+#       - wl_ap_stats
+#       - wl_info
+#       - wl_radio_info
+#       - wl_client_roam
 
 #   # PaloAlto Firewalls
 #   172.24.88.156:9339:

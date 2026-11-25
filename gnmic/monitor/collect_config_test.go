@@ -136,29 +136,14 @@ func TestParseConfigRealFile(t *testing.T) {
 		t.Skipf("real config file not found: %v", err)
 	}
 
+	// Every target comes from the NetBox loader: no static targets, so the monitor uses the collectors' list.
+	// ParseConfig still parses the subscriptions (an unparsable sample-interval would be an error).
 	targets, err := ParseConfig(data)
 	if err != nil {
 		t.Fatalf("ParseConfig failed: %v", err)
 	}
-
-	// The static list keeps only devices not in NetBox (the WLCs); the rest come from the NetBox loader.
-	var wlc *TargetConfig
-	for i := range targets {
-		if targets[i].Name == "nk-home-ewlc01" {
-			wlc = &targets[i]
-			break
-		}
-	}
-	if wlc == nil {
-		t.Fatalf("target 'nk-home-ewlc01' not found")
-	}
-	if len(wlc.Subs) != 7 {
-		t.Errorf("nk-home-ewlc01: expected 7 subs, got %d", len(wlc.Subs))
-	}
-	for _, sub := range wlc.Subs {
-		if sub.Interval <= 0 {
-			t.Errorf("nk-home-ewlc01.%s: expected Interval > 0, got %v", sub.Name, sub.Interval)
-		}
+	if targets != nil {
+		t.Errorf("expected no static targets (NetBox mode), got %d", len(targets))
 	}
 }
 
