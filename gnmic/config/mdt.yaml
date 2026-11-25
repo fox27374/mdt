@@ -221,21 +221,21 @@ targets:
 #       - nx_arp_info
 #       - nx_lag_info
 
-  # Enable SSID Stats: conf t --- ap profile <profile-name> --- bssid-stats
-  # ibk-lab-ewlc01#sh run | sec ap profile ibk-lab
-  172.24.89.147:57400:
-    name: "ibk-lab-ewlc01"
-    event-tags:
-      site: "ibk-lab"
-      mgmt_ip: "172.24.89.147"
-    subscriptions:
-      - xe_cpu_stats
-      - xe_mem_stats
-      - wl_client_stats
-      - wl_ap_stats
-      - wl_info
-      - wl_radio_info
-      - wl_client_roam
+#   # Enable SSID Stats: conf t --- ap profile <profile-name> --- bssid-stats
+#   # ibk-lab-ewlc01#sh run | sec ap profile ibk-lab
+#   172.24.89.147:57400:
+#     name: "ibk-lab-ewlc01"
+#     event-tags:
+#       site: "ibk-lab"
+#       mgmt_ip: "172.24.89.147"
+#     subscriptions:
+#       - xe_cpu_stats
+#       - xe_mem_stats
+#       - wl_client_stats
+#       - wl_ap_stats
+#       - wl_info
+#       - wl_radio_info
+#       - wl_client_roam
 
   # Fabric WLC (C9800-CL 17.18). gnxi enabled 2026-11-04, same as ibk-lab-ewlc01. bssid-stats on in ap profiles
   # ibk-fabric and default-ap-profile (needs no statistics traffic-distribution: the two are exclusive).
