@@ -308,6 +308,9 @@ podman rm -f podman-exporter
 PODMAN_UID=$(id -u) XDG_RUNTIME_DIR=/run/user/$(id -u) podman-compose --in-pod false up -d --no-deps podman-exporter monitor
 ```
 
+On the maintainer test host, `scripts/monitor-deploy` does this for the monitor: it copies `gnmic/monitor/`, tags
+the running image `localhost/gnmic_monitor:rollback`, rebuilds, replaces both containers and waits for `/healthz`.
+
 After a `podman-compose down`, the DNS resolver for the network can go stale (containers
 cannot resolve each other). Fix it by killing `aardvark-dns` and removing its state directory
 `/run/user/$(id -u)/containers/networks/aardvark-dns` (`rm -rf`, it is a directory), then bring the

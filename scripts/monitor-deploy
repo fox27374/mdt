@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Rebuild and replace the gnmic-monitor container on the test host (kof-ibk-debian4) from gnmic/monitor/.
+# Maintainer lab only. The live stack runs from /home/claude/mdt/gnmic (compose project, claude-owned).
+#
+#   scripts/monitor-deploy
+#
+# Replaces /home/claude/mdt/gnmic/monitor with this checkout's gnmic/monitor, tags the running image
+# localhost/gnmic_monitor:rollback, rebuilds, then replaces the service as in README "Replacing a single service"
+# (monitor depends on podman-exporter, so both are recreated). Waits for /healthz and prints the served version.
+# Rollback: podman tag localhost/gnmic_monitor:rollback localhost/gnmic_monitor:latest, then the same rm/up steps.
+# Env: MDTHOST (default claude@172.24.89.69), MDTHOST_KEY (optional ssh private key).
+set -euo pipefail
+host=${MDTHOST:-claude@172.24.89.69}
+live=/home/claude/mdt/gnmic
+ssh_cmd=(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "$host")
+[ -n "${MDTHOST_KEY:-}" ] && ssh_cmd=(ssh -i "$MDTHOST_KEY" -o IdentitiesOnly=yes "${ssh_cmd[@]:1}")
+root=$(git rev-parse --show-toplevel)
+exec 2> >(grep -v -E 'setlocale|Warning: Permanently|Executing external compose provider' >&2)
+
+COPYFILE_DISABLE=1 tar --no-xattrs -C "$root/gnmic" --exclude=.DS_Store -cf - monitor | "${ssh_cmd[@]}" "set -e
+  export XDG_RUNTIME_DIR=/run/user/\$(id -u) PODMAN_UID=\$(id -u)
+  stage=\$(mktemp -d); trap 'rm -rf \$stage' EXIT; tar -xf - -C \$stage
+  rm -rf $live/monitor && mv \$stage/monitor $live/monitor
+  cd $live
+  podman image exists localhost/gnmic_monitor:latest && podman tag localhost/gnmic_monitor:latest localhost/gnmic_monitor:rollback
+  podman-compose build monitor >/dev/null
+  podman rm -f gnmic-monitor podman-exporter >/dev/null
+  podman-compose --in-pod false up -d --no-deps podman-exporter monitor >/dev/null
+  for i in \$(seq 1 30); do curl -sf -o /dev/null localhost:8080/healthz && break; sleep 2; done
+  curl -sf -o /dev/null localhost:8080/healthz || { echo 'monitor /healthz not answering' >&2; exit 1; }
+  echo \"monitor up, version \$(curl -s localhost:8080/ | grep -o 'v[0-9][0-9.]*' | head -1)\"
+  podman ps --filter name=gnmic-monitor --filter name=podman-exporter --format '{{.Names}} {{.Status}}'"
